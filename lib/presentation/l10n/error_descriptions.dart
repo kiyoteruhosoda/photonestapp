@@ -8,10 +8,14 @@ import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 /// error messages are developer-facing English, so screens translate the
 /// *kind* of failure instead of showing the message verbatim. Screens showing
 /// an [Object] from an `AsyncError` route it through here.
+///
+/// Only a transport failure earns the "check your connection" wording — an
+/// error the server *did* respond with (an HTTP 500, a malformed payload)
+/// is not something reconnecting will fix, so it stays generic.
 String describeLoadError(Object error, AppLocalizations l10n) {
   return switch (error) {
+    NetworkUnreachableError() => l10n.commonErrorNetwork,
     AuthenticationError() => l10n.commonErrorSessionExpired,
-    InfrastructureError() => l10n.commonErrorNetwork,
     _ => l10n.commonError,
   };
 }
@@ -26,6 +30,7 @@ String describeUploadFailure(
     PhotoUploadFailureReason.missingFromLibrary => l10n.uploadFailureMissing,
     PhotoUploadFailureReason.unsupportedFormat => l10n.uploadFailureUnsupported,
     PhotoUploadFailureReason.sessionExpired => l10n.commonErrorSessionExpired,
+    PhotoUploadFailureReason.unreachable => l10n.commonErrorNetwork,
     PhotoUploadFailureReason.rejected => l10n.uploadFailureRejected,
   };
 }

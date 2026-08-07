@@ -14,9 +14,16 @@ void main() {
     expect(describeLoadError(error, ja), ja.commonErrorSessionExpired);
   });
 
-  test('an infrastructure error reads as a connection problem', () {
-    const error = InfrastructureError('Could not reach the server: refused');
+  test('a transport failure reads as a connection problem', () {
+    const error = NetworkUnreachableError('Could not reach the server');
     expect(describeLoadError(error, en), en.commonErrorNetwork);
+    expect(describeLoadError(error, ja), ja.commonErrorNetwork);
+  });
+
+  test('a response the server did send stays generic — reconnecting will '
+      'not fix it', () {
+    const error = InfrastructureError('Server error (HTTP 500).');
+    expect(describeLoadError(error, en), en.commonError);
   });
 
   test('anything else falls back to the generic error', () {

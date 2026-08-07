@@ -162,7 +162,7 @@ final class PhotoNestApiClient {
     try {
       return await http.Response.fromStream(await _http.send(request));
     } on http.ClientException catch (error) {
-      throw InfrastructureError(
+      throw NetworkUnreachableError(
         'Could not reach the server: ${error.message}',
         cause: error,
       );
@@ -187,7 +187,7 @@ final class PhotoNestApiClient {
         ),
       );
     } on http.ClientException catch (error) {
-      throw InfrastructureError(
+      throw NetworkUnreachableError(
         'Could not reach the server: ${error.message}',
         cause: error,
       );

@@ -18,7 +18,10 @@ enum PhotoUploadFailureReason {
   /// The session expired and could not be refreshed.
   sessionExpired,
 
-  /// The server rejected the photo or could not be reached.
+  /// The server could not be reached — retrying once connected may succeed.
+  unreachable,
+
+  /// The server answered and refused the photo.
   rejected,
 }
 
@@ -166,6 +169,7 @@ final class UploadPhotosUseCase {
   static PhotoUploadFailureReason _reasonFor(AppError error) {
     return switch (error) {
       AuthenticationError() => PhotoUploadFailureReason.sessionExpired,
+      NetworkUnreachableError() => PhotoUploadFailureReason.unreachable,
       InfrastructureError(code: 'unsupported_format') =>
         PhotoUploadFailureReason.unsupportedFormat,
       _ => PhotoUploadFailureReason.rejected,

@@ -22,7 +22,7 @@ void main() {
   ) async {
     final scope = TestScope(
       albumRepository: FakeAlbumRepository()
-        ..failure = const InfrastructureError('server down'),
+        ..failure = const NetworkUnreachableError('server down'),
     );
     await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
     // The developer-facing message stays out of the UI; the user sees the

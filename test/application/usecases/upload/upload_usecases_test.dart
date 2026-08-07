@@ -156,6 +156,13 @@ void main() {
       uploads.failFor = {'refused'};
       result = await uploadUseCase().execute([refused]);
       expect(result.failed.single.reason, PhotoUploadFailureReason.rejected);
+
+      final offline = testLocalPhoto(localId: 'offline');
+      library.bytesById['offline'] = Uint8List.fromList([4]);
+      uploads.failure = const NetworkUnreachableError('connection refused');
+      uploads.failFor = {'offline'};
+      result = await uploadUseCase().execute([offline]);
+      expect(result.failed.single.reason, PhotoUploadFailureReason.unreachable);
     });
 
     test('reports progress after each settled photo', () async {

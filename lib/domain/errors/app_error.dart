@@ -10,13 +10,24 @@ final class DomainError extends AppError {
 }
 
 /// An error from the infrastructure layer (I/O, network, DB).
-final class InfrastructureError extends AppError {
+base class InfrastructureError extends AppError {
   const InfrastructureError(super.message, {this.cause, this.code});
   final Object? cause;
 
   /// Stable, language-neutral error code from the failing system (for
   /// example a server's `not_found`), when one was provided.
   final String? code;
+}
+
+/// The server could not be reached at all — no connection, DNS failure,
+/// or the request never produced a response.
+///
+/// Separated from its parent because Presentation words it differently: a
+/// transport failure means "check your connection and retry", while a
+/// response the server *did* send (an HTTP 500, a malformed payload) is not
+/// something reconnecting will fix.
+final class NetworkUnreachableError extends InfrastructureError {
+  const NetworkUnreachableError(super.message, {super.cause});
 }
 
 /// The server rejected the caller's identity — wrong credentials, or an

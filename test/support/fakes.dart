@@ -447,8 +447,13 @@ final class FakePhotoUploadRepository implements PhotoUploadRepository {
   AppError? failure;
   Set<String> failFor = <String>{};
 
+  /// When set, awaited before each upload — lets a test hold a batch
+  /// mid-flight to observe its progress or cancel it.
+  Future<void> Function(LocalPhoto photo)? gate;
+
   @override
   Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+    await gate?.call(photo);
     final error = failure;
     if (error != null && (failFor.isEmpty || failFor.contains(photo.localId))) {
       throw error;

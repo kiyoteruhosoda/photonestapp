@@ -21,10 +21,7 @@ void main() {
 
   test('anything else falls back to the generic error', () {
     expect(describeLoadError(StateError('bug'), en), en.commonError);
-    expect(
-      describeLoadError(const UnexpectedError('bug'), en),
-      en.commonError,
-    );
+    expect(describeLoadError(const UnexpectedError('bug'), en), en.commonError);
   });
 
   test('the developer-facing message never leaks into the description', () {

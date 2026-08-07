@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
@@ -21,7 +22,6 @@ class UploadTab extends ConsumerStatefulWidget {
 class _UploadTabState extends ConsumerState<UploadTab> {
   /// Local ids the user has ticked for manual upload.
   final Set<String> _selected = <String>{};
-  bool _uploading = false;
 
   Future<void> _toggleAuto(bool enabled) async {
     final l10n = AppLocalizations.of(context);
@@ -43,23 +43,57 @@ class _UploadTabState extends ConsumerState<UploadTab> {
         .toList();
     if (photos.isEmpty) return;
 
-    setState(() => _uploading = true);
-    try {
-      final result = await ref
-          .read(uploadCandidatesProvider.notifier)
-          .upload(photos);
-      if (!mounted) return;
-      setState(() {
-        _selected.removeAll(result.uploaded.map((photo) => photo.localId));
-      });
-      final message = result.hasFailures
-          ? '${l10n.uploadDone(result.uploaded.length)} '
-                '${l10n.uploadFailed(result.failed.length)}'
-          : l10n.uploadDone(result.uploaded.length);
-      messenger.showSnackBar(SnackBar(content: Text(message)));
-    } finally {
-      if (mounted) setState(() => _uploading = false);
-    }
+    final result = await ref.read(uploadRunProvider.notifier).start(photos);
+    if (!mounted) return;
+    setState(() {
+      _selected.removeAll(result.uploaded.map((photo) => photo.localId));
+    });
+    final message = [
+      if (result.cancelled) l10n.uploadCancelled,
+      if (result.uploaded.isNotEmpty || !result.cancelled)
+        l10n.uploadDone(result.uploaded.length),
+      if (result.hasFailures) l10n.uploadFailed(result.failed.length),
+    ].join(' ');
+    messenger.showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _showFailures(UploadPhotosResult result) {
+    final l10n = AppLocalizations.of(context);
+    return showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.uploadFailureListTitle),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: result.failed.length,
+            itemBuilder: (context, index) {
+              final failure = result.failed[index];
+              return ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  Icons.broken_image_outlined,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+                title: Text(
+                  failure.photo.fileName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(describeUploadFailure(failure.reason, l10n)),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(l10n.commonClose),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -172,14 +206,62 @@ class _UploadTabState extends ConsumerState<UploadTab> {
         ),
         Padding(
           padding: const EdgeInsets.all(AppSpacing.pageMargin),
-          child: _uploading
-              ? const Center(child: CircularProgressIndicator())
-              : AppPrimaryButton(
-                  label: l10n.uploadSubmit,
-                  onPressed: _selected.isEmpty
-                      ? null
-                      : () => unawaited(_uploadSelected(candidates)),
-                ),
+          child: _buildRunControls(candidates, l10n),
+        ),
+      ],
+    );
+  }
+
+  /// The area under the grid: a progress bar with a cancel button while a
+  /// batch runs, otherwise the failure summary of the last run (when there
+  /// is one) above the upload button.
+  Widget _buildRunControls(
+    List<UploadCandidate> candidates,
+    AppLocalizations l10n,
+  ) {
+    final run = ref.watch(uploadRunProvider);
+    if (run.running) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          LinearProgressIndicator(
+            value: run.total == 0 ? null : run.completed / run.total,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                l10n.uploadProgress(run.completed, run.total),
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              TextButton(
+                onPressed: ref.read(uploadRunProvider.notifier).cancel,
+                child: Text(l10n.uploadCancel),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
+    final lastResult = run.lastResult;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (lastResult != null && lastResult.hasFailures) ...[
+          _FailureSummary(
+            count: lastResult.failed.length,
+            onShowDetails: () => unawaited(_showFailures(lastResult)),
+            onDismiss: ref.read(uploadRunProvider.notifier).dismissResult,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+        AppPrimaryButton(
+          label: l10n.uploadSubmit,
+          onPressed: _selected.isEmpty
+              ? null
+              : () => unawaited(_uploadSelected(candidates)),
         ),
       ],
     );
@@ -221,6 +303,47 @@ class _UploadTabState extends ConsumerState<UploadTab> {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// One-line recap of the last batch's failures, with the way into the
+/// per-photo list and a dismiss control.
+class _FailureSummary extends StatelessWidget {
+  const _FailureSummary({
+    required this.count,
+    required this.onShowDetails,
+    required this.onDismiss,
+  });
+
+  final int count;
+  final VoidCallback onShowDetails;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        Icon(Icons.error_outline, color: colorScheme.error),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            l10n.uploadFailed(count),
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        TextButton(
+          onPressed: onShowDetails,
+          child: Text(l10n.uploadShowFailures),
+        ),
+        IconButton(
+          onPressed: onDismiss,
+          tooltip: l10n.commonClose,
+          icon: const Icon(Icons.close),
+        ),
+      ],
     );
   }
 }

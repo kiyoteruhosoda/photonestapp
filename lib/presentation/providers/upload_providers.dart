@@ -89,14 +89,83 @@ class UploadCandidatesNotifier extends AsyncNotifier<UploadCandidates> {
       () => ref.read(listUploadCandidatesUseCaseProvider).execute(),
     );
   }
+}
 
-  /// Uploads [photos], then re-reads the grid so fresh "uploaded" badges
-  /// come from the history rather than from patched in-memory state.
-  Future<UploadPhotosResult> upload(List<LocalPhoto> photos) async {
-    final result = await ref.read(uploadPhotosUseCaseProvider).execute(photos);
-    await reload();
-    return result;
+/// One manual upload batch as the screen sees it: whether one is running,
+/// how far it got, and — once it settles — its outcome.
+final class UploadRunState {
+  const UploadRunState({
+    this.running = false,
+    this.completed = 0,
+    this.total = 0,
+    this.lastResult,
+  });
+
+  /// True while a batch is in flight.
+  final bool running;
+
+  /// Photos settled so far (uploaded or failed).
+  final int completed;
+
+  /// Batch size of the running (or last) upload.
+  final int total;
+
+  /// Outcome of the most recent batch, cleared when the next one starts
+  /// or via [UploadRunNotifier.dismissResult].
+  final UploadPhotosResult? lastResult;
+}
+
+/// Runs one manual upload batch at a time, exposing progress, cancellation,
+/// and the failure list of the last run.
+final NotifierProvider<UploadRunNotifier, UploadRunState> uploadRunProvider =
+    NotifierProvider<UploadRunNotifier, UploadRunState>(UploadRunNotifier.new);
+
+/// Drives [uploadRunProvider].
+class UploadRunNotifier extends Notifier<UploadRunState> {
+  UploadCancellation? _cancellation;
+
+  @override
+  UploadRunState build() => const UploadRunState();
+
+  /// Uploads [photos], reporting progress through the state, then re-reads
+  /// the candidate grid so fresh "uploaded" badges come from the history
+  /// rather than from patched in-memory state.
+  Future<UploadPhotosResult> start(List<LocalPhoto> photos) async {
+    final cancellation = UploadCancellation();
+    _cancellation = cancellation;
+    state = UploadRunState(running: true, total: photos.length);
+    try {
+      final result = await ref
+          .read(uploadPhotosUseCaseProvider)
+          .execute(
+            photos,
+            onProgress: (completed, total) => state = UploadRunState(
+              running: true,
+              completed: completed,
+              total: total,
+            ),
+            cancellation: cancellation,
+          );
+      await ref.read(uploadCandidatesProvider.notifier).reload();
+      state = UploadRunState(total: photos.length, lastResult: result);
+      return result;
+    } catch (_) {
+      // An unexpected escape must not leave the screen stuck in "running";
+      // the exception itself still propagates.
+      state = const UploadRunState();
+      rethrow;
+    } finally {
+      _cancellation = null;
+    }
   }
+
+  /// Asks the running batch to stop before its next photo. No-op when
+  /// nothing is running.
+  void cancel() => _cancellation?.cancel();
+
+  /// Clears the last outcome — the screen calls this when the user dismisses
+  /// the failure summary.
+  void dismissResult() => state = const UploadRunState();
 }
 
 /// Whether auto-upload is on, together with the command to change it.

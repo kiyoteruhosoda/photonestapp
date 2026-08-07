@@ -3,6 +3,13 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — `azure-pipelines.yml` を削除し GitHub Actions へ一本化
+
+- 旧 Progress #7。Azure パイプラインは `ios/` 不在で `Build_iOS` が必ず失敗、
+  配布先の App Center も 2025-03 に廃止済み、release 鍵の配線も未接続で
+  実質全損だったため削除。CI は GitHub Actions
+  （`quality.yml` / `build.yml`）のみとする。
+
 ## 2026-08-07 — 通知ボタンは通知機能の予約済み入り口として残す（ADR-0005）
 
 - 旧 Progress #13（ダミーの通知ボタンを削除するか実装するか）を「予約済みの

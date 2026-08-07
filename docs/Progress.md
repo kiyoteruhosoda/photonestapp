@@ -13,7 +13,6 @@
 |---|---|---|---|---|---|---|---|
 | 2 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | ⬜未着手 | 大 | 大 | 小 | 小 |
 | 3 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | ⬜未着手 | 大 | 中 | 小 | 小 |
-| 4 | 7 | `azure-pipelines.yml` を削除し GitHub Actions（`quality.yml` / `build.yml`）へ一本化する | ⬜未着手 | 中 | 中 | 小 | 小 |
 | 5 | 8 | サーバー由来の英語エラー文言を翻訳キー化する（`LoginFailure` 方式の分類をアルバム／アップロードへ横展開） | ⬜未着手 | 中 | 大 | 中 | 中 |
 | 6 | 9 | 動画対応（端末動画の列挙・アップロード・再生。現状 `RequestType.image` 固定で完全非対応） | ⬜未着手 | 大 | 大 | 大 | 大 |
 | 7 | 10 | オフラインキャッシュ（サムネイル永続化）とアルバム詳細のページング（現状メモリキャッシュのみ・全件一括取得） | ⬜未着手 | 大 | 中 | 大 | 大 |
@@ -28,21 +27,6 @@
 
 `android/app/build.gradle` が `com.example.flutterbase` のままで、Kotlin パッケージも
 テンプレートのまま。`scripts/rename_app.sh` が用意されているので実 ID で実行する。
-
-### 7. `azure-pipelines.yml` の削除（GitHub Actions へ一本化）
-
-削除して GitHub Actions（`quality.yml` / `build.yml`）へ一本化することに決定済み。
-判断根拠（現状の Azure パイプラインは実質全損）:
-
-- Stage `Build_iOS` は `ios/` ディレクトリが存在しないため必ず失敗し、
-  `Deploy` は両ビルド成功が条件のため永久に到達しない。
-- 配布先の Microsoft App Center は 2025-03 に廃止済み。
-- `DownloadSecureFile@1` は `KEYSTORE_*` を環境変数に載せるだけで、Gradle が読むのは
-  `android/key.properties` のみ（GitHub Actions の `build.yml` はこれを生成している）。
-  そのため secure file を設定していても Azure の release ビルドは常に debug 鍵署名の
-  AAB になる（release 鍵の配線が未接続）。
-- `scripts/ci.sh`（アーキテクチャチェック・カバレッジ閾値）を呼ばず GitHub Actions の
-  品質ゲートと乖離している。
 
 ### 8. サーバー由来エラーの翻訳キー化
 

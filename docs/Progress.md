@@ -12,19 +12,10 @@
 | 優先 | # | 概要 | 状態 | 影響度 | 重要度 | 難易度 | 工数 |
 |---|---|---|---|---|---|---|---|
 | 1 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | ⬜未着手 | 大 | 中 | 小 | 小 |
-| 2 | 3 | 認証トークンの保存先を SharedPreferences から Keystore へ移す | ⬜未着手 | 大 | 大 | 中 | 中 |
-| 3 | 4 | アプリを閉じている間の自動アップロード（WorkManager 等のバックグラウンド実行） | ⬜未着手 | 中 | 中 | 大 | 大 |
-| 4 | 2 | ViewModel + `AppScope` を Riverpod に寄せるか決める | 🟡要判断 | 中 | 中 | 中 | 大 |
+| 2 | 4 | アプリを閉じている間の自動アップロード（WorkManager 等のバックグラウンド実行） | ⬜未着手 | 中 | 中 | 大 | 大 |
 
 
 ## 詳細
-
-### 3. 認証トークンの保存先を Keystore へ移す
-
-`SharedPreferencesSessionRepository` は開発段階の実装で、アクセストークン・
-リフレッシュトークンを平文の SharedPreferences に保存している。本番運用前に
-`flutter_secure_storage`（Android Keystore）等への差し替えが必要。
-`SessionRepository` の実装を差し替えるだけで済む構造にしてある。
 
 ### 4. バックグラウンド自動アップロード
 
@@ -47,20 +38,3 @@ fork 後に必要な作業は 3 つで、いずれも `docs/DEEP_LINKS.md` に�
    `https://<host>/.well-known/assetlinks.json` として配信する。
 
 テンプレート側で決められるのはここまでなので、作業自体は fork 側に残します。
-
-### 2. ViewModel + `AppScope` を Riverpod に寄せるか決める
-
-現在、状態管理の入り口が 2 つあります。
-
-- 既存のテーマ・言語・デバッグ設定・About・Logs: `get_it` + `ChangeNotifier`
-  + `AppScope`（`InheritedWidget`）
-- ブックマーク機能: `flutter_riverpod`（provider は Presentation に宣言し、
-  合成ルートが `overrideWithValue` で実体を注入）
-
-役割は同じ（合成ルートが注入し、Presentation は契約だけを見る）で、
-どちらも `tool/check_architecture.dart` を通ります。ただしテンプレートとして
-「どちらで書けばいいか」が一目で決まらないのは弱点です。
-
-Riverpod に統一する場合、ViewModel 5 本とそのテスト、`AppScope`、
-テストハーネスが影響範囲です。既存コードが動いている以上、急ぎではありません。
-経緯は `docs/adr/0002-starter-stack.md`。

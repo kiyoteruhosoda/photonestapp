@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/app/bootstrap/app_router.dart';
 import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
 import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
 import 'package:flutterbase/application/usecases/album/list_albums_usecase.dart';
@@ -32,20 +33,16 @@ import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/presentation/app_scope.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
+import 'package:flutterbase/presentation/providers/app_info_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
 import 'package:flutterbase/presentation/providers/bookmark_providers.dart';
+import 'package:flutterbase/presentation/providers/session_providers.dart';
+import 'package:flutterbase/presentation/providers/settings_providers.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
 import 'package:flutterbase/presentation/theme/app_theme.dart';
-import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:go_router/go_router.dart';
 
 import 'fakes.dart';
@@ -56,6 +53,8 @@ import 'recording_app_logger.dart';
 /// Mirrors what `app/di/service_locator.dart` and
 /// `app/di/provider_overrides.dart` assemble at runtime, so a widget test
 /// exercises the same wiring the app ships — without any platform channel.
+/// All screen state lives in Riverpod; [container] is the test's window into
+/// it (`scope.container.read(themeModeProvider)` and friends).
 class TestScope {
   TestScope({
     FakeThemePreferenceRepository? themeRepository,
@@ -86,8 +85,8 @@ class TestScope {
        logger = logger ?? RecordingAppLogger(),
        authRepository = authRepository ?? FakeAuthRepository(),
        // Widget tests exercise screens that sit behind the login guard, so
-       // the default scope is signed in; pass `initialSession: null` via a
-       // fresh FakeSessionRepository to start signed out.
+       // the default scope is signed in; pass a fresh FakeSessionRepository
+       // to start signed out.
        sessionRepository =
            sessionRepository ??
            FakeSessionRepository(initialSession ?? testAuthSession),
@@ -102,37 +101,7 @@ class TestScope {
            uploadHistoryRepository ?? FakeUploadHistoryRepository(),
        autoUploadSettingsRepository =
            autoUploadSettingsRepository ?? FakeAutoUploadSettingsRepository(),
-       photoLibrary = photoLibrary ?? FakePhotoLibraryGateway() {
-    themeViewModel = ThemeViewModel(
-      GetThemePreferenceUseCase(this.themeRepository),
-      SetThemePreferenceUseCase(this.themeRepository),
-      this.logger,
-    );
-    languageViewModel = LanguageViewModel(
-      GetLanguagePreferenceUseCase(this.languageRepository),
-      SetLanguagePreferenceUseCase(this.languageRepository),
-      this.logger,
-    );
-    debugSettingsViewModel = DebugSettingsViewModel(
-      GetDebugSettingsUseCase(this.debugSettingsRepository),
-      SetDebugModeUseCase(this.debugSettingsRepository),
-      SetLogLevelUseCase(this.debugSettingsRepository, this.logger),
-      this.logger,
-    );
-    sessionViewModel = SessionViewModel(
-      LoginUseCase(
-        this.authRepository,
-        this.sessionRepository,
-        this.apiEndpointRepository,
-        this.logger,
-      ),
-      LogoutUseCase(this.authRepository, this.sessionRepository, this.logger),
-      RestoreSessionUseCase(this.sessionRepository),
-      GetApiEndpointUseCase(this.apiEndpointRepository),
-      WatchSessionUseCase(this.sessionRepository),
-      this.logger,
-    );
-  }
+       photoLibrary = photoLibrary ?? FakePhotoLibraryGateway();
 
   final FakeThemePreferenceRepository themeRepository;
   final FakeLanguagePreferenceRepository languageRepository;
@@ -151,14 +120,21 @@ class TestScope {
   final FakeAutoUploadSettingsRepository autoUploadSettingsRepository;
   final FakePhotoLibraryGateway photoLibrary;
 
-  late final ThemeViewModel themeViewModel;
-  late final LanguageViewModel languageViewModel;
-  late final DebugSettingsViewModel debugSettingsViewModel;
-  late final SessionViewModel sessionViewModel;
+  /// The Riverpod container every wrapped widget reads from.
+  ///
+  /// The same instance backs [wrap] (via `UncontrolledProviderScope`), so a
+  /// test can drive state — `container.read(sessionProvider.notifier)` — and
+  /// observe what the screen sees.
+  late final ProviderContainer container = ProviderContainer(
+    overrides: providerOverrides(),
+    // Mirrors main.dart: no automatic retry — error states carry an
+    // explicit retry button, and a background retry would double-count the
+    // repository calls tests assert on.
+    retry: (retryCount, error) => null,
+  );
 
-  /// Number of times a per-screen ViewModel has been requested.
-  int aboutViewModelsCreated = 0;
-  int debugViewModelsCreated = 0;
+  /// Shorthand for the session commands most auth tests need.
+  SessionNotifier get session => container.read(sessionProvider.notifier);
 
   /// The router [wrap] installed, available once [wrap] has been called.
   late final GoRouter router;
@@ -170,14 +146,16 @@ class TestScope {
   /// Where the router currently is.
   String get location => router.state.uri.toString();
 
-  AboutViewModel createAboutViewModel() {
-    aboutViewModelsCreated++;
-    return AboutViewModel(GetAppInfoUseCase(appInfoRepository), logger);
-  }
-
-  DebugViewModel createDebugViewModel() {
-    debugViewModelsCreated++;
-    return DebugViewModel(GetAppInfoUseCase(appInfoRepository), logger);
+  /// A refresh bridge wired to [container], for tests that mount the app's
+  /// real router: it re-runs the auth guard when the session changes,
+  /// exactly as the composition root does at runtime.
+  Listenable routerRefresh() {
+    final bridge = RouterRefreshBridge();
+    container.listen<bool>(
+      sessionProvider.select((state) => state.isAuthenticated),
+      (_, _) => bridge.poke(),
+    );
+    return bridge;
   }
 
   /// The Riverpod overrides the composition root installs, with fakes in
@@ -246,11 +224,56 @@ class TestScope {
           logger,
         ),
       ),
+      getThemePreferenceUseCaseProvider.overrideWithValue(
+        GetThemePreferenceUseCase(themeRepository),
+      ),
+      setThemePreferenceUseCaseProvider.overrideWithValue(
+        SetThemePreferenceUseCase(themeRepository),
+      ),
+      getLanguagePreferenceUseCaseProvider.overrideWithValue(
+        GetLanguagePreferenceUseCase(languageRepository),
+      ),
+      setLanguagePreferenceUseCaseProvider.overrideWithValue(
+        SetLanguagePreferenceUseCase(languageRepository),
+      ),
+      getDebugSettingsUseCaseProvider.overrideWithValue(
+        GetDebugSettingsUseCase(debugSettingsRepository),
+      ),
+      setDebugModeUseCaseProvider.overrideWithValue(
+        SetDebugModeUseCase(debugSettingsRepository),
+      ),
+      setLogLevelUseCaseProvider.overrideWithValue(
+        SetLogLevelUseCase(debugSettingsRepository, logger),
+      ),
+      getAppInfoUseCaseProvider.overrideWithValue(
+        GetAppInfoUseCase(appInfoRepository),
+      ),
+      loginUseCaseProvider.overrideWithValue(
+        LoginUseCase(
+          authRepository,
+          sessionRepository,
+          apiEndpointRepository,
+          logger,
+        ),
+      ),
+      logoutUseCaseProvider.overrideWithValue(
+        LogoutUseCase(authRepository, sessionRepository, logger),
+      ),
+      restoreSessionUseCaseProvider.overrideWithValue(
+        RestoreSessionUseCase(sessionRepository),
+      ),
+      getApiEndpointUseCaseProvider.overrideWithValue(
+        GetApiEndpointUseCase(apiEndpointRepository),
+      ),
+      watchSessionUseCaseProvider.overrideWithValue(
+        WatchSessionUseCase(sessionRepository),
+      ),
     ];
   }
 
-  /// Wraps [child] in the same scope, theme, localisations, and router the
-  /// real app installs, so a widget under test sees production conditions.
+  /// Wraps [child] in the same providers, theme, localisations, and router
+  /// the real app installs, so a widget under test sees production
+  /// conditions.
   ///
   /// [child] is mounted at `/`; every other location in
   /// [AppRoutes] resolves to a labelled placeholder, so a test asserts that
@@ -267,37 +290,27 @@ class TestScope {
     );
   }
 
-  /// The same scope, theme, localisations, and provider overrides as [wrap],
-  /// driven by [config] instead of the placeholder route table.
+  /// The same providers, theme, and localisations as [wrap], driven by
+  /// [config] instead of the placeholder route table.
   ///
   /// For tests that exercise the app's real router — a deep link resolving to
   /// a real screen, for instance.
   Widget wrapRouter(GoRouter config, {Locale? locale}) {
     router = config;
-    return ProviderScope(
-      overrides: providerOverrides(),
-      child: AppScope(
-        logger: logger,
-        themeViewModel: themeViewModel,
-        languageViewModel: languageViewModel,
-        debugSettingsViewModel: debugSettingsViewModel,
-        sessionViewModel: sessionViewModel,
-        createAboutViewModel: createAboutViewModel,
-        createDebugViewModel: createDebugViewModel,
-        child: MaterialApp.router(
-          theme: AppTheme.light,
-          darkTheme: AppTheme.dark,
-          themeMode: themeViewModel.themeMode,
-          locale: locale,
-          supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          routerConfig: config,
-        ),
+    return UncontrolledProviderScope(
+      container: container,
+      child: MaterialApp.router(
+        theme: AppTheme.light,
+        darkTheme: AppTheme.dark,
+        locale: locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        routerConfig: config,
       ),
     );
   }
@@ -365,7 +378,7 @@ Future<TestScope> pumpInScope(
   return resolved;
 }
 
-/// Pumps a bare widget with theme and localisations but no [AppScope].
+/// Pumps a bare widget with theme and localisations but no providers.
 ///
 /// For leaf UI components that must not reach for app state.
 ///

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/bookmark_id.dart';
@@ -12,8 +14,18 @@ import 'package:flutterbase/presentation/pages/system/debug_page.dart';
 import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
 import 'package:flutterbase/presentation/pages/system/logs_page.dart';
 import 'package:flutterbase/presentation/pages/system/not_found_page.dart';
-import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
+import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:go_router/go_router.dart';
+
+/// Re-runs the router's redirect when poked.
+///
+/// `GoRouter.refreshListenable` wants a [Listenable]; Riverpod state is not
+/// one. The composition root listens to [sessionProvider] and pokes this
+/// bridge, which is what turns a login or logout into automatic navigation.
+class RouterRefreshBridge extends ChangeNotifier {
+  /// Announces that the auth state changed.
+  void poke() => notifyListeners();
+}
 
 /// Builds the app's [GoRouter].
 ///
@@ -44,24 +56,27 @@ class AppRouter {
   /// for tests that want to start somewhere other than Home — at runtime the
   /// platform's deep link wins over it.
   ///
-  /// [sessionViewModel] is both the guard's source of truth and the trigger
-  /// for re-evaluating it: `refreshListenable` re-runs `redirect` on every
-  /// session change, which is what turns a login or logout into automatic
-  /// navigation.
+  /// The auth guard reads [sessionProvider] through the `ProviderScope`
+  /// above the router. [refreshListenable] re-runs the redirect when poked —
+  /// the composition root pokes it on every session change, which is what
+  /// turns a login or logout into automatic navigation.
   static GoRouter create({
     required AppLogger logger,
-    required SessionViewModel sessionViewModel,
+    Listenable? refreshListenable,
     String? initialLocation,
   }) {
     return GoRouter(
       initialLocation: initialLocation ?? AppRoutes.main,
-      refreshListenable: sessionViewModel,
+      refreshListenable: refreshListenable,
       // Every resolved location passes through here — including the one the
       // platform hands over when a link launches the app cold — so one log
       // line answers "did the link reach the router, and as what?".
       redirect: (context, state) {
         logger.debug('[Router] → ${state.uri}');
-        final signedIn = sessionViewModel.isAuthenticated;
+        final signedIn = ProviderScope.containerOf(
+          context,
+          listen: false,
+        ).read(sessionProvider).isAuthenticated;
         final atLogin = state.matchedLocation == AppRoutes.login;
         // Everything except the login screen requires a session. Signed-in
         // users have no business on the login screen either — after a

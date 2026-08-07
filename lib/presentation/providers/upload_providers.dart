@@ -9,6 +9,7 @@ import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:flutterbase/presentation/providers/session_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 
@@ -75,6 +76,9 @@ uploadCandidatesProvider =
 class UploadCandidatesNotifier extends AsyncNotifier<UploadCandidates> {
   @override
   Future<UploadCandidates> build() {
+    // The "uploaded" badges come from the account-scoped upload history, so
+    // the grid is identity-derived even though the photos are local.
+    ref.watch(sessionIdentityProvider);
     return ref.read(listUploadCandidatesUseCaseProvider).execute();
   }
 

@@ -19,6 +19,8 @@ dependencies:
   # State management (presentation). Used without code generation — see
   # docs/adr/0002-starter-stack.md.
   flutter_riverpod: ^3.3.2
+  # Platform keystore-backed storage for auth tokens (infrastructure).
+  flutter_secure_storage: ^11.0.0
   # Service locator — composition root only (lib/app/di).
   get_it: ^9.2.1
   # Navigation (presentation).
@@ -53,6 +55,9 @@ dev_dependencies:
   # `adaptive_icon_monochrome` knob used for Android 13+ themed icons.
   flutter_launcher_icons: ^0.14.4
   flutter_lints: ^6.0.0
+  # Typed access to FlutterSecureStoragePlatform.instance, so tests can
+  # install the in-memory platform the plugin ships for testing.
+  flutter_secure_storage_platform_interface: ^2.0.3
   flutter_test:
     sdk: flutter
   integration_test:

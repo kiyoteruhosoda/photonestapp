@@ -41,7 +41,7 @@ void main() {
     final resolved = scope ?? TestScope();
     final router = AppRouter.create(
       logger: resolved.logger,
-      sessionViewModel: resolved.sessionViewModel,
+      refreshListenable: resolved.routerRefresh(),
       initialLocation: location,
     );
     addTearDown(router.dispose);
@@ -107,7 +107,7 @@ void main() {
 
       final router = AppRouter.create(
         logger: scope.logger,
-        sessionViewModel: scope.sessionViewModel,
+        refreshListenable: scope.routerRefresh(),
         initialLocation: '/bookmarks/7',
       );
       addTearDown(router.dispose);
@@ -195,7 +195,7 @@ void main() {
       await openAt(tester, AppRoutes.main, scope: scope);
       expect(find.byType(LoginPage), findsOneWidget);
 
-      final loggedIn = await scope.sessionViewModel.login(
+      final loggedIn = await scope.session.login(
         serverUrl: 'https://photos.example.com',
         email: 'user@example.com',
         password: 'secret',
@@ -209,7 +209,7 @@ void main() {
       final scope = await openAt(tester, AppRoutes.main);
       expect(find.byType(MainPage), findsOneWidget);
 
-      await scope.sessionViewModel.logout();
+      await scope.session.logout();
       await tester.pumpAndSettle();
       expect(find.byType(LoginPage), findsOneWidget);
     });

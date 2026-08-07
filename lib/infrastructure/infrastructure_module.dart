@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
@@ -24,11 +25,11 @@ import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/package_info_app_info_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/secure_storage_session_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_api_endpoint_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_upload_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_debug_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
-import 'package:flutterbase/infrastructure/repositories/shared_preferences_session_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_bookmark_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
@@ -85,8 +86,13 @@ final class InfrastructureModule {
     );
 
     // One HTTP client and one API client for every server-backed adapter,
-    // so they share the token-refresh logic and its persistence.
-    final sessions = SharedPreferencesSessionRepository(preferences);
+    // so they share the token-refresh logic and its persistence. Tokens
+    // live in the platform keystore; `preferences` is passed so tokens a
+    // pre-keystore build left in plaintext are migrated and purged.
+    final sessions = await SecureStorageSessionRepository.create(
+      const FlutterSecureStorage(),
+      preferences,
+    );
     final apiEndpoints = SharedPreferencesApiEndpointRepository(preferences);
     final apiClient = PhotoNestApiClient(
       httpClient: http.Client(),

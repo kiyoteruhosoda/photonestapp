@@ -43,12 +43,6 @@ import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/infrastructure_module.dart';
-import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:get_it/get_it.dart';
 
 /// Composition root.
@@ -222,46 +216,8 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
-  // ─── ViewModels ──────────────────────────────────────────────────────
-
-  sl.registerSingleton<ThemeViewModel>(
-    ThemeViewModel(
-      sl<GetThemePreferenceUseCase>(),
-      sl<SetThemePreferenceUseCase>(),
-      sl<AppLogger>(),
-    ),
-  );
-  sl.registerSingleton<LanguageViewModel>(
-    LanguageViewModel(
-      sl<GetLanguagePreferenceUseCase>(),
-      sl<SetLanguagePreferenceUseCase>(),
-      sl<AppLogger>(),
-    ),
-  );
-  sl.registerSingleton<DebugSettingsViewModel>(
-    DebugSettingsViewModel(
-      sl<GetDebugSettingsUseCase>(),
-      sl<SetDebugModeUseCase>(),
-      sl<SetLogLevelUseCase>(),
-      sl<AppLogger>(),
-    ),
-  );
-  sl.registerSingleton<SessionViewModel>(
-    SessionViewModel(
-      sl<LoginUseCase>(),
-      sl<LogoutUseCase>(),
-      sl<RestoreSessionUseCase>(),
-      sl<GetApiEndpointUseCase>(),
-      sl<WatchSessionUseCase>(),
-      sl<AppLogger>(),
-    ),
-  );
-  sl.registerFactory<AboutViewModel>(
-    () => AboutViewModel(sl<GetAppInfoUseCase>(), sl<AppLogger>()),
-  );
-  sl.registerFactory<DebugViewModel>(
-    () => DebugViewModel(sl<GetAppInfoUseCase>(), sl<AppLogger>()),
-  );
+  // Screen state lives in Riverpod. The bridge from these use cases to the
+  // providers the screens read is `lib/app/di/provider_overrides.dart`.
 
   sl<AppLogger>().info('[DI] Service locator setup complete');
 }

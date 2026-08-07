@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/pages/auth/login_page.dart';
+import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 
 import '../../../support/fakes.dart';
@@ -55,7 +56,7 @@ void main() {
     await tester.tap(find.byType(AppPrimaryButton));
     await tester.pumpAndSettle();
 
-    expect(scope.sessionViewModel.isAuthenticated, isTrue);
+    expect(scope.container.read(sessionProvider).isAuthenticated, isTrue);
     expect(scope.authRepository.logins.single.email, 'user@example.com');
   });
 
@@ -71,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.loginErrorInvalidCredentials), findsOneWidget);
-    expect(scope.sessionViewModel.isAuthenticated, isFalse);
+    expect(scope.container.read(sessionProvider).isAuthenticated, isFalse);
   });
 
   testWidgets('an unreachable server renders the network error', (
@@ -112,6 +113,6 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
 
-    expect(scope.sessionViewModel.isAuthenticated, isTrue);
+    expect(scope.container.read(sessionProvider).isAuthenticated, isTrue);
   });
 }

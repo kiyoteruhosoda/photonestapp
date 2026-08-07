@@ -32,6 +32,10 @@ Future<void> main() async {
   runApp(
     ProviderScope(
       overrides: buildProviderOverrides(),
+      // Riverpod 3 は失敗した provider を既定で自動リトライする。この
+      // アプリはエラー表示に明示的な「再試行」を置いているので、裏で
+      // サーバーを叩き直す自動リトライは無効にする。
+      retry: (retryCount, error) => null,
       child: const AppWidget(),
     ),
   );

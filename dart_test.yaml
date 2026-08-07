@@ -1,0 +1,11 @@
+# Test tags.
+#
+# `flutter test` warns about tags it has never heard of, so every tag used
+# with `@Tags([...])` is declared here.
+tags:
+  # Tests that shell out to the checkers in tool/. They are slower than a
+  # unit test because they compile and run a separate process.
+  #
+  # Skip them locally with: flutter test --exclude-tags tool
+  tool:
+    description: End-to-end tests for the tool/ CI checkers.

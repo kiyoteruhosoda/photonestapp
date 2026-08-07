@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon (Android 8+/API 26+).
+
+  background  → brand colour defined in res/values/colors.xml.
+                Ensures the launcher renders the icon on the brand plate
+                rather than a white fallback on Android 12+ launchers.
+  foreground  → the shipped foreground art (see assets/icon/); its central
+                66% is the safe zone honoured by every launcher mask.
+  monochrome  → Android 13+/API 33 "themed icons". The system tints this
+                single-colour layer with the user's wallpaper-derived
+                theme colour. We reuse the foreground for now; swap in a
+                dedicated silhouette if the foreground renders poorly.
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+</adaptive-icon>

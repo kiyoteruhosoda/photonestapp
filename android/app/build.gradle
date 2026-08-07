@@ -1,0 +1,172 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
+// Release signing — reads android/key.properties written by CI or local dev.
+// See docs/signing.md for setup instructions.
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.withReader("UTF-8") { reader ->
+        keystoreProperties.load(reader)
+    }
+}
+def hasKeystore = keystoreProperties.getProperty("storeFile") != null
+
+// Project-local debug keystore — checked into the repo so every dev and CI
+// runner signs debug builds with the same key.  Without this, each machine
+// generates its own ~/.android/debug.keystore, and switching APKs between
+// machines triggers INSTALL_FAILED_UPDATE_INCOMPATIBLE on install (the
+// previously installed APK's signature differs from the new one).
+// See docs/CUSTOMISATION.md §9b.
+def sharedDebugKeystore = rootProject.file("app/debug.keystore")
+
+// Single source of truth for namespace + applicationId + the APK/AAB
+// base filename.  `scripts/rename_app.sh` rewrites the two string
+// constants below, and the archives base name derives from them.
+def appNamespace     = "com.example.flutterbase"
+def appApplicationId = "com.example.flutterbase"
+def appArchivesBase  = (project.findProperty("app.archivesBaseName")
+    ?: appApplicationId.tokenize('.').last())
+
+android {
+    namespace = appNamespace
+    compileSdk = 36
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_17
+    }
+
+    signingConfigs {
+        if (sharedDebugKeystore.exists()) {
+            debug {
+                keyAlias      "androiddebugkey"
+                keyPassword   "android"
+                storeFile     sharedDebugKeystore
+                storePassword "android"
+            }
+        }
+        if (hasKeystore) {
+            release {
+                keyAlias     keystoreProperties["keyAlias"]
+                keyPassword  keystoreProperties["keyPassword"]
+                storeFile    file(keystoreProperties["storeFile"])
+                storePassword keystoreProperties["storePassword"]
+            }
+        }
+    }
+
+    defaultConfig {
+        applicationId = appApplicationId
+        minSdk = 36
+        targetSdk = 36
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+    }
+
+    // Pin NDK to the highest version any plugin depends on (currently
+    // integration_test and jni → 28.2.13676358).  NDK is backward-compatible,
+    // so newer is always safe; leaving Gradle's default triggers a warning
+    // and can fail on strict CI.  `flutter build` names the version it wants
+    // in its output whenever a plugin moves past this one.
+    ndkVersion = "28.2.13676358"
+
+    buildTypes {
+        release {
+            signingConfig = hasKeystore ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+}
+
+// Per-app renamed COPIES of Gradle's default outputs.
+//
+// We deliberately do not rename the originals via base.archivesName or
+// applicationVariants.outputFileName: Flutter's CLI post-build step hard-
+// codes the default filenames (app-<buildType>.aab, app-<buildType>.apk)
+// and fails with "Gradle build failed to produce an .aab file" if they
+// are missing.  Leaving the defaults in place keeps `flutter build ...`
+// working; the named copy lives alongside for humans and CI.
+//
+// APK lives in two directories:
+//   build/app/outputs/apk/<buildType>/        (AGP's raw output)
+//   build/app/outputs/flutter-apk/            (Flutter CLI copies here
+//                                              AFTER Gradle exits)
+// AAB lives in one:
+//   build/app/outputs/bundle/<buildType>/
+//
+// We drop a per-app copy into every one of those directories so CI
+// uploaders can pick it up regardless of which path they watch.
+project.afterEvaluate {
+    android.applicationVariants.all { variant ->
+        def variantName   = variant.name                    // e.g. "release"
+        def variantCap    = variantName.capitalize()        // e.g. "Release"
+        def perAppBase    = "${appArchivesBase}-${variant.versionName}-${variantName}"
+
+        // APK copy — runs after the assemble task has produced app-<type>.apk.
+        def assembleTask = tasks.findByName("assemble${variantCap}")
+        if (assembleTask != null) {
+            assembleTask.doLast {
+                variant.outputs.each { output ->
+                    def src = output.outputFile
+                    if (src?.exists()) {
+                        // 1. Next to the AGP output.
+                        new File(src.parentFile, "${perAppBase}.apk").bytes = src.bytes
+
+                        // 2. Next to Flutter's post-build copy.  Flutter
+                        //    creates flutter-apk/ after Gradle exits, so we
+                        //    create it here; Flutter's later `cp app-release.apk`
+                        //    into the same dir doesn't disturb our file.
+                        def flutterApkDir = file("${buildDir}/outputs/flutter-apk")
+                        flutterApkDir.mkdirs()
+                        def flutterDst = new File(flutterApkDir, "${perAppBase}.apk")
+                        flutterDst.bytes = src.bytes
+                        logger.lifecycle("Per-app APK: ${flutterDst}")
+                    }
+                }
+            }
+        }
+
+        // AAB copy — runs after the bundle task has produced app-<type>.aab.
+        def bundleTask = tasks.findByName("bundle${variantCap}")
+        if (bundleTask != null) {
+            bundleTask.doLast {
+                def bundleDir = file("${buildDir}/outputs/bundle/${variantName}")
+                def src = new File(bundleDir, "app-${variantName}.aab")
+                if (src.exists()) {
+                    def dst = new File(bundleDir, "${perAppBase}.aab")
+                    dst.bytes = src.bytes
+                    logger.lifecycle("Per-app AAB: ${dst}")
+                }
+            }
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}

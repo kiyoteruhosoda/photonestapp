@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ic_launcher_background: adaptive-icon background layer (API 26+) and
+  Android 12+ splash-screen background. Must match AppColors.brand
+  (lib/shared/theme/app_colors.dart) so the native surface and Flutter
+  surface agree.
+-->
+<resources>
+    <color name="ic_launcher_background">#264AF4</color>
+</resources>

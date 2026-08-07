@@ -1,0 +1,99 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application
+        android:label="@string/app_name"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/NormalTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            <meta-data
+              android:name="io.flutter.embedding.android.NormalTheme"
+              android:resource="@style/NormalTheme" />
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+            <!-- ── App Links ────────────────────────────────────────────
+                 android:autoVerify="true" makes Android fetch
+                 https://<host>/.well-known/assetlinks.json at install time
+                 and compare its signing-certificate fingerprints with this
+                 APK's. Only if they match does the system open these links
+                 here instead of in the browser — that verification is the
+                 difference between an App Link and a custom scheme anyone
+                 could claim.
+
+                 The host must equal AppConfig.appLinkHost, and the paths
+                 must match the routes in
+                 presentation/navigation/app_routes.dart. See
+                 docs/DEEP_LINKS.md for generating assetlinks.json and for
+                 verifying with adb. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="flutterbase.example.com"/>
+            </intent-filter>
+
+            <!-- ── Custom scheme fallback ───────────────────────────────
+                 Unverified: any app may register the same scheme, so this
+                 is for local testing and for entry points you control —
+                 never for a link a stranger can send. Links must use the
+                 empty-authority form (flutterbase:///bookmarks/1), because
+                 Flutter's Android embedding builds the in-app route from
+                 the URI path and drops the authority. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="flutterbase"/>
+            </intent-filter>
+
+            <!-- Hands the launch intent's URI to the Flutter framework as the
+                 initial route, and delivers later ones to the Router API
+                 while the app is running. Without it, the intent filters
+                 above still open the app, but it always lands on "/".
+
+                 Must sit INSIDE <activity>: FlutterActivity.getMetaData()
+                 reads ActivityInfo.metaData, so the same element placed
+                 under <application> is never seen — and the failure is
+                 silent. -->
+            <meta-data
+                android:name="flutter_deeplinking_enabled"
+                android:value="true" />
+        </activity>
+
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2" />
+    </application>
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- url_launcher needs to see which apps can handle a web URL before
+             canLaunchUrl() will answer truthfully on API 30+. Both schemes
+             are declared because BookmarkDraft accepts both: with only
+             https here, an http-only handler stays invisible and
+             canLaunchUrl reports a URL as unopenable that the platform
+             could in fact open. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="http"/>
+        </intent>
+    </queries>
+</manifest>

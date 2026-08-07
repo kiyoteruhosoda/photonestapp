@@ -1,0 +1,94 @@
+# Static-analysis policy.
+#
+# CI runs `flutter analyze --fatal-infos --fatal-warnings`, so every
+# diagnostic below — including `info` — fails the build. Severities are
+# still declared explicitly for the rules that must never be downgraded to
+# a hint by a future edit.
+#
+# Architectural rules the analyzer cannot express (layer direction,
+# per-layer package bans, domain purity) live in
+# `tool/check_architecture.dart` and `tool/check_dependencies.dart`.
+# See `docs/ARCHITECTURE.md`.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    # Reject implicit downcasts from `dynamic`.
+    strict-casts: true
+    # Reject inference that would silently fall back to `dynamic`.
+    strict-inference: true
+    # Reject generic types used without type arguments.
+    strict-raw-types: true
+
+  errors:
+    # ── Type integrity ────────────────────────────────────────────────
+    argument_type_not_assignable: error
+    invalid_assignment: error
+    return_of_invalid_type: error
+    missing_required_param: error
+    missing_return: error
+    body_might_complete_normally_nullable: error
+
+    # ── Dead code / unused declarations ───────────────────────────────
+    dead_code: error
+    dead_null_aware_expression: error
+    unused_import: error
+    unused_local_variable: error
+    unused_field: error
+    unused_element: error
+    unused_shown_name: error
+    unnecessary_import: error
+
+    # ── Async correctness ─────────────────────────────────────────────
+    unawaited_futures: error
+    discarded_futures: error
+    use_build_context_synchronously: error
+
+    # ── Dynamic escapes ───────────────────────────────────────────────
+    avoid_dynamic_calls: error
+    avoid_print: error
+
+    # ── Immutability ──────────────────────────────────────────────────
+    prefer_final_fields: error
+    prefer_final_locals: error
+
+    # TODOs are informational, not build failures.
+    todo: ignore
+
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "**/*.mocks.dart"
+    - "build/**"
+
+linter:
+  rules:
+    - always_declare_return_types
+    # Package imports only. `prefer_relative_imports` is deliberately NOT
+    # enabled: the two rules are mutually exclusive, and package imports
+    # make a file's layer visible at the import site, which is what the
+    # architecture checks read.
+    - always_use_package_imports
+    - avoid_dynamic_calls
+    - avoid_print
+    - avoid_slow_async_io
+    - avoid_unnecessary_containers
+    - avoid_unused_constructor_parameters
+    - cancel_subscriptions
+    - close_sinks
+    - depend_on_referenced_packages
+    - directives_ordering
+    - discarded_futures
+    - lines_longer_than_80_chars
+    - only_throw_errors
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_final_fields
+    - prefer_final_locals
+    - sort_pub_dependencies
+    - unawaited_futures
+    - unnecessary_lambdas
+    - use_build_context_synchronously
+    - use_key_in_widget_constructors
+    - use_string_buffers

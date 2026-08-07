@@ -1,0 +1,23 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// Keep every module's build output under the repository-root build/ tree, so
+// `flutter clean` and CI artefact collection only have one place to look.
+// `Project.buildDir` is deprecated from Gradle 8.11; `layout.buildDirectory`
+// is the replacement.
+rootProject.layout.buildDirectory.set(file("../build"))
+
+subprojects {
+    layout.buildDirectory.set(
+        rootProject.layout.buildDirectory.dir(project.name)
+    )
+    project.evaluationDependsOn(":app")
+}
+
+tasks.register("clean", Delete) {
+    delete rootProject.layout.buildDirectory
+}

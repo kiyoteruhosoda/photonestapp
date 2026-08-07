@@ -1,0 +1,108 @@
+name: flutterbase
+description: flutterbase
+publish_to: "none"
+version: 1.7.1+151
+
+environment:
+  sdk: ">=3.12.0 <4.0.0"
+  flutter: ">=3.44.0"
+
+# Dependencies are listed alphabetically (enforced by the
+# `sort_pub_dependencies` lint). The layer each package may be imported
+# from is enforced by `tool/check_dependencies.dart` — see
+# `docs/ARCHITECTURE.md` §"Package placement rules".
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  # State management (presentation). Used without code generation — see
+  # docs/adr/0002-starter-stack.md.
+  flutter_riverpod: ^3.3.2
+  # Service locator — composition root only (lib/app/di).
+  get_it: ^9.2.1
+  # Navigation (presentation).
+  go_router: ^17.3.0
+  # Console/file logging backend (infrastructure).
+  logger: ^2.7.0
+  # Runtime package metadata (infrastructure).
+  package_info_plus: ^10.2.1
+  # Filesystem path composition — database file location (infrastructure).
+  path: ^1.9.1
+  # Platform directories (infrastructure).
+  path_provider: ^2.1.6
+  # Key-value persistence (infrastructure).
+  shared_preferences: ^2.5.5
+  # SQLite (infrastructure).
+  sqflite: ^2.4.3
+  # External links (presentation).
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  # Powers the AST-based checks in tool/check_architecture.dart.
+  analyzer: ^12.1.0
+  build_runner: ^2.15.1
+  # 0.13.x fails on Dart SDK ≥ 3.3 during adaptive-icon generation
+  # (silently skips mipmap-anydpi-v26 output). 0.14+ also unlocks the
+  # `adaptive_icon_monochrome` knob used for Android 13+ themed icons.
+  flutter_launcher_icons: ^0.14.4
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  mockito: ^5.6.4
+  # Runs the SQLite adapter's tests on the host VM, where the Android/iOS
+  # sqflite plugin is unavailable.
+  sqflite_common_ffi: ^2.4.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icon/
+  fonts:
+    - family: NotoSansJP
+      fonts:
+        - asset: assets/fonts/NotoSansJP-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansJP-Bold.ttf
+          weight: 700
+
+# Launcher-icon generation.
+# Regenerate after editing by running:
+#   dart run flutter_launcher_icons
+# The generated PNGs under android/app/src/main/res/mipmap-*/ and
+# mipmap-anydpi-v26/ic_launcher.xml should be committed.
+flutter_launcher_icons:
+  android: "ic_launcher"
+  image_path: "assets/icon/app_icon.png"
+  # Brand colour — keep in sync with AppColors.brand (AppColors.blue800)
+  # and res/values/colors.xml@ic_launcher_background.
+  adaptive_icon_background: "#264AF4"
+  adaptive_icon_foreground: "assets/icon/app_icon_foreground.png"
+  # Android 13+ themed icons (requires flutter_launcher_icons ≥ 0.14).
+  # Provide a silhouette PNG if you want a dedicated monochrome mark;
+  # falling back to the foreground yields acceptable results for most
+  # logos.
+  adaptive_icon_monochrome: "assets/icon/app_icon_foreground.png"
+  # Must match `minSdk` in android/app/build.gradle — the generator uses it to
+  # decide which legacy mipmap variants to emit.
+  min_sdk_android: 36
+  # ios section intentionally omitted — no ios/ directory yet.
+  # When iOS is added, re-enable with:
+  #   ios: true
+  #   remove_alpha_ios: true
+
+# Runtime dependencies the template ships for downstream apps but does not
+# import from lib/ yet. `tool/check_dependencies.dart` treats anything listed
+# here as a deliberate reservation, and still fails on any *other* unused
+# runtime dependency — so this list is the only place a "declared but unused"
+# package can hide, and reviewing it is reviewing the whole starter stack.
+#
+# The list is empty on purpose: every package the template declares is now
+# exercised by the bookmarks sample under lib/ (see
+# docs/adr/0002-starter-stack.md). Add an entry only when a package is
+# declared ahead of the code that will import it.
+dependency_policy:
+  reserved: []

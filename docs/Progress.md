@@ -11,7 +11,6 @@
 
 | 優先 | # | 概要 | 状態 | 影響度 | 重要度 | 難易度 | 工数 |
 |---|---|---|---|---|---|---|---|
-| 1 | 5 | `minSdk = 36` を引き下げる（Android 16 未満にインストール不可＝実質配布不能） | ⬜未着手 | 大 | 大 | 小 | 小 |
 | 2 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | ⬜未着手 | 大 | 大 | 小 | 小 |
 | 3 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | ⬜未着手 | 大 | 中 | 小 | 小 |
 | 4 | 7 | `azure-pipelines.yml` を整理する（`ios/` が無いのに iOS ビルドを実行し必ず失敗、App Center 配布は廃止済み、release AAB が常に debug 鍵署名になる） | 🟡要判断 | 中 | 中 | 小 | 小 |
@@ -25,13 +24,6 @@
 
 
 ## 詳細
-
-### 5. `minSdk = 36` の引き下げ
-
-`android/app/build.gradle` の `minSdk = 36`（Android 16）は現実の端末シェアの
-ほぼ全域を切り捨てる。旧端末のカメラロール移行が主要ユースケースの写真アプリと
-矛盾するため、21〜24 相当へ引き下げる。`pubspec.yaml` の `min_sdk_android: 36` も
-合わせて更新する。
 
 ### 6. `applicationId` の変更
 

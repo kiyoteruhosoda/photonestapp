@@ -99,7 +99,7 @@ flutter_launcher_icons:
   adaptive_icon_monochrome: "assets/icon/app_icon_foreground.png"
   # Must match `minSdk` in android/app/build.gradle — the generator uses it to
   # decide which legacy mipmap variants to emit.
-  min_sdk_android: 36
+  min_sdk_android: 24
   # ios section intentionally omitted — no ios/ directory yet.
   # When iOS is added, re-enable with:
   #   ios: true

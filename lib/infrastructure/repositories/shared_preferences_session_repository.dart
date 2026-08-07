@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
@@ -9,9 +11,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Moving the tokens to the platform keystore is a pre-production hardening
 /// task — tracked in `docs/Progress.md`.
 final class SharedPreferencesSessionRepository implements SessionRepository {
-  const SharedPreferencesSessionRepository(this._preferences);
+  SharedPreferencesSessionRepository(this._preferences);
 
   final SharedPreferences _preferences;
+
+  /// Never closed by design: one repository instance lives as long as the
+  /// process, and the observers do too.
+  // ignore: close_sinks
+  final StreamController<AuthSession?> _changes =
+      StreamController<AuthSession?>.broadcast();
 
   static const String _accessTokenKey = 'auth.accessToken';
   static const String _refreshTokenKey = 'auth.refreshToken';
@@ -43,6 +51,7 @@ final class SharedPreferencesSessionRepository implements SessionRepository {
     await _preferences.setString(_refreshTokenKey, session.refreshToken);
     await _preferences.setString(_emailKey, session.email);
     await _preferences.setStringList(_scopesKey, session.scopes);
+    _changes.add(session);
   }
 
   @override
@@ -51,5 +60,9 @@ final class SharedPreferencesSessionRepository implements SessionRepository {
     await _preferences.remove(_refreshTokenKey);
     await _preferences.remove(_emailKey);
     await _preferences.remove(_scopesKey);
+    _changes.add(null);
   }
+
+  @override
+  Stream<AuthSession?> get changes => _changes.stream;
 }

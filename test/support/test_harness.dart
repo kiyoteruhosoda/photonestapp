@@ -11,6 +11,7 @@ import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.d
 import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/add_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/get_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/list_bookmarks_usecase.dart';
@@ -128,6 +129,7 @@ class TestScope {
       LogoutUseCase(this.authRepository, this.sessionRepository, this.logger),
       RestoreSessionUseCase(this.sessionRepository),
       GetApiEndpointUseCase(this.apiEndpointRepository),
+      WatchSessionUseCase(this.sessionRepository),
       this.logger,
     );
   }

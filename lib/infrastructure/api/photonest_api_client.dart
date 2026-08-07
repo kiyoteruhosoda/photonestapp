@@ -30,6 +30,15 @@ final class PhotoNestApiClient {
   final ApiEndpointRepository _endpoints;
   final AppLogger _logger;
 
+  /// The refresh currently in flight, when there is one.
+  ///
+  /// Refresh tokens rotate and the server honours only the newest one, so
+  /// two concurrent refreshes — an album grid's worth of thumbnail requests
+  /// all hitting 401 together — would race: one wins, every other one fails
+  /// with a token the server just forgot. All callers therefore share a
+  /// single in-flight refresh.
+  Future<void>? _refreshInFlight;
+
   /// POSTs [body] as JSON to [path] and decodes the JSON response.
   Future<Map<String, dynamic>> postJson(
     String path,
@@ -107,16 +116,36 @@ final class PhotoNestApiClient {
     required bool authenticated,
     required http.BaseRequest Function() build,
   }) async {
+    final usedToken = authenticated ? _sessions.load()?.accessToken : null;
     var response = await _send(build(), authenticated: authenticated);
     if (authenticated && response.statusCode == 401) {
       _logger.debug('[Api] access token rejected — refreshing session');
-      await _refreshSession();
+      await _refreshSessionUnlessReplaced(usedToken);
       response = await _send(build(), authenticated: true);
     }
     if (response.statusCode >= 400) {
       throw _errorFor(response);
     }
     return response;
+  }
+
+  /// Refreshes the session, unless another request already did.
+  ///
+  /// [rejectedToken] is the access token the failing request carried. When
+  /// the stored token differs by the time we get here, a concurrent request
+  /// has already refreshed — retrying with the stored token is enough.
+  /// Otherwise all concurrent callers await the same in-flight refresh.
+  Future<void> _refreshSessionUnlessReplaced(String? rejectedToken) {
+    final inFlight = _refreshInFlight;
+    if (inFlight != null) return inFlight;
+    if (_sessions.load()?.accessToken != rejectedToken) {
+      return Future<void>.value();
+    }
+    final refresh = _refreshSession().whenComplete(
+      () => _refreshInFlight = null,
+    );
+    _refreshInFlight = refresh;
+    return refresh;
   }
 
   Future<http.Response> _send(
@@ -164,7 +193,12 @@ final class PhotoNestApiClient {
       );
     }
     if (response.statusCode >= 400) {
-      _logger.warning('[Api] session refresh rejected — sign in again');
+      _logger.warning('[Api] session refresh rejected — signing out');
+      // The refresh token is dead, so the stored session can never work
+      // again. Clearing it flips the app to signed out (the session store
+      // broadcasts the change) instead of stranding the user behind an
+      // authenticated-looking UI whose every request fails.
+      await _sessions.clear();
       throw const AuthenticationError(
         'The session has expired. Please sign in again.',
         code: 'invalid_token',

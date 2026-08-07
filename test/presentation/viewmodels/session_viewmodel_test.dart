@@ -3,6 +3,7 @@ import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.d
 import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
 
@@ -28,6 +29,7 @@ void main() {
       LogoutUseCase(auth, sessions, logger),
       RestoreSessionUseCase(sessions),
       GetApiEndpointUseCase(endpoints),
+      WatchSessionUseCase(sessions),
       logger,
     );
   }
@@ -140,6 +142,53 @@ void main() {
       );
       expect(ok, isTrue);
       expect(viewModel.lastFailure, isNull);
+    });
+  });
+
+  group('store-driven changes', () {
+    test(
+      'an externally cleared session flips the app to signed out', //
+      () async {
+        await sessions.save(testAuthSession);
+        final viewModel = build();
+        expect(viewModel.isAuthenticated, isTrue);
+        var notifications = 0;
+        viewModel.addListener(() => notifications++);
+
+        // What the API client does when a refresh is rejected.
+        await sessions.clear();
+        await pumpEventQueue();
+
+        expect(viewModel.isAuthenticated, isFalse);
+        expect(notifications, 1);
+      },
+    );
+
+    test(
+      'a rotated token pair is mirrored without a spurious sign-out', //
+      () async {
+        await sessions.save(testAuthSession);
+        final viewModel = build();
+
+        final rotated = testAuthSession.withTokens(
+          accessToken: 'access-2',
+          refreshToken: 'refresh-2',
+        );
+        await sessions.save(rotated);
+        await pumpEventQueue();
+
+        expect(viewModel.isAuthenticated, isTrue);
+        expect(viewModel.session, rotated);
+      },
+    );
+
+    test('dispose stops mirroring the store', () async {
+      await sessions.save(testAuthSession);
+      build().dispose();
+      await sessions.clear();
+      await pumpEventQueue();
+      // No crash from notifying a disposed ChangeNotifier is the assertion.
+      expect(sessions.load(), isNull);
     });
   });
 

@@ -344,6 +344,11 @@ final class FakeSessionRepository implements SessionRepository {
   final List<AuthSession> saved = <AuthSession>[];
   int cleared = 0;
 
+  /// Left open for the fake's lifetime, like the platform broadcast fakes.
+  // ignore: close_sinks
+  final StreamController<AuthSession?> _changes =
+      StreamController<AuthSession?>.broadcast();
+
   @override
   AuthSession? load() => _session;
 
@@ -351,13 +356,18 @@ final class FakeSessionRepository implements SessionRepository {
   Future<void> save(AuthSession session) async {
     saved.add(session);
     _session = session;
+    _changes.add(session);
   }
 
   @override
   Future<void> clear() async {
     cleared++;
     _session = null;
+    _changes.add(null);
   }
+
+  @override
+  Stream<AuthSession?> get changes => _changes.stream;
 }
 
 /// In-memory [ApiEndpointRepository].
@@ -516,13 +526,14 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
   Future<List<LocalPhoto>> photosTakenAfter(
     DateTime? since, {
     int limit = 100,
+    int page = 0,
   }) async {
     queriedSince.add(since);
-    final matching = photos
+    return photos
         .where((photo) => since == null || photo.takenAt.isAfter(since))
+        .skip(page * limit)
         .take(limit)
         .toList();
-    return matching;
   }
 
   @override

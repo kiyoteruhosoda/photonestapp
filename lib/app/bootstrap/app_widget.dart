@@ -15,6 +15,7 @@ import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
+import 'package:flutterbase/presentation/widgets/session_cache_reset.dart';
 import 'package:go_router/go_router.dart';
 
 /// Root widget.
@@ -93,26 +94,30 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
       sessionViewModel: _sessionViewModel,
       createAboutViewModel: sl.call<AboutViewModel>,
       createDebugViewModel: sl.call<DebugViewModel>,
-      child: ListenableBuilder(
-        listenable: Listenable.merge([_themeViewModel, _languageViewModel]),
-        builder: (context, _) {
-          return MaterialApp.router(
-            onGenerateTitle: (context) => AppLocalizations.of(context).appName,
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
-            themeMode: _themeViewModel.themeMode,
-            locale: _languageViewModel.locale,
-            supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            routerConfig: _router,
-          );
-        },
+      child: SessionCacheReset(
+        sessionViewModel: _sessionViewModel,
+        child: ListenableBuilder(
+          listenable: Listenable.merge([_themeViewModel, _languageViewModel]),
+          builder: (context, _) {
+            return MaterialApp.router(
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context).appName,
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.light,
+              darkTheme: AppTheme.dark,
+              themeMode: _themeViewModel.themeMode,
+              locale: _languageViewModel.locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              routerConfig: _router,
+            );
+          },
+        ),
       ),
     );
   }

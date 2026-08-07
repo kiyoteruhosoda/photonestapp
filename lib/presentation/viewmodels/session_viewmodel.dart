@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/login_credentials.dart';
@@ -36,10 +39,16 @@ class SessionViewModel extends ChangeNotifier {
     this._logout,
     RestoreSessionUseCase restoreSession,
     GetApiEndpointUseCase getApiEndpoint,
+    WatchSessionUseCase watchSession,
     this._logger,
   ) {
     _session = restoreSession.execute();
     _lastServerUrl = getApiEndpoint.execute();
+    // The persisted session can change without any user action — the API
+    // client rotates tokens transparently, and discards the session when a
+    // refresh is rejected. Mirroring those changes here is what makes the
+    // router's guard kick a dead session back to the login screen.
+    _storeSubscription = watchSession.execute().listen(_onStoredSessionChange);
     _logger.info(
       '[SessionViewModel] init — '
       '${_session == null ? 'signed out' : 'restored ${_session!.email}'}',
@@ -50,6 +59,7 @@ class SessionViewModel extends ChangeNotifier {
   final LogoutUseCase _logout;
   final AppLogger _logger;
 
+  StreamSubscription<AuthSession?>? _storeSubscription;
   AuthSession? _session;
   Uri? _lastServerUrl;
   bool _busy = false;
@@ -118,5 +128,21 @@ class SessionViewModel extends ChangeNotifier {
       _busy = false;
       notifyListeners();
     }
+  }
+
+  /// Mirrors a store-driven session change (token rotation, forced expiry).
+  void _onStoredSessionChange(AuthSession? stored) {
+    if (stored == _session) return;
+    if (stored == null && _session != null) {
+      _logger.info('[SessionViewModel] stored session expired — signing out');
+    }
+    _session = stored;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_storeSubscription?.cancel());
+    super.dispose();
   }
 }

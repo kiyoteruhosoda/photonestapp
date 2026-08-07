@@ -14,4 +14,13 @@ abstract interface class SessionRepository {
 
   /// Forgets the stored session.
   Future<void> clear();
+
+  /// Emits the stored session after every [save] and [clear].
+  ///
+  /// The session can change outside any user action — the API client rotates
+  /// the token pair transparently, and discards the session entirely when a
+  /// refresh is rejected. Observers (the session view model, above all) use
+  /// this to stay truthful instead of holding a copy that silently went
+  /// stale.
+  Stream<AuthSession?> get changes;
 }

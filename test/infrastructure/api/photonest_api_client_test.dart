@@ -137,7 +137,8 @@ void main() {
       },
     );
 
-    test('a failed refresh surfaces as AuthenticationError', () async {
+    test('a failed refresh surfaces as AuthenticationError and clears the '
+        'stored session', () async {
       final subject = client((request) async {
         if (request.url.path.endsWith('/auth/refresh')) {
           return json({
@@ -159,6 +160,50 @@ void main() {
           ),
         ),
       );
+      // A dead refresh token can never work again: keeping the session
+      // would strand the user behind an authenticated-looking UI.
+      expect(sessions.load(), isNull);
+      expect(sessions.cleared, 1);
+    });
+
+    test('concurrent 401s share one refresh instead of racing the rotating '
+        'token', () async {
+      var refreshCalls = 0;
+      final subject = client((request) async {
+        if (request.url.path.endsWith('/auth/refresh')) {
+          refreshCalls++;
+          // Only the stored (newest) refresh token is valid — a second
+          // independent refresh with the same token would fail exactly the
+          // way the rotating server does.
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          if (body['refresh_token'] != sessions.load()?.refreshToken) {
+            return json({
+              'detail': {'error': 'invalid_token', 'message': 'rotated away'},
+            }, status: 401);
+          }
+          return json({
+            'access_token': 'access-${refreshCalls + 1}',
+            'refresh_token': 'refresh-${refreshCalls + 1}',
+            'scope': 'gui:view',
+          });
+        }
+        if (request.headers['Authorization'] ==
+            'Bearer ${testAuthSession.accessToken}') {
+          return json({
+            'detail': {'error': 'invalid_token', 'message': 'expired'},
+          }, status: 401);
+        }
+        return json({'ok': true});
+      });
+
+      final results = await Future.wait([
+        subject.getJson('/albums'),
+        subject.getJson('/media'),
+        subject.getJson('/albums/1'),
+      ]);
+
+      expect(results, everyElement({'ok': true}));
+      expect(refreshCalls, 1);
     });
   });
 

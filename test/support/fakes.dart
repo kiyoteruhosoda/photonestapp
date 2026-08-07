@@ -302,6 +302,10 @@ final class FakeAuthRepository implements AuthRepository {
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
+  /// When set, every method throws this raw (non-[AppError]) object —
+  /// models a platform/plugin blowing up outside the typed error contract.
+  Object? unexpectedFailure;
+
   final List<LoginCredentials> logins = <LoginCredentials>[];
   final List<AuthSession> loggedOut = <AuthSession>[];
 
@@ -331,6 +335,8 @@ final class FakeAuthRepository implements AuthRepository {
   }
 
   void _failIfAsked() {
+    final unexpected = unexpectedFailure;
+    if (unexpected != null) throw unexpected; // ignore: only_throw_errors
     final error = failure;
     if (error != null) throw error;
   }

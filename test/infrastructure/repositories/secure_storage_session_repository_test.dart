@@ -97,6 +97,28 @@ void main() {
     },
   );
 
+  test('a half-written keystore does not count as migrated', () async {
+    // A previous launch died between the two token writes. The fragment
+    // must not be treated as the real session — and above all it must not
+    // trigger the purge of the still-valid plaintext pair.
+    stored['auth.accessToken'] = 'fragment-access';
+
+    final repository = await open(
+      legacyValues: {
+        'auth.accessToken': 'legacy-access',
+        'auth.refreshToken': 'legacy-refresh',
+        'auth.email': 'user@example.com',
+      },
+    );
+
+    final restored = repository.load();
+    expect(restored, isNotNull);
+    expect(restored!.accessToken, 'legacy-access');
+    expect(restored.refreshToken, 'legacy-refresh');
+    expect(stored['auth.accessToken'], 'legacy-access');
+    expect(stored['auth.refreshToken'], 'legacy-refresh');
+  });
+
   test('an existing keystore session wins over legacy leftovers', () async {
     final first = await open();
     await first.save(testAuthSession);

@@ -99,6 +99,10 @@ final class SecureStorageSessionRepository implements SessionRepository {
 
   /// Moves tokens saved by the SharedPreferences-era implementation into
   /// the keystore, then deletes the plaintext copies.
+  ///
+  /// Ordered for crash safety: the keystore is written first and the
+  /// plaintext removed last, so a launch that dies mid-migration re-runs it
+  /// next time instead of losing the session.
   static Future<void> _migrateLegacyTokens(
     FlutterSecureStorage storage,
     SharedPreferences legacyPreferences,
@@ -107,7 +111,13 @@ final class SecureStorageSessionRepository implements SessionRepository {
     final legacyRefresh = legacyPreferences.getString(_refreshTokenKey);
     final hasLegacy = legacyAccess != null && legacyRefresh != null;
 
-    final alreadyMigrated = await storage.read(key: _accessTokenKey) != null;
+    // Only a *complete* token pair counts as migrated. A previous launch
+    // that died between the two writes must not have its half-session
+    // treated as the real one — the legacy pair is still the valid session
+    // and gets to overwrite the fragment.
+    final alreadyMigrated =
+        await storage.read(key: _accessTokenKey) != null &&
+        await storage.read(key: _refreshTokenKey) != null;
     if (hasLegacy && !alreadyMigrated) {
       await storage.write(key: _accessTokenKey, value: legacyAccess);
       await storage.write(key: _refreshTokenKey, value: legacyRefresh);

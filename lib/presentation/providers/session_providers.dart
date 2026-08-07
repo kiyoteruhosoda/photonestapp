@@ -160,6 +160,8 @@ class SessionNotifier extends Notifier<SessionState> {
       logger.warning('[Session] login failed: ${error.message}');
       _failWith(LoginFailure.network);
       return false;
+    } finally {
+      _neverStayBusy();
     }
   }
 
@@ -170,8 +172,26 @@ class SessionNotifier extends Notifier<SessionState> {
       lastServerUrl: state.lastServerUrl,
       busy: true,
     );
-    await ref.read(logoutUseCaseProvider).execute();
-    state = SessionState(lastServerUrl: state.lastServerUrl);
+    try {
+      await ref.read(logoutUseCaseProvider).execute();
+      state = SessionState(lastServerUrl: state.lastServerUrl);
+    } finally {
+      _neverStayBusy();
+    }
+  }
+
+  /// Clears a leftover busy flag when a login/logout escaped through an
+  /// unexpected exception (one outside the mapped [AppError] kinds).
+  ///
+  /// Every intended exit already set a non-busy state, so this is a no-op
+  /// there — but an unhandled throw must not leave the form disabled behind
+  /// a permanent spinner. The exception itself still propagates.
+  void _neverStayBusy() {
+    if (!state.busy) return;
+    state = SessionState(
+      session: state.session,
+      lastServerUrl: state.lastServerUrl,
+    );
   }
 
   void _failWith(LoginFailure failure) {

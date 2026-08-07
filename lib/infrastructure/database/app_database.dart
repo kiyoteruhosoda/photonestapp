@@ -15,10 +15,13 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 1;
+  static const int schemaVersion = 2;
 
   /// Table holding the bookmarks sample feature.
   static const String bookmarksTable = 'bookmarks';
+
+  /// Table remembering which device photos were already uploaded.
+  static const String uploadedPhotosTable = 'uploaded_photos';
 
   /// Opens the database, creating or migrating the schema as needed.
   ///
@@ -51,17 +54,28 @@ CREATE TABLE $bookmarksTable (
   created_at TEXT NOT NULL
 )
 ''');
+    await db.execute(_createUploadedPhotos);
   }
+
+  /// `local_id` is the platform's asset identifier — the natural key the
+  /// upload history is queried by, so it is the primary key.
+  static const String _createUploadedPhotos =
+      '''
+CREATE TABLE $uploadedPhotosTable (
+  local_id TEXT PRIMARY KEY,
+  file_name TEXT NOT NULL,
+  uploaded_at TEXT NOT NULL
+)
+''';
 
   /// Applies the migrations between two schema versions.
   ///
   /// Written as a fall-through ladder — `if (from < 2) { … }`, then
   /// `if (from < 3) { … }` — so upgrading across several releases at once
-  /// runs each step in order. Version 1 is the initial schema, so there is
-  /// nothing to apply yet.
+  /// runs each step in order.
   static Future<void> _upgrade(Database db, int from, int to) async {
-    // if (from < 2) {
-    //   await db.execute('ALTER TABLE $bookmarksTable ADD COLUMN note TEXT');
-    // }
+    if (from < 2) {
+      await db.execute(_createUploadedPhotos);
+    }
   }
 }

@@ -78,6 +78,58 @@ void main() {
     expect(await insert('c'), greaterThan(second));
   });
 
+  test('creates the uploaded_photos table for the upload history', () async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(${AppDatabase.uploadedPhotosTable})',
+    );
+    expect(
+      columns.map((row) => row['name']),
+      containsAll(<String>['local_id', 'file_name', 'uploaded_at']),
+    );
+  });
+
+  test('upgrading a v1 database adds the uploaded_photos table', () async {
+    // Build a database exactly as schema v1 left it, then let AppDatabase
+    // migrate it. This is the on-device path for anyone who installed the
+    // app before the upload feature existed.
+    final path = '${await databaseFactory.getDatabasesPath()}/migrate-test.db';
+    await databaseFactory.deleteDatabase(path);
+
+    final v1 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, version) => db.execute('''
+CREATE TABLE ${AppDatabase.bookmarksTable} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)
+'''),
+      ),
+    );
+    await v1.close();
+
+    final migrated = await AppDatabase.open(path: path);
+    addTearDown(() async {
+      await migrated.close();
+      await databaseFactory.deleteDatabase(path);
+    });
+
+    expect(await migrated.getVersion(), AppDatabase.schemaVersion);
+    final tables = await migrated.query(
+      'sqlite_master',
+      columns: <String>['name'],
+      where: 'type = ?',
+      whereArgs: <Object?>['table'],
+    );
+    expect(
+      tables.map((row) => row['name']),
+      contains(AppDatabase.uploadedPhotosTable),
+    );
+  });
+
   test('re-opening an existing database does not re-run onCreate', () async {
     // A file-backed database, so the second open sees the first one's schema.
     final path = '${await databaseFactory.getDatabasesPath()}/reopen-test.db';

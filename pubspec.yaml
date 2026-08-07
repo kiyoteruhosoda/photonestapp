@@ -23,6 +23,10 @@ dependencies:
   get_it: ^9.2.1
   # Navigation (presentation).
   go_router: ^17.3.0
+  # HTTP client for the PhotoNest API (infrastructure).
+  http: ^1.5.0
+  # MediaType for multipart upload parts (infrastructure).
+  http_parser: ^4.1.0
   # Console/file logging backend (infrastructure).
   logger: ^2.7.0
   # Runtime package metadata (infrastructure).
@@ -31,6 +35,8 @@ dependencies:
   path: ^1.9.1
   # Platform directories (infrastructure).
   path_provider: ^2.1.6
+  # Device photo library access and change events (infrastructure).
+  photo_manager: ^3.11.0
   # Key-value persistence (infrastructure).
   shared_preferences: ^2.5.5
   # SQLite (infrastructure).

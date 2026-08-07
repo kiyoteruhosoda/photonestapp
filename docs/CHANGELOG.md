@@ -3,6 +3,17 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — `integration_test` を認証ガード後の実態に合わせて修正し CI へ組み込み
+
+- 旧 Progress #12。「起動直後に `NavigationBar` がある」前提だった
+  `integration_test/app_test.dart` を、未ログイン起動はログイン画面・
+  セッション保存済み起動はメイン画面、という認証ガード後の挙動に合わせて
+  書き直した（セッションは実キーストアの `SessionRepository` へ直接保存して
+  用意する。サーバーには接続しない）。
+- `quality.yml` に `integration-tests` ジョブを追加し、Android エミュレータ
+  （API 34, KVM）で `flutter test integration_test` を実行する。端末が要るため
+  `scripts/ci.sh` には含めない（`docs/OPERATIONS.md` 参照）。
+
 ## 2026-08-07 — アップロードの進捗表示・キャンセル・失敗一覧 UI
 
 - 旧 Progress #11。`UploadPhotosUseCase` に進捗コールバックと協調キャンセル

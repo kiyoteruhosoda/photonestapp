@@ -3,6 +3,25 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — 通知ボタンは通知機能の予約済み入り口として残す（ADR-0005）
+
+- 旧 Progress #13（ダミーの通知ボタンを削除するか実装するか）を「予約済みの
+  入り口として残す」で決着。判断の経緯は
+  `docs/adr/0005-notification-button-reserved.md`。コード変更なし。
+
+## 2026-08-07 — `minSdk` を 36 から 24 へ引き下げ
+
+- `minSdk = 36`（Android 16）は現実の端末シェアのほぼ全域を切り捨てており、
+  旧端末のカメラロール移行という主要ユースケースと矛盾していたため、
+  Android 7.0（API 24）まで引き下げた。`pubspec.yaml` の
+  `min_sdk_android` も 24 に更新。
+- API 33 未満には `READ_MEDIA_*` 権限が無いため、`AndroidManifest.xml` に
+  `READ_EXTERNAL_STORAGE`（`maxSdkVersion="32"`）を追加。
+- API 26 未満は adaptive icon（`mipmap-anydpi-v26`）を使えないため、
+  `assets/icon/app_icon.png` からレガシー密度別の
+  `mipmap-*/ic_launcher.png`（mdpi〜xxxhdpi）を生成してコミット
+  （`dart run flutter_launcher_icons` の再実行でも同等物が生成される）。
+
 ## 2026-08-07 — 状態管理を Riverpod に一本化
 
 判断の経緯は `docs/adr/0004-riverpod-unification.md`。

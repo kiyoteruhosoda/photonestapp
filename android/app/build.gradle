@@ -83,7 +83,10 @@ android {
 
     defaultConfig {
         applicationId = appApplicationId
-        minSdk = 36
+        // Android 7.0+. Old-device camera-roll migration is a core use case,
+        // so keep this as low as Flutter and photo_manager support. 36 would
+        // exclude every device below Android 16 (effectively undistributable).
+        minSdk = 24
         targetSdk = 36
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName

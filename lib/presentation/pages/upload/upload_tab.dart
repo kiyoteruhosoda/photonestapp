@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
@@ -106,7 +106,7 @@ class _UploadTabState extends ConsumerState<UploadTab> {
           child: switch (candidates) {
             AsyncLoading<UploadCandidates>() => const AppLoadingView(),
             AsyncError<UploadCandidates>(:final error) => AppErrorView(
-              message: error is AppError ? error.message : l10n.commonError,
+              message: describeLoadError(error, l10n),
               onRetry: () => unawaited(
                 ref.read(uploadCandidatesProvider.notifier).reload(),
               ),

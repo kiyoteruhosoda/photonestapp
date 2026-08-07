@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/entities/album_media_item.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
@@ -44,7 +44,7 @@ class AlbumDetailPage extends ConsumerWidget {
       body: switch (detail) {
         AsyncLoading<AlbumDetail?>() => const AppLoadingView(),
         AsyncError<AlbumDetail?>(:final error) => AppErrorView(
-          message: error is AppError ? error.message : l10n.commonError,
+          message: describeLoadError(error, l10n),
           onRetry: () => ref.invalidate(albumDetailProvider(albumId)),
         ),
         AsyncData<AlbumDetail?>(value: final value) when value == null =>

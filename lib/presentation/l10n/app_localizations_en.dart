@@ -439,6 +439,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get commonRetry => 'Retry';
   @override
+  String get commonClose => 'Close';
+  @override
+  String get commonErrorNetwork =>
+      'Could not reach the server. Check your connection and try again.';
+  @override
+  String get commonErrorSessionExpired =>
+      'Your session has expired. Please sign in again.';
+  @override
   String get commonMenu => 'Menu';
   @override
   String get commonNotifications => 'Notifications';

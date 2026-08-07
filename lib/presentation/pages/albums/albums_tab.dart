@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
@@ -26,7 +26,7 @@ class AlbumsTab extends ConsumerWidget {
     return switch (albums) {
       AsyncLoading<List<Album>>() => const AppLoadingView(),
       AsyncError<List<Album>>(:final error) => AppErrorView(
-        message: error is AppError ? error.message : l10n.commonError,
+        message: describeLoadError(error, l10n),
         onRetry: () => unawaited(ref.read(albumListProvider.notifier).reload()),
       ),
       AsyncData<List<Album>>(value: final items) when items.isEmpty =>

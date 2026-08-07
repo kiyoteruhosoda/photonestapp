@@ -420,6 +420,12 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get commonRetry => '再試行';
   @override
+  String get commonClose => '閉じる';
+  @override
+  String get commonErrorNetwork => 'サーバーに接続できませんでした。通信環境を確認して再試行してください。';
+  @override
+  String get commonErrorSessionExpired => 'セッションの有効期限が切れました。もう一度ログインしてください。';
+  @override
   String get commonMenu => 'メニュー';
   @override
   String get commonNotifications => '通知';

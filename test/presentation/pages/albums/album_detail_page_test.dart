@@ -59,7 +59,8 @@ void main() {
         ..failure = const InfrastructureError('boom'),
     );
     await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
-    expect(find.text('boom'), findsOneWidget);
+    expect(find.text('boom'), findsNothing);
+    expect(find.text(l10n.commonErrorNetwork), findsOneWidget);
     expect(find.text(l10n.commonRetry), findsOneWidget);
   });
 

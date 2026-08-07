@@ -257,6 +257,9 @@ abstract class AppLocalizations {
 
   // ─── Common ──────────────────────────────────────────────────────────
   String get commonRetry;
+  String get commonClose;
+  String get commonErrorNetwork;
+  String get commonErrorSessionExpired;
   String get commonMenu;
   String get commonNotifications;
   String get commonNotFound;

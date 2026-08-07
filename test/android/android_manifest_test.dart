@@ -112,10 +112,8 @@ void main() {
 
     test('names the same application id as the Gradle build', () {
       final gradle = File('android/app/build.gradle').readAsStringSync();
-      final match = RegExp(
-        r'def appApplicationId\s*=\s*"([^"]+)"',
-      ).firstMatch(gradle);
-      expect(match, isNotNull, reason: 'appApplicationId not found');
+      final match = RegExp(r'applicationId\s*=\s*"([^"]+)"').firstMatch(gradle);
+      expect(match, isNotNull, reason: 'applicationId not found');
 
       expect(
         File('docs/deep_links/assetlinks.json').readAsStringSync(),

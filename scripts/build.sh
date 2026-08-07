@@ -81,8 +81,8 @@ build_number="${BUILD_NUMBER:-$(git rev-list --count HEAD 2>/dev/null || printf 
 # Keep in step with `appArchivesBase` in android/app/build.gradle.
 archives_base="$(sed -n 's/^ *app\.archivesBaseName *= *//p' android/gradle.properties 2>/dev/null | tr -d '[:space:]')"
 if [[ -z "$archives_base" ]]; then
-  application_id="$(sed -n 's/^ *def appApplicationId *= *"\(.*\)".*/\1/p' android/app/build.gradle)"
-  [[ -n "$application_id" ]] || die "could not read appApplicationId from android/app/build.gradle."
+  application_id="$(sed -n 's/^ *applicationId *= *"\(.*\)".*/\1/p' android/app/build.gradle)"
+  [[ -n "$application_id" ]] || die "could not read applicationId from android/app/build.gradle."
   archives_base="${application_id##*.}"
 fi
 

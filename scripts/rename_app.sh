@@ -66,8 +66,8 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
 fi
 
 OLD_DART_NAME="$(awk '/^name:/ {print $2; exit}' pubspec.yaml)"
-# Matches: def appNamespace = "com.example.flutterbase"
-OLD_ANDROID_PKG="$(awk -F'"' '/^def appNamespace/ {print $2; exit}' android/app/build.gradle)"
+# Matches:     namespace = "com.example.flutterbase"
+OLD_ANDROID_PKG="$(awk -F'"' '/^[[:space:]]*namespace = / {print $2; exit}' android/app/build.gradle)"
 
 [[ -n "$OLD_DART_NAME"   ]] || die "could not read current Dart package name from pubspec.yaml"
 [[ -n "$OLD_ANDROID_PKG" ]] || die "could not read current Android namespace from android/app/build.gradle"
@@ -88,13 +88,14 @@ $SED -i.bak "1s|^name: $OLD_DART_NAME$|name: $NEW_DART_NAME|" pubspec.yaml
 find lib test integration_test -type f -name '*.dart' -print0 \
     | xargs -0 $SED -i.bak "s|package:${OLD_DART_NAME}/|package:${NEW_DART_NAME}/|g"
 
-# ─── 3. android/app/build.gradle: appNamespace + appApplicationId ────────
-# Rewrites the two string constants at the top of the file; namespace and
-# applicationId inside the android { } block reference these via Groovy
-# variables, so they update transitively.
+# ─── 3. android/app/build.gradle: namespace + applicationId ──────────────
+# Rewrites the two quoted literals inside the android { } block.  They must
+# stay literal (not Groovy variables): flutter_tools resolves the package id
+# for `flutter run` / `flutter test integration_test` by regex-matching the
+# quoted value after `namespace`.
 $SED -i.bak \
-    -e "s|^def appNamespace     = \"$OLD_ANDROID_PKG\"|def appNamespace     = \"$NEW_ANDROID_PKG\"|" \
-    -e "s|^def appApplicationId = \"$OLD_ANDROID_PKG\"|def appApplicationId = \"$NEW_ANDROID_PKG\"|" \
+    -e "s|^\([[:space:]]*\)namespace = \"$OLD_ANDROID_PKG\"|\1namespace = \"$NEW_ANDROID_PKG\"|" \
+    -e "s|^\([[:space:]]*\)applicationId = \"$OLD_ANDROID_PKG\"|\1applicationId = \"$NEW_ANDROID_PKG\"|" \
     android/app/build.gradle
 
 # ─── 4. Move Kotlin source tree ──────────────────────────────────────────

@@ -172,6 +172,43 @@ void main() {
       expect(library.queriedSince, [DateTime.utc(2026, 8, 1)]);
     });
 
+    test('pages past already-uploaded photos so older pending ones are '
+        'found', () async {
+      // Newest-first library: page one is entirely uploaded already. A
+      // single-page sync would filter it all out and stop — the older
+      // pending photos would stay unsynchronised forever.
+      settings
+        ..enabled = true
+        ..since = DateTime.utc(2026, 8, 1);
+      library.photos = [
+        for (var i = 0; i < 5; i++)
+          testLocalPhoto(
+            localId: 'photo-$i',
+            takenAt: DateTime.utc(2026, 8, 5, 10 - i),
+          ),
+      ];
+      library.bytesById['photo-3'] = Uint8List.fromList([1]);
+      library.bytesById['photo-4'] = Uint8List.fromList([2]);
+      history = FakeUploadHistoryRepository({'photo-0', 'photo-1', 'photo-2'});
+
+      final paged = SyncNewPhotosUseCase(
+        settings,
+        sessions,
+        library,
+        history,
+        uploadUseCase(),
+        logger,
+        pageSize: 3,
+      );
+      final report = await paged.execute();
+
+      expect(report.uploadedCount, 2);
+      expect(
+        uploads.uploaded.map((entry) => entry.$1.localId),
+        containsAll(['photo-3', 'photo-4']),
+      );
+    });
+
     test('an empty library yields an empty successful report', () async {
       settings
         ..enabled = true

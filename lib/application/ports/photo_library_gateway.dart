@@ -14,10 +14,17 @@ abstract interface class PhotoLibraryGateway {
   /// repeatedly — the platform only prompts when it has to.
   Future<bool> ensureAccess();
 
-  /// Photos taken strictly after [since], newest first, at most [limit].
+  /// Photos taken strictly after [since], newest first — the [page]-th
+  /// window of [limit] photos.
   ///
-  /// Pass null to list the most recent photos regardless of age.
-  Future<List<LocalPhoto>> photosTakenAfter(DateTime? since, {int limit = 100});
+  /// Pass null to list the most recent photos regardless of age. A caller
+  /// that must see *every* matching photo keeps advancing [page] until a
+  /// batch comes back shorter than [limit].
+  Future<List<LocalPhoto>> photosTakenAfter(
+    DateTime? since, {
+    int limit = 100,
+    int page = 0,
+  });
 
   /// The photo's original encoded bytes, or null when the asset has
   /// disappeared from the library.

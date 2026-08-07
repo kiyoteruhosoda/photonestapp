@@ -116,7 +116,11 @@ final class InfrastructureModule {
       albums: ApiAlbumRepository(apiClient),
       mediaThumbnails: ApiMediaThumbnailRepository(apiClient),
       photoUploads: ApiPhotoUploadRepository(apiClient),
-      uploadHistory: SqfliteUploadHistoryRepository(database),
+      uploadHistory: SqfliteUploadHistoryRepository(
+        database,
+        sessions,
+        apiEndpoints,
+      ),
       autoUploadSettings: SharedPreferencesAutoUploadSettingsRepository(
         preferences,
       ),

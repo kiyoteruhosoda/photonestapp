@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/infrastructure/database/app_database.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
@@ -13,11 +14,17 @@ void main() {
   });
 
   late Database db;
+  late FakeSessionRepository sessions;
+  late FakeApiEndpointRepository endpoints;
   late SqfliteUploadHistoryRepository repository;
 
   setUp(() async {
     db = await AppDatabase.open(path: inMemoryDatabasePath);
-    repository = SqfliteUploadHistoryRepository(db);
+    sessions = FakeSessionRepository(testAuthSession);
+    endpoints = FakeApiEndpointRepository(
+      Uri.parse('https://photos.example.com'),
+    );
+    repository = SqfliteUploadHistoryRepository(db, sessions, endpoints);
   });
 
   tearDown(() async {
@@ -58,6 +65,55 @@ void main() {
     final row = (await db.query(AppDatabase.uploadedPhotosTable)).single;
     expect(row['uploaded_at'], '2026-08-03T12:30:00.000Z');
   });
+
+  test('the history is scoped to the signed-in account', () async {
+    await repository.markUploaded(
+      testLocalPhoto(localId: 'a'),
+      testPhotoTakenAt,
+    );
+
+    // Another account on the same server starts with a clean history.
+    final otherAccount = SqfliteUploadHistoryRepository(
+      db,
+      FakeSessionRepository(
+        AuthSession(
+          accessToken: 'x',
+          refreshToken: 'y',
+          email: 'other@example.com',
+        ),
+      ),
+      endpoints,
+    );
+    expect(await otherAccount.uploadedLocalIds(), isEmpty);
+
+    // The same account on another server does too.
+    final otherServer = SqfliteUploadHistoryRepository(
+      db,
+      sessions,
+      FakeApiEndpointRepository(Uri.parse('https://elsewhere.example.com')),
+    );
+    expect(await otherServer.uploadedLocalIds(), isEmpty);
+
+    // The original account still sees its row.
+    expect(await repository.uploadedLocalIds(), {'a'});
+  });
+
+  test(
+    'signed out: nothing counts as uploaded, and marking is refused', //
+    () async {
+      await repository.markUploaded(
+        testLocalPhoto(localId: 'a'),
+        testPhotoTakenAt,
+      );
+      await sessions.clear();
+
+      expect(await repository.uploadedLocalIds(), isEmpty);
+      expect(
+        repository.markUploaded(testLocalPhoto(localId: 'b'), testPhotoTakenAt),
+        throwsA(isA<AuthenticationError>()),
+      );
+    },
+  );
 
   test('translates database failures into InfrastructureError', () async {
     await db.close();

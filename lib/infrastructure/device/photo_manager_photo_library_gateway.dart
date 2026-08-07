@@ -32,6 +32,7 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
   Future<List<LocalPhoto>> photosTakenAfter(
     DateTime? since, {
     int limit = 100,
+    int page = 0,
   }) async {
     final paths = await PhotoManager.getAssetPathList(
       onlyAll: true,
@@ -49,7 +50,7 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
     );
     if (paths.isEmpty) return const <LocalPhoto>[];
 
-    final assets = await paths.first.getAssetListPaged(page: 0, size: limit);
+    final assets = await paths.first.getAssetListPaged(page: page, size: limit);
     return assets.map(_localPhotoOf).toList();
   }
 

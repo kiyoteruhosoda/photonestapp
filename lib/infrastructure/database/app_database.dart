@@ -57,14 +57,18 @@ CREATE TABLE $bookmarksTable (
     await db.execute(_createUploadedPhotos);
   }
 
-  /// `local_id` is the platform's asset identifier — the natural key the
-  /// upload history is queried by, so it is the primary key.
+  /// `local_id` is the platform's asset identifier; `account_key` names the
+  /// server + account the photo was sent to. The pair is the primary key:
+  /// the same photo uploaded to two accounts is two history rows, so
+  /// signing into another account never inherits the first one's history.
   static const String _createUploadedPhotos =
       '''
 CREATE TABLE $uploadedPhotosTable (
-  local_id TEXT PRIMARY KEY,
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
   file_name TEXT NOT NULL,
-  uploaded_at TEXT NOT NULL
+  uploaded_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
 )
 ''';
 

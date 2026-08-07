@@ -33,7 +33,6 @@ void main() {
     ) async {
       final scope = await pumpInScope(tester, const AboutPage());
       expect(scope.appInfoRepository.callCount, 1);
-      expect(scope.aboutViewModelsCreated, 1);
     });
   });
 
@@ -46,7 +45,7 @@ void main() {
       );
       await pumpInScope(tester, const AboutPage(), scope: scope);
       expect(find.byType(AppErrorView), findsOneWidget);
-      expect(find.text('Failed to load app info'), findsOneWidget);
+      expect(find.text(l10n.commonError), findsOneWidget);
     });
 
     testWidgets('retry re-runs the use case', (tester) async {

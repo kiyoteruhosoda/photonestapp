@@ -8,6 +8,7 @@ import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:flutterbase/presentation/providers/session_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 //
@@ -47,6 +48,9 @@ final AsyncNotifierProvider<AlbumListNotifier, List<Album>> albumListProvider =
 class AlbumListNotifier extends AsyncNotifier<List<Album>> {
   @override
   Future<List<Album>> build() {
+    // Rebuilds when the signed-in identity changes, so a login to another
+    // account or server never shows the previous identity's albums.
+    ref.watch(sessionIdentityProvider);
     return ref.read(listAlbumsUseCaseProvider).execute();
   }
 
@@ -67,6 +71,7 @@ final albumDetailProvider = FutureProvider.family<AlbumDetail?, AlbumId>((
   ref,
   id,
 ) {
+  ref.watch(sessionIdentityProvider);
   return ref.read(getAlbumUseCaseProvider).execute(id);
 });
 
@@ -80,6 +85,9 @@ typedef MediaThumbnailRequest = ({MediaId id, int size});
 /// instead of re-downloading them.
 final mediaThumbnailProvider =
     FutureProvider.family<Uint8List, MediaThumbnailRequest>((ref, request) {
+      // Media ids are only unique per server, so cached bytes must not
+      // survive an identity change.
+      ref.watch(sessionIdentityProvider);
       return ref
           .read(getMediaThumbnailUseCaseProvider)
           .execute(request.id, size: request.size);

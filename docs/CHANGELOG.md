@@ -3,6 +3,22 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — 状態管理を Riverpod に一本化
+
+判断の経緯は `docs/adr/0004-riverpod-unification.md`。
+
+- `ChangeNotifier` ViewModel 6 本（Theme / Language / DebugSettings /
+  About / Debug / Session）を Riverpod の `Notifier` / `FutureProvider` に
+  置き換え、`AppScope`（`InheritedWidget`）を削除。
+- 認証ガードは `redirect` 内で `ProviderScope.containerOf` からセッションを
+  読み、セッション変化は合成ルートの `RouterRefreshBridge` が
+  `refreshListenable` に伝える。
+- サーバー由来のキャッシュ（アルバム・サムネイル・アップロード候補）は
+  `sessionIdentityProvider` を watch して自動破棄する形になり、
+  `SessionCacheReset` ウィジェットを削除。
+- Riverpod 3 の既定の自動リトライを無効化（明示的な「再試行」UI と競合し、
+  失敗時に裏でサーバーを叩き直してしまうため）。
+
 ## 2026-08-07 — 認証トークンの保存先を Keystore へ移行
 
 - `SessionRepository` の実装を SharedPreferences（平文）から

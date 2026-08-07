@@ -2,45 +2,38 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/app/bootstrap/app_router.dart';
 import 'package:flutterbase/app/di/service_locator.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
-import 'package:flutterbase/presentation/app_scope.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:flutterbase/presentation/providers/session_providers.dart';
+import 'package:flutterbase/presentation/providers/settings_providers.dart';
 import 'package:flutterbase/presentation/theme/app_theme.dart';
-import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
-import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
-import 'package:flutterbase/presentation/widgets/session_cache_reset.dart';
 import 'package:go_router/go_router.dart';
 
 /// Root widget.
 ///
-/// Resolves the wired objects from the service locator once and publishes
-/// them to the widget tree via [AppScope], so no Presentation file has to
-/// import the composition root itself.
+/// A [ConsumerStatefulWidget]: theme, language, and session all live in
+/// Riverpod, and this is where they meet the framework — `MaterialApp`
+/// settings and the router's auth guard.
 ///
 /// Uses `MaterialApp.router`: the Router API is what lets the platform push a
 /// location into a running app, which is what makes an incoming App Link an
 /// ordinary navigation instead of a special case.
-class AppWidget extends StatefulWidget {
+class AppWidget extends ConsumerStatefulWidget {
   const AppWidget({super.key});
 
   @override
-  State<AppWidget> createState() => _AppWidgetState();
+  ConsumerState<AppWidget> createState() => _AppWidgetState();
 }
 
-class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
+class _AppWidgetState extends ConsumerState<AppWidget>
+    with WidgetsBindingObserver {
   late final AppLogger _logger;
-  late final ThemeViewModel _themeViewModel;
-  late final LanguageViewModel _languageViewModel;
-  late final DebugSettingsViewModel _debugSettingsViewModel;
-  late final SessionViewModel _sessionViewModel;
   late final AutoUploadCoordinator _autoUploadCoordinator;
+  final RouterRefreshBridge _routerRefresh = RouterRefreshBridge();
 
   /// Built once: a router recreated on every rebuild would drop the
   /// navigation stack, including the screen a deep link just opened.
@@ -50,13 +43,15 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     _logger = sl<AppLogger>();
-    _themeViewModel = sl<ThemeViewModel>();
-    _languageViewModel = sl<LanguageViewModel>();
-    _debugSettingsViewModel = sl<DebugSettingsViewModel>();
-    _sessionViewModel = sl<SessionViewModel>();
     _router = AppRouter.create(
       logger: _logger,
-      sessionViewModel: _sessionViewModel,
+      refreshListenable: _routerRefresh,
+    );
+    // The guard reads the session provider; this listener is what re-runs
+    // it when the session changes (login, logout, forced expiry).
+    ref.listenManual<bool>(
+      sessionProvider.select((state) => state.isAuthenticated),
+      (_, _) => _routerRefresh.poke(),
     );
     // Watches the photo library for the whole app run. Each sync pass
     // re-checks the preconditions itself, so it is safe to start
@@ -71,6 +66,7 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     unawaited(_autoUploadCoordinator.stop());
     _router.dispose();
+    _routerRefresh.dispose();
     super.dispose();
   }
 
@@ -86,39 +82,23 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return AppScope(
-      logger: _logger,
-      themeViewModel: _themeViewModel,
-      languageViewModel: _languageViewModel,
-      debugSettingsViewModel: _debugSettingsViewModel,
-      sessionViewModel: _sessionViewModel,
-      createAboutViewModel: sl.call<AboutViewModel>,
-      createDebugViewModel: sl.call<DebugViewModel>,
-      child: SessionCacheReset(
-        sessionViewModel: _sessionViewModel,
-        child: ListenableBuilder(
-          listenable: Listenable.merge([_themeViewModel, _languageViewModel]),
-          builder: (context, _) {
-            return MaterialApp.router(
-              onGenerateTitle: (context) =>
-                  AppLocalizations.of(context).appName,
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.light,
-              darkTheme: AppTheme.dark,
-              themeMode: _themeViewModel.themeMode,
-              locale: _languageViewModel.locale,
-              supportedLocales: AppLocalizations.supportedLocales,
-              localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              routerConfig: _router,
-            );
-          },
-        ),
-      ),
+    final themeMode = ref.watch(themeModeProvider);
+    final language = ref.watch(appLanguageProvider);
+    return MaterialApp.router(
+      onGenerateTitle: (context) => AppLocalizations.of(context).appName,
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: themeMode,
+      locale: localeOf(language),
+      supportedLocales: AppLocalizations.supportedLocales,
+      localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      routerConfig: _router,
     );
   }
 }

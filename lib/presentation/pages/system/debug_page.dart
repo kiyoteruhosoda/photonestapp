@@ -2,48 +2,29 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutterbase/presentation/app_scope.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutterbase/domain/entities/app_info.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:flutterbase/presentation/providers/app_info_providers.dart';
+import 'package:flutterbase/presentation/providers/app_providers.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 import 'package:flutterbase/shared/app_config.dart';
 
 /// Debug information page — shows build metadata and diagnostic actions.
-class DebugPage extends StatefulWidget {
+class DebugPage extends ConsumerStatefulWidget {
   const DebugPage({super.key});
 
   @override
-  State<DebugPage> createState() => _DebugPageState();
+  ConsumerState<DebugPage> createState() => _DebugPageState();
 }
 
-class _DebugPageState extends State<DebugPage> {
-  DebugViewModel? _viewModel;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_viewModel != null) return;
-    final viewModel = AppScope.of(context).createDebugViewModel();
-    _viewModel = viewModel;
-    viewModel.addListener(_onViewModelChange);
-    unawaited(viewModel.loadAppInfo());
-  }
-
-  @override
-  void dispose() {
-    _viewModel?.removeListener(_onViewModelChange);
-    super.dispose();
-  }
-
-  void _onViewModelChange() {
-    if (mounted) setState(() {});
-  }
-
+class _DebugPageState extends ConsumerState<DebugPage> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
+    final appInfo = ref.watch(appInfoProvider);
     return Scaffold(
       appBar: AppMainHeader(
         title: l10n.debugTitle,
@@ -86,13 +67,16 @@ class _DebugPageState extends State<DebugPage> {
           // App info card
           AppSectionHeader(title: l10n.debugAppInfoSection),
           const SizedBox(height: AppSpacing.sm),
-          switch (_viewModel?.state ?? DebugState.loading) {
-            DebugState.loading => const AppLoadingView(),
-            DebugState.error => AppErrorView(
-              message: _viewModel?.appError?.message ?? l10n.commonError,
-              onRetry: () => unawaited(_viewModel!.loadAppInfo()),
+          switch (appInfo) {
+            AsyncError<AppInfo>() => AppErrorView(
+              message: l10n.commonError,
+              onRetry: () => ref.invalidate(appInfoProvider),
             ),
-            DebugState.loaded => _buildInfoCard(context),
+            AsyncData<AppInfo>(value: final info) => _buildInfoCard(
+              context,
+              info,
+            ),
+            _ => const AppLoadingView(),
           },
           const SizedBox(height: AppSpacing.lg),
 
@@ -149,7 +133,9 @@ class _DebugPageState extends State<DebugPage> {
             title: l10n.debugClearLogs,
             leading: const Icon(Icons.clear_all),
             onTap: () {
-              _viewModel?.clearLogs();
+              final logger = ref.read(appLoggerProvider);
+              logger.info('[Debug] clearLogs');
+              logger.clearBuffer();
               _showSnackBar(l10n.debugClearLogsSuccess);
             },
           ),
@@ -170,8 +156,7 @@ class _DebugPageState extends State<DebugPage> {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context) {
-    final info = _viewModel!.appInfo!;
+  Widget _buildInfoCard(BuildContext context, AppInfo info) {
     final l10n = AppLocalizations.of(context);
     final entries = <(String, String)>[
       (l10n.debugAppName, AppConfig.appName),
@@ -200,7 +185,7 @@ class _DebugPageState extends State<DebugPage> {
   }
 
   void _copyAllToClipboard() {
-    final info = _viewModel?.appInfo;
+    final info = ref.read(appInfoProvider).value;
     if (info == null) return;
     final l10n = AppLocalizations.of(context);
     final buffer = StringBuffer()

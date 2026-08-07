@@ -45,9 +45,10 @@ void main() {
       expect(find.text(l10n.debugThemeModeLight), findsOneWidget);
     });
 
-    testWidgets('creates exactly one ViewModel for the route', (tester) async {
+    testWidgets('asks the repository for app info exactly once', (
+      tester,
+    ) async {
       final scope = await pumpInScope(tester, const DebugPage());
-      expect(scope.debugViewModelsCreated, 1);
       expect(scope.appInfoRepository.callCount, 1);
     });
   });
@@ -61,7 +62,7 @@ void main() {
       );
       await pumpInScope(tester, const DebugPage(), scope: scope);
       expect(find.byType(AppErrorView), findsOneWidget);
-      expect(find.text('Failed to load debug info'), findsOneWidget);
+      expect(find.text(l10n.commonError), findsOneWidget);
     });
 
     testWidgets('retry re-runs the use case', (tester) async {

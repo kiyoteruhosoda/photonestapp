@@ -2,25 +2,26 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/domain/entities/log_entry.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
-import 'package:flutterbase/presentation/app_scope.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:flutterbase/presentation/providers/app_providers.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 
 /// Displays the in-memory log buffer with level filtering and export.
-class LogsPage extends StatefulWidget {
+class LogsPage extends ConsumerStatefulWidget {
   const LogsPage({super.key});
 
   @override
-  State<LogsPage> createState() => _LogsPageState();
+  ConsumerState<LogsPage> createState() => _LogsPageState();
 }
 
-class _LogsPageState extends State<LogsPage> {
+class _LogsPageState extends ConsumerState<LogsPage> {
   LogLevel? _filter; // null = all
-  AppLogger get _logger => AppScope.of(context).logger;
+  AppLogger get _logger => ref.read(appLoggerProvider);
 
   @override
   Widget build(BuildContext context) {

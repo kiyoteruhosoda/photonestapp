@@ -16,7 +16,7 @@
 | `lib/domain/` | エンティティ・値オブジェクト・ドメインエラー・リポジトリ *インターフェース* | 不可 |
 | `lib/application/` | ユースケース、外向きポート (`ports/`) | 不可 |
 | `lib/infrastructure/` | 外部システムのアダプター（永続化・プラットフォーム・ネットワーク） | 可 |
-| `lib/presentation/` | 画面・ウィジェット・ViewModel・テーマ・i18n | 可 |
+| `lib/presentation/` | 画面・ウィジェット・Riverpod provider / Notifier・テーマ・i18n | 可 |
 | `lib/app/` | 合成ルート（DI・起動・ルーティング）。`lib/main.dart` も含む | 可 |
 | `lib/shared/` | フレームワーク非依存の定数のみ（`AppConfig` / `BuildInfo`） | 不可 |
 
@@ -56,10 +56,12 @@ presentation  infrastructure
 | app | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | shared | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
-**Presentation は `lib/app/` を import できません。** ViewModel は
-`presentation/app_scope.dart`（`InheritedWidget`）経由で受け取ります。
-合成ルートが `AppScope` に値を注入し、画面はそれを読むだけです。
-サービスロケータを画面から直接引く形にすると矢印が外向きに逆転するため、CI で落ちます。
+**Presentation は `lib/app/` を import できません。** 画面が必要とする
+ユースケースは `presentation/providers/` の Riverpod provider として宣言し、
+本体は `UnimplementedError` を投げます。合成ルートの
+`lib/app/di/provider_overrides.dart` が `overrideWithValue` で実体を差すので、
+注入漏れは起動時に必ず失敗します。サービスロケータを画面から直接引く形に
+すると矢印が外向きに逆転するため、CI で落ちます。
 
 ## CI が拒否するもの
 
@@ -119,17 +121,27 @@ reserved に残っていても CI が落ちます）。
 採用していません。値の等価性は手書きの `==` / `hashCode`、Riverpod の
 provider は手書きで書きます。
 
-### Riverpod と `AppScope` の使い分け
+### 状態管理は Riverpod に一本化
 
-どちらも役割は同じです。**合成ルートが実体を注入し、Presentation は契約だけを見る。**
+Presentation の状態はすべて Riverpod で持ちます（ADR 0004）。原則は変わらず
+**合成ルートが実体を注入し、Presentation は契約だけを見る** です。
 
-- `AppScope`（`InheritedWidget`）— 既存の `ChangeNotifier` ViewModel 用。
-- Riverpod — ブックマーク機能などの新しいコード用。
-  provider は Presentation に宣言し、本体は `UnimplementedError` を投げます。
-  `lib/app/di/provider_overrides.dart` が `overrideWithValue` で実体を差すので、
-  注入漏れは起動時に必ず失敗します（黙って null にはなりません）。
+- ユースケースの provider は Presentation に宣言し、本体は
+  `UnimplementedError` を投げます。`lib/app/di/provider_overrides.dart` が
+  `overrideWithValue` で実体を差すので、注入漏れは起動時に必ず失敗します
+  （黙って null にはなりません）。
+- 画面状態は `Notifier` / `AsyncNotifier` / `FutureProvider`
+  （`presentation/providers/`）。かつての `ChangeNotifier` ViewModel と
+  `AppScope`（`InheritedWidget`）は廃止しました。
+- go_router の `refreshListenable` は `Listenable` を要求するため、
+  セッション変化は合成ルートが `RouterRefreshBridge`（`ChangeNotifier`）に
+  変換して渡します。認証ガード自体は `redirect` 内で
+  `ProviderScope.containerOf(context)` からセッションを読みます。
+- サーバー由来のキャッシュ（アルバム・サムネイル・アップロード候補）は
+  `sessionIdentityProvider` を `build` で watch し、ログイン先の変化で
+  自動的に破棄されます。
 
-どちらの場合も、Presentation から `lib/app/` を import することはできません。
+Presentation から `lib/app/` を import することはできません。
 
 ## ルーティングとディープリンク
 
@@ -165,15 +177,17 @@ pubspec レベルでも依存方向を強制できます。本テンプレート
 - `test/support/fakes.dart` — 各 Repository の in-memory 実装。書き込み内容を記録し、
   失敗も注入できます。
 - `test/support/recording_app_logger.dart` — `AppLogger` ポートの記録用ダブル。
-- `test/support/test_harness.dart` — `AppScope` + テーマ + i18n を組んだ
-  ウィジェットテスト用ハーネス（`pumpInScope` / `pumpComponent`）。
+- `test/support/test_harness.dart` — Riverpod の override 一式 + テーマ +
+  i18n を組んだウィジェットテスト用ハーネス（`pumpInScope` /
+  `pumpComponent`）。`TestScope.container` から provider の状態を直接
+  読み書きできます。
 
 特に次を必ずテストします。
 
 - Domain エンティティの状態遷移、値オブジェクトの不正値
 - ユースケースの正常系・異常系
 - Repository・外部ポートの呼び出し（記録用ダブルで検証）
-- ViewModel の状態遷移
+- Notifier / provider の状態遷移
 
 ### カバレッジ目標
 

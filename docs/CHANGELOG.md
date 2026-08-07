@@ -3,6 +3,15 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — 認証トークンの保存先を Keystore へ移行
+
+- `SessionRepository` の実装を SharedPreferences（平文）から
+  `flutter_secure_storage`（Android Keystore）へ差し替え。secure storage の
+  API は非同期のため、起動時に一度読み込んでメモリに保持し、save / clear が
+  キャッシュとキーストアを同時に更新する（`load()` の同期契約は不変）。
+- 旧ビルドが SharedPreferences に残した平文トークンは起動時に Keystore へ
+  移行し、平文側は無条件に削除する。
+
 ## 2026-08-07 — PhotoNest クライアント機能（ログイン・アルバム・アップロード）
 
 テンプレート（flutterbase）を PhotoNest のモバイルクライアントとして実装。

@@ -12,19 +12,11 @@
 | 優先 | # | 概要 | 状態 | 影響度 | 重要度 | 難易度 | 工数 |
 |---|---|---|---|---|---|---|---|
 | 1 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | ⬜未着手 | 大 | 中 | 小 | 小 |
-| 2 | 3 | 認証トークンの保存先を SharedPreferences から Keystore へ移す | ⬜未着手 | 大 | 大 | 中 | 中 |
-| 3 | 4 | アプリを閉じている間の自動アップロード（WorkManager 等のバックグラウンド実行） | ⬜未着手 | 中 | 中 | 大 | 大 |
-| 4 | 2 | ViewModel + `AppScope` を Riverpod に寄せるか決める | 🟡要判断 | 中 | 中 | 中 | 大 |
+| 2 | 4 | アプリを閉じている間の自動アップロード（WorkManager 等のバックグラウンド実行） | ⬜未着手 | 中 | 中 | 大 | 大 |
+| 3 | 2 | ViewModel + `AppScope` を Riverpod に寄せるか決める | 🟡要判断 | 中 | 中 | 中 | 大 |
 
 
 ## 詳細
-
-### 3. 認証トークンの保存先を Keystore へ移す
-
-`SharedPreferencesSessionRepository` は開発段階の実装で、アクセストークン・
-リフレッシュトークンを平文の SharedPreferences に保存している。本番運用前に
-`flutter_secure_storage`（Android Keystore）等への差し替えが必要。
-`SessionRepository` の実装を差し替えるだけで済む構造にしてある。
 
 ### 4. バックグラウンド自動アップロード
 

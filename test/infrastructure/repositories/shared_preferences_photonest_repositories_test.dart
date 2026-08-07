@@ -1,10 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_api_endpoint_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_upload_settings_repository.dart';
-import 'package:flutterbase/infrastructure/repositories/shared_preferences_session_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../support/fakes.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -13,45 +10,6 @@ void main() {
     SharedPreferences.setMockInitialValues(const {});
     return SharedPreferences.getInstance();
   }
-
-  group('SharedPreferencesSessionRepository', () {
-    test('round-trips a session', () async {
-      final repository = SharedPreferencesSessionRepository(
-        await preferences(),
-      );
-
-      expect(repository.load(), isNull);
-      await repository.save(testAuthSession);
-
-      final restored = repository.load();
-      expect(restored, testAuthSession);
-      expect(restored?.email, testAuthSession.email);
-      expect(restored?.scopes, testAuthSession.scopes);
-    });
-
-    test('clear forgets everything', () async {
-      final repository = SharedPreferencesSessionRepository(
-        await preferences(),
-      );
-      await repository.save(testAuthSession);
-      await repository.clear();
-      expect(repository.load(), isNull);
-    });
-
-    test(
-      'corrupted storage reads back as signed out, not as a crash', //
-      () async {
-        SharedPreferences.setMockInitialValues(const {
-          'auth.accessToken': '',
-          'auth.refreshToken': 'r',
-        });
-        final repository = SharedPreferencesSessionRepository(
-          await SharedPreferences.getInstance(),
-        );
-        expect(repository.load(), isNull);
-      },
-    );
-  });
 
   group('SharedPreferencesApiEndpointRepository', () {
     test('round-trips the endpoint', () async {

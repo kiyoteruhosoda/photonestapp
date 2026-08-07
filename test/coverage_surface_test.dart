@@ -89,11 +89,11 @@ import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/package_info_app_info_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/secure_storage_session_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_api_endpoint_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_upload_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_debug_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
-import 'package:flutterbase/infrastructure/repositories/shared_preferences_session_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_bookmark_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';

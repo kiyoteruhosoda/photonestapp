@@ -11,8 +11,8 @@
 
 | 優先 | # | 概要 | 状態 | 影響度 | 重要度 | 難易度 | 工数 |
 |---|---|---|---|---|---|---|---|
-| 2 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | ⬜未着手 | 大 | 大 | 小 | 小 |
-| 3 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | ⬜未着手 | 大 | 中 | 小 | 小 |
+| 2 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | 🟡要判断 | 大 | 大 | 小 | 小 |
+| 3 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | 🟡要判断 | 大 | 中 | 小 | 小 |
 | 6 | 9 | 動画対応（端末動画の列挙・アップロード・再生。現状 `RequestType.image` 固定で完全非対応） | ⬜未着手 | 大 | 大 | 大 | 大 |
 | 7 | 10 | オフラインキャッシュ（サムネイル永続化）とアルバム詳細のページング（現状メモリキャッシュのみ・全件一括取得） | ⬜未着手 | 大 | 中 | 大 | 大 |
 | 11 | 4 | アプリを閉じている間の自動アップロード（WorkManager 等のバックグラウンド実行） | ⬜未着手 | 中 | 中 | 大 | 大 |
@@ -24,6 +24,12 @@
 
 `android/app/build.gradle` が `com.example.flutterbase` のままで、Kotlin パッケージも
 テンプレートのまま。`scripts/rename_app.sh` が用意されているので実 ID で実行する。
+
+**要判断**: 実 ID はプロダクトオーナーが所有ドメインから決める必要があり、
+コード側では決められない（一度 Play Console に上げた ID は変更不可）。
+決まり次第 `./scripts/rename_app.sh <実ID>` を実行するだけで完了する。
+候補の考え方: 所有ドメインの逆順 + アプリ名（例: 所有ドメインが
+`example.com` なら `com.example.photonest`）。
 
 ### 9. 動画対応
 
@@ -61,3 +67,9 @@ fork 後に必要な作業は 3 つで、いずれも `docs/DEEP_LINKS.md` に�
    `https://<host>/.well-known/assetlinks.json` として配信する。
 
 テンプレート側で決められるのはここまでなので、作業自体は fork 側に残します。
+
+**要判断**: 実際に配信に使うドメイン（PhotoNest サーバーを公開しているホスト等）と、
+`assetlinks.json` に入れる署名フィンガープリント（release 鍵）が決まらないと
+着手できない。ドメインが決まれば上記 1〜3 は `docs/DEEP_LINKS.md` の手順どおりで
+工数小。#6 の `applicationId` 決定と同時に決めるのが望ましい
+（`assetlinks.json` は `package_name` に実 ID を含むため）。

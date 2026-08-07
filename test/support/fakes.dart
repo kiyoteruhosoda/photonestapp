@@ -1,16 +1,35 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
+import 'package:flutterbase/application/ports/photo_library_gateway.dart';
+import 'package:flutterbase/domain/entities/album.dart';
+import 'package:flutterbase/domain/entities/album_media_item.dart';
 import 'package:flutterbase/domain/entities/app_info.dart';
+import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/entities/bookmark.dart';
+import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:flutterbase/domain/repositories/album_repository.dart';
+import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
+import 'package:flutterbase/domain/repositories/auth_repository.dart';
+import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
+import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
+import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
+import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/app_language.dart';
 import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
 import 'package:flutterbase/domain/value_objects/bookmark_id.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:flutterbase/domain/value_objects/login_credentials.dart';
+import 'package:flutterbase/domain/value_objects/media_id.dart';
 
 /// In-memory repository doubles.
 ///
@@ -205,6 +224,328 @@ final class FakeBookmarkRepository implements BookmarkRepository {
     final error = failure;
     if (error != null) throw error;
   }
+}
+
+// ─── PhotoNest fakes ───────────────────────────────────────────────────────
+
+/// A ready-made session for tests that just need to be "signed in".
+final AuthSession testAuthSession = AuthSession(
+  accessToken: 'access-token',
+  refreshToken: 'refresh-token',
+  email: 'user@example.com',
+  scopes: const ['gui:view', 'album:view', 'media:view'],
+);
+
+/// A fixed capture instant, so tests never reason about the wall clock.
+final DateTime testPhotoTakenAt = DateTime.utc(2026, 8, 3, 12, 30);
+
+/// A real, decodable 1×1 transparent PNG.
+///
+/// Thumbnail fakes must return this rather than arbitrary bytes: the widgets
+/// hand the payload to `Image.memory`, and an undecodable buffer turns every
+/// screen test into an image-codec exception.
+final Uint8List testPngBytes = Uint8List.fromList(const [
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, //
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, //
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, //
+  0x0b, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x60, 0x00, 0x02, 0x00, //
+  0x00, 0x05, 0x00, 0x01, 0x7a, 0x5e, 0xab, 0x3f, 0x00, 0x00, 0x00, 0x00, //
+  0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+]);
+
+/// Builds a device photo without going through the platform gateway.
+LocalPhoto testLocalPhoto({
+  String localId = 'asset-1',
+  String fileName = 'IMG_0001.jpg',
+  DateTime? takenAt,
+}) {
+  return LocalPhoto(
+    localId: localId,
+    fileName: fileName,
+    takenAt: takenAt ?? testPhotoTakenAt,
+  );
+}
+
+/// Builds a server album without going through a repository.
+Album testAlbum({
+  int id = 1,
+  String title = 'Trip',
+  int mediaCount = 2,
+  int? coverMediaId = 10,
+}) {
+  return Album(
+    id: AlbumId(id),
+    title: title,
+    mediaCount: mediaCount,
+    coverMediaId: coverMediaId == null ? null : MediaId(coverMediaId),
+    createdAt: DateTime.utc(2026),
+  );
+}
+
+/// Builds one album media item.
+AlbumMediaItem testAlbumMediaItem({int id = 10, String filename = 'a.jpg'}) {
+  return AlbumMediaItem(
+    id: MediaId(id),
+    filename: filename,
+    shotAt: testPhotoTakenAt,
+  );
+}
+
+/// In-memory [AuthRepository].
+final class FakeAuthRepository implements AuthRepository {
+  FakeAuthRepository({AuthSession? session}) : sessionToReturn = session;
+
+  /// Session handed back by [login] / [refresh]; defaults to a session built
+  /// from the submitted credentials.
+  AuthSession? sessionToReturn;
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  final List<LoginCredentials> logins = <LoginCredentials>[];
+  final List<AuthSession> loggedOut = <AuthSession>[];
+
+  @override
+  Future<AuthSession> login(LoginCredentials credentials) async {
+    _failIfAsked();
+    logins.add(credentials);
+    return sessionToReturn ??
+        AuthSession(
+          accessToken: 'access-token',
+          refreshToken: 'refresh-token',
+          email: credentials.email,
+          scopes: const ['gui:view'],
+        );
+  }
+
+  @override
+  Future<AuthSession> refresh(AuthSession session) async {
+    _failIfAsked();
+    return sessionToReturn ?? session;
+  }
+
+  @override
+  Future<void> logout(AuthSession session) async {
+    _failIfAsked();
+    loggedOut.add(session);
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// In-memory [SessionRepository].
+final class FakeSessionRepository implements SessionRepository {
+  FakeSessionRepository([this._session]);
+
+  AuthSession? _session;
+  final List<AuthSession> saved = <AuthSession>[];
+  int cleared = 0;
+
+  /// Left open for the fake's lifetime, like the platform broadcast fakes.
+  // ignore: close_sinks
+  final StreamController<AuthSession?> _changes =
+      StreamController<AuthSession?>.broadcast();
+
+  @override
+  AuthSession? load() => _session;
+
+  @override
+  Future<void> save(AuthSession session) async {
+    saved.add(session);
+    _session = session;
+    _changes.add(session);
+  }
+
+  @override
+  Future<void> clear() async {
+    cleared++;
+    _session = null;
+    _changes.add(null);
+  }
+
+  @override
+  Stream<AuthSession?> get changes => _changes.stream;
+}
+
+/// In-memory [ApiEndpointRepository].
+final class FakeApiEndpointRepository implements ApiEndpointRepository {
+  FakeApiEndpointRepository([this._baseUrl]);
+
+  Uri? _baseUrl;
+  final List<Uri> saved = <Uri>[];
+
+  @override
+  Uri? load() => _baseUrl;
+
+  @override
+  Future<void> save(Uri baseUrl) async {
+    saved.add(baseUrl);
+    _baseUrl = baseUrl;
+  }
+}
+
+/// In-memory [AlbumRepository].
+final class FakeAlbumRepository implements AlbumRepository {
+  FakeAlbumRepository({List<Album>? albums, Map<AlbumId, AlbumDetail>? details})
+    : albums = albums ?? <Album>[],
+      details = details ?? <AlbumId, AlbumDetail>{};
+
+  List<Album> albums;
+  Map<AlbumId, AlbumDetail> details;
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<List<Album>> findAll() async {
+    _failIfAsked();
+    return albums;
+  }
+
+  @override
+  Future<AlbumDetail?> findById(AlbumId id) async {
+    _failIfAsked();
+    return details[id];
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// In-memory [MediaThumbnailRepository] returning a fixed byte pattern.
+final class FakeMediaThumbnailRepository implements MediaThumbnailRepository {
+  final List<(MediaId, int)> fetched = <(MediaId, int)>[];
+
+  AppError? failure;
+
+  @override
+  Future<Uint8List> fetch(MediaId id, {required int size}) async {
+    final error = failure;
+    if (error != null) throw error;
+    fetched.add((id, size));
+    return testPngBytes;
+  }
+}
+
+/// Records uploads instead of sending them.
+final class FakePhotoUploadRepository implements PhotoUploadRepository {
+  final List<(LocalPhoto, Uint8List)> uploaded = <(LocalPhoto, Uint8List)>[];
+
+  /// When set, [upload] throws for photos whose id is in [failFor] (or for
+  /// every photo when [failFor] is empty).
+  AppError? failure;
+  Set<String> failFor = <String>{};
+
+  @override
+  Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+    final error = failure;
+    if (error != null && (failFor.isEmpty || failFor.contains(photo.localId))) {
+      throw error;
+    }
+    uploaded.add((photo, bytes));
+  }
+}
+
+/// In-memory [UploadHistoryRepository].
+final class FakeUploadHistoryRepository implements UploadHistoryRepository {
+  FakeUploadHistoryRepository([Set<String>? uploaded])
+    : _uploaded = uploaded ?? <String>{};
+
+  final Set<String> _uploaded;
+  final List<LocalPhoto> marked = <LocalPhoto>[];
+
+  @override
+  Future<Set<String>> uploadedLocalIds() async => Set.of(_uploaded);
+
+  @override
+  Future<void> markUploaded(LocalPhoto photo, DateTime uploadedAt) async {
+    marked.add(photo);
+    _uploaded.add(photo.localId);
+  }
+}
+
+/// In-memory [AutoUploadSettingsRepository].
+final class FakeAutoUploadSettingsRepository
+    implements AutoUploadSettingsRepository {
+  FakeAutoUploadSettingsRepository({this.enabled = false, this.since});
+
+  bool enabled;
+  DateTime? since;
+  final List<bool> savedStates = <bool>[];
+
+  @override
+  bool isEnabled() => enabled;
+
+  @override
+  DateTime? enabledSince() => since;
+
+  @override
+  Future<void> setEnabled(bool value) async {
+    savedStates.add(value);
+    enabled = value;
+    if (value) since ??= testPhotoTakenAt;
+  }
+}
+
+/// In-memory [PhotoLibraryGateway].
+///
+/// [changes] is a broadcast controller a test can push events into to
+/// simulate the platform's library-change broadcast.
+final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
+  FakePhotoLibraryGateway({this.accessGranted = true, List<LocalPhoto>? photos})
+    : photos = photos ?? <LocalPhoto>[];
+
+  bool accessGranted;
+  List<LocalPhoto> photos;
+
+  /// Bytes per local id; a photo missing here reads back as null.
+  final Map<String, Uint8List> bytesById = <String, Uint8List>{};
+  final Map<String, Uint8List> thumbnailsById = <String, Uint8List>{};
+
+  // Deliberately left open for the fake's lifetime: tests push events into
+  // it to simulate the platform broadcast, and the test process ends before
+  // "leaking" matters. The lint has a point for production code only.
+  // ignore: close_sinks
+  final StreamController<void> changes = StreamController<void>.broadcast();
+
+  int accessRequests = 0;
+  final List<DateTime?> queriedSince = <DateTime?>[];
+
+  @override
+  Future<bool> ensureAccess() async {
+    accessRequests++;
+    return accessGranted;
+  }
+
+  @override
+  Future<List<LocalPhoto>> photosTakenAfter(
+    DateTime? since, {
+    int limit = 100,
+    int page = 0,
+  }) async {
+    queriedSince.add(since);
+    return photos
+        .where((photo) => since == null || photo.takenAt.isAfter(since))
+        .skip(page * limit)
+        .take(limit)
+        .toList();
+  }
+
+  @override
+  Future<Uint8List?> readOriginalBytes(String localId) async =>
+      bytesById[localId];
+
+  @override
+  Future<Uint8List?> readThumbnail(String localId, {required int size}) async =>
+      thumbnailsById[localId];
+
+  @override
+  Stream<void> get libraryChanges => changes.stream;
 }
 
 /// Records the URLs handed to the platform instead of launching them.

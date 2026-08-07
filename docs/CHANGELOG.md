@@ -3,6 +3,43 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — PhotoNest クライアント機能（ログイン・アルバム・アップロード）
+
+テンプレート（flutterbase）を PhotoNest のモバイルクライアントとして実装。
+バックエンドは photonest リポジトリの FastAPI（`/api`）。API 仕様は
+サーバーの `/api/docs`（OpenAPI）を出所とする。
+
+### 追加
+
+- **ログイン**: サーバー URL + メールアドレス + パスワードでログイン
+  （`POST /api/auth/login`、scope は `gui:view`）。アクセストークン失効時は
+  `POST /api/auth/refresh` で自動更新し、ローテーションされたリフレッシュ
+  トークンを即座に永続化。ルーターに認証ガードを追加し、未ログイン時は
+  `/login` へ、ログイン済みでの `/login` は `/` へリダイレクト。
+- **アルバム閲覧**: アルバム一覧（`GET /api/albums`）と詳細
+  （`GET /api/albums/{id}`、`/albums/:id` ルート）。サムネイルは
+  `GET /api/media/{id}/thumbnail`（Bearer 認証）をバイト列で取得して表示。
+- **写真アップロード**: 端末の最近の写真から選択して
+  `POST /api/upload/prepare` → `POST /api/upload/commit`（`X-Upload-Session`
+  ヘッダー）で送信。アップロード済みの写真は SQLite の履歴
+  （`uploaded_photos` テーブル、スキーマ v2）で管理し二重送信を防ぐ。
+- **自動アップロード**: photo_manager の変更通知とフォアグラウンド復帰を
+  トリガーに、有効化時点以降に撮影された未送信の写真を自動送信
+  （`AutoUploadCoordinator`）。有効化時に基準時刻を一度だけ記録するため、
+  既存のカメラロール全体を巻き込まない。カメラ（撮影）機能は持たない。
+- 依存: `http` / `http_parser` / `photo_manager`。Android に
+  `READ_MEDIA_IMAGES` / `READ_MEDIA_VISUAL_USER_SELECTED` 権限を追加。
+
+### 変更
+
+- アプリ identity を PhotoNest に変更（`AppConfig` / Android label / l10n）。
+- MainPage のタブを ホーム/検索/設定 から アルバム/アップロード/設定 に変更し、
+  テンプレートのデモコンテンツ（Home/Search タブ）を削除。設定タブに
+  アカウント表示とログアウトを追加。
+- アップロード後の写真がサーバーのライブラリに現れるのは、サーバー側の
+  取り込みジョブ（local import）実行後。クライアントは受領（コミット成功）
+  までを保証する。
+
 ## 2026-08-05 — 自己更新後の再実行が終了コード 126 で落ちる問題の修正
 
 - `scripts/build-remote-container.sh` の自己更新後の再実行を、ファイルを直接

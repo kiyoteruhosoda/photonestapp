@@ -6,3 +6,4 @@ export 'app_license_launcher.dart';
 export 'app_primary_button.dart';
 export 'app_state_views.dart';
 export 'app_text_field.dart';
+export 'thumbnail_image.dart';

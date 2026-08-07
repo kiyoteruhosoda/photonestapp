@@ -13,18 +13,18 @@ class AppConfig {
   // ─── Identity ─────────────────────────────────────────────────────
   /// Display name shown in the MaterialApp title, drawer header,
   /// and About page.
-  static const String appName = 'FlutterBase';
+  static const String appName = 'PhotoNest';
 
   /// One-line description shown on the About page.
   static const String appDescription =
-      'Flutter base app following the DADS design system';
+      'Mobile client for the PhotoNest photo library';
 
   /// Short tagline rendered under the app name in the drawer.
-  static const String appTagline = 'DADS Design System';
+  static const String appTagline = 'Your photos, in your nest';
 
   // ─── Home page copy ───────────────────────────────────────────────
-  static const String homeSubtitle = 'DADS Design System App';
-  static const String homeCardTitle = 'DADS Design System';
+  static const String homeSubtitle = 'PhotoNest';
+  static const String homeCardTitle = 'PhotoNest';
 
   // ─── Deep links (App Links) ───────────────────────────────────────
   /// Domain that Android verifies against

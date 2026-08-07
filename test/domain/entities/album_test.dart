@@ -1,0 +1,66 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/domain/entities/album.dart';
+import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/value_objects/album_id.dart';
+import 'package:flutterbase/domain/value_objects/media_id.dart';
+
+void main() {
+  Album build({int id = 1, String title = 'Trip'}) {
+    return Album(
+      id: AlbumId(id),
+      title: title,
+      mediaCount: 3,
+      coverMediaId: MediaId(9),
+      createdAt: DateTime.utc(2026),
+    );
+  }
+
+  group('Album', () {
+    test('identity is the id — a renamed album is the same album', () {
+      expect(build(title: 'Trip'), build(title: 'Renamed'));
+      expect(build().hashCode, build(title: 'Renamed').hashCode);
+      expect(build(id: 1), isNot(build(id: 2)));
+    });
+
+    test('toString names id and title', () {
+      expect(build().toString(), 'Album(1, Trip)');
+    });
+  });
+
+  group('AlbumMediaItem', () {
+    AlbumMediaItem buildItem({int id = 5, String filename = 'a.jpg'}) {
+      return AlbumMediaItem(
+        id: MediaId(id),
+        filename: filename,
+        shotAt: DateTime.utc(2026),
+      );
+    }
+
+    test('identity is the media id', () {
+      expect(buildItem(filename: 'a.jpg'), buildItem(filename: 'b.jpg'));
+      expect(buildItem(id: 5), isNot(buildItem(id: 6)));
+      expect(buildItem().hashCode, buildItem().hashCode);
+    });
+
+    test('toString names id and filename', () {
+      expect(buildItem().toString(), 'AlbumMediaItem(5, a.jpg)');
+    });
+  });
+
+  group('AlbumDetail', () {
+    test('identity follows the album', () {
+      final a = AlbumDetail(album: build(), media: const []);
+      final b = AlbumDetail(
+        album: build(),
+        media: [AlbumMediaItem(id: MediaId(1), filename: 'x.jpg')],
+      );
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+    });
+
+    test('toString names the album and the media count', () {
+      final detail = AlbumDetail(album: build(), media: const []);
+      expect(detail.toString(), 'AlbumDetail(1, 0 media)');
+    });
+  });
+}

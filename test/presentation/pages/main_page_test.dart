@@ -5,7 +5,6 @@ import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/pages/main_page.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 import 'package:flutterbase/shared/app_config.dart';
 
 import '../../support/fakes.dart';
@@ -101,10 +100,10 @@ bool canPopFromMainPage(WidgetTester tester) {
 
 void main() {
   group('MainPage — chrome', () {
-    testWidgets('opens on the Home tab', (tester) async {
+    testWidgets('opens on the Albums tab', (tester) async {
       await pumpInScope(tester, const MainPage());
-      expect(find.text(l10n.homeWelcomeTitle), findsOneWidget);
-      expect(find.text(AppConfig.homeSubtitle), findsOneWidget);
+      // The default scope has no albums, so the tab shows its empty state.
+      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
     });
 
     testWidgets('shows the app name in the header', (tester) async {
@@ -126,15 +125,11 @@ void main() {
   });
 
   group('MainPage — tabs', () {
-    testWidgets('Search tab shows the search field and empty state', (
-      tester,
-    ) async {
+    testWidgets('Upload tab shows the auto-upload switch', (tester) async {
       await pumpInScope(tester, const MainPage());
       await selectTab(tester, 1);
-      // "Search" is also the navigation destination label, hence >= 1.
-      expect(find.text(l10n.searchFieldLabel), findsAtLeastNWidgets(1));
-      expect(find.text(l10n.searchEmptyMessage), findsOneWidget);
-      expect(find.byType(AppTextField), findsOneWidget);
+      expect(find.text(l10n.uploadAutoTitle), findsOneWidget);
+      expect(find.byType(SwitchListTile), findsAtLeastNWidgets(1));
     });
 
     testWidgets('Settings tab shows theme and language sections', (
@@ -146,28 +141,28 @@ void main() {
       expect(inBody(l10n.settingsLanguage), findsOneWidget);
     });
 
-    testWidgets('returns to Home when the Home tab is selected again', (
+    testWidgets('returns to Albums when the Albums tab is selected again', (
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
       await selectTab(tester, 2);
       expect(inBody(l10n.settingsTitle), findsOneWidget);
       await selectTab(tester, 0);
-      expect(find.text(l10n.homeWelcomeTitle), findsOneWidget);
+      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
     });
 
-    testWidgets('the Home tab exercises its demo components', (tester) async {
-      await pumpInScope(tester, const MainPage());
-      expect(find.byType(AppPrimaryButton), findsOneWidget);
-      expect(find.byType(AppSecondaryButton), findsOneWidget);
-      await tester.tap(find.text(l10n.homePrimaryButton));
-      await tester.tap(find.text(l10n.homeSecondaryButton));
-      await tester.pumpAndSettle();
-
-      // The demo list cards sit below the fold on a test-sized viewport.
-      await scrollTo(tester, find.text(l10n.homeListCardTitle));
-      expect(find.byType(AppListCard), findsAtLeastNWidgets(1));
-      await scrollAndTap(tester, l10n.homeListCardTitle);
+    testWidgets('the Albums tab lists the stored albums', (tester) async {
+      final scope = TestScope(
+        albumRepository: FakeAlbumRepository(
+          albums: [
+            testAlbum(id: 1, title: 'Summer trip', coverMediaId: null),
+            testAlbum(id: 2, title: 'Family', coverMediaId: 20),
+          ],
+        ),
+      );
+      await pumpInScope(tester, const MainPage(), scope: scope);
+      expect(find.text('Summer trip'), findsOneWidget);
+      expect(find.text('Family'), findsOneWidget);
     });
   });
 
@@ -182,7 +177,7 @@ void main() {
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.text(l10n.homeWelcomeTitle), findsOneWidget);
+      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
     });
 
     testWidgets('a back gesture on Home is allowed to pop', (tester) async {
@@ -198,7 +193,8 @@ void main() {
       await pumpInScope(tester, const MainPage());
       await openDrawer(tester);
       expect(inDrawer(AppConfig.appTagline), findsOneWidget);
-      expect(inDrawer(l10n.navHome), findsOneWidget);
+      expect(inDrawer(l10n.navAlbums), findsOneWidget);
+      expect(inDrawer(l10n.navUpload), findsOneWidget);
       expect(inDrawer(l10n.drawerAbout), findsOneWidget);
       expect(inDrawer(l10n.drawerLicenses), findsOneWidget);
     });
@@ -224,14 +220,14 @@ void main() {
       expect(inDrawer(l10n.drawerDebug), findsNothing);
     });
 
-    testWidgets('selecting Search from the drawer switches tab and closes', (
+    testWidgets('selecting Upload from the drawer switches tab and closes', (
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
       await openDrawer(tester);
-      await tester.tap(inDrawer(l10n.navSearch));
+      await tester.tap(inDrawer(l10n.navUpload));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.searchEmptyMessage), findsOneWidget);
+      expect(find.text(l10n.uploadAutoTitle), findsOneWidget);
     });
 
     testWidgets('selecting Settings from the drawer switches tab', (
@@ -244,15 +240,15 @@ void main() {
       expect(inBody(l10n.settingsTitle), findsOneWidget);
     });
 
-    testWidgets('selecting Home from the drawer keeps Home selected', (
+    testWidgets('selecting Albums from the drawer keeps Albums selected', (
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
       await selectTab(tester, 1);
       await openDrawer(tester);
-      await tester.tap(inDrawer(l10n.navHome));
+      await tester.tap(inDrawer(l10n.navAlbums));
       await tester.pumpAndSettle();
-      expect(find.text(l10n.homeWelcomeTitle), findsOneWidget);
+      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
     });
 
     testWidgets('About in the drawer navigates to /about', (tester) async {

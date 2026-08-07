@@ -13,6 +13,7 @@ void main() {
       String describe(AppError error) => switch (error) {
         DomainError() => 'domain',
         InfrastructureError() => 'infrastructure',
+        AuthenticationError() => 'authentication',
         UnexpectedError() => 'unexpected',
       };
 
@@ -21,7 +22,20 @@ void main() {
         describe(const InfrastructureError('b')),
         equals('infrastructure'),
       );
+      expect(
+        describe(const AuthenticationError('d')),
+        equals('authentication'),
+      );
       expect(describe(const UnexpectedError('c')), equals('unexpected'));
+    });
+  });
+
+  group('AuthenticationError', () {
+    test('code defaults to null and is retained when supplied', () {
+      expect(AuthenticationError('denied'.toString()).code, isNull);
+      const error = AuthenticationError('denied', code: 'invalid_credentials');
+      expect(error.message, 'denied');
+      expect(error.code, 'invalid_credentials');
     });
   });
 

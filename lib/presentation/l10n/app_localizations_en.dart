@@ -6,13 +6,112 @@ class AppLocalizationsEn extends AppLocalizations {
 
   // ─── Navigation ───────────────────────────────────────────────────────
   @override
-  String get appName => 'FlutterBase';
+  String get appName => 'PhotoNest';
   @override
   String get navHome => 'Home';
   @override
   String get navSearch => 'Search';
   @override
   String get navSettings => 'Settings';
+  @override
+  String get navAlbums => 'Albums';
+  @override
+  String get navUpload => 'Upload';
+
+  // ─── Login ────────────────────────────────────────────────────────────
+  @override
+  String get loginTitle => 'Sign in';
+  @override
+  String get loginSubtitle => 'Sign in to your PhotoNest server';
+  @override
+  String get loginServerLabel => 'Server URL';
+  @override
+  String get loginServerHint => 'https://photos.example.com';
+  @override
+  String get loginEmailLabel => 'E-mail';
+  @override
+  String get loginEmailHint => 'you@example.com';
+  @override
+  String get loginPasswordLabel => 'Password';
+  @override
+  String get loginSubmit => 'Sign in';
+  @override
+  String get loginErrorInvalidInput =>
+      'Check the server URL, e-mail, and password.';
+  @override
+  String get loginErrorInvalidCredentials =>
+      'The e-mail or password is incorrect.';
+  @override
+  String get loginErrorNetwork =>
+      'Could not reach the server. Check the URL and your connection.';
+
+  // ─── Albums ───────────────────────────────────────────────────────────
+  @override
+  String get albumsTitle => 'Albums';
+  @override
+  String get albumsEmpty => 'No albums yet';
+  @override
+  String get albumsEmptyHint => 'Albums you create on the server appear here.';
+  @override
+  String albumsMediaCount(int count) => count == 1 ? '1 item' : '$count items';
+  @override
+  String get albumNotFound => 'Album not found';
+  @override
+  String get albumNotFoundHint => 'It may have been deleted on the server.';
+  @override
+  String get albumEmpty => 'This album has no photos yet.';
+
+  // ─── Upload ───────────────────────────────────────────────────────────
+  @override
+  String get uploadTitle => 'Upload';
+  @override
+  String get uploadAutoTitle => 'Auto-upload new photos';
+  @override
+  String get uploadAutoSubtitle =>
+      'Photos you take from now on are uploaded automatically.';
+  @override
+  String get uploadAutoDenied =>
+      'Photo library access is required for auto-upload.';
+  @override
+  String get uploadPermissionTitle => 'No photo access';
+  @override
+  String get uploadPermissionBody =>
+      'Allow photo library access to upload your photos.';
+  @override
+  String get uploadPermissionRetry => 'Allow access';
+  @override
+  String get uploadEmpty => 'No photos found on this device.';
+  @override
+  String get uploadRecentSection => 'Recent photos';
+  @override
+  String get uploadSelected => 'Selected';
+  @override
+  String uploadSelectedCount(int count) =>
+      count == 1 ? '1 selected' : '$count selected';
+  @override
+  String get uploadSubmit => 'Upload selected';
+  @override
+  String uploadDone(int count) =>
+      count == 1 ? 'Uploaded 1 photo.' : 'Uploaded $count photos.';
+  @override
+  String uploadFailed(int count) => count == 1
+      ? '1 photo could not be uploaded.'
+      : '$count photos could not be uploaded.';
+  @override
+  String get uploadUploadedBadge => 'Uploaded';
+
+  // ─── Session / sign out ───────────────────────────────────────────────
+  @override
+  String get settingsSignOut => 'Sign out';
+  @override
+  String get settingsSignOutConfirmTitle => 'Sign out?';
+  @override
+  String get settingsSignOutConfirmBody =>
+      'Auto-upload stops until you sign in again.';
+  @override
+  String get settingsSignOutCancel => 'Cancel';
+  @override
+  String get settingsSignedInAs => 'Signed in as';
 
   // ─── Drawer ───────────────────────────────────────────────────────────
   @override

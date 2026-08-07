@@ -1,6 +1,15 @@
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
+import 'package:flutterbase/application/ports/photo_library_gateway.dart';
+import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
+import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
+import 'package:flutterbase/application/usecases/album/list_albums_usecase.dart';
 import 'package:flutterbase/application/usecases/app_info/get_app_info_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/add_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/get_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/list_bookmarks_usecase.dart';
@@ -11,18 +20,34 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/domain/repositories/album_repository.dart';
+import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
+import 'package:flutterbase/domain/repositories/auth_repository.dart';
+import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
+import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
+import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/infrastructure_module.dart';
 import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
+import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:get_it/get_it.dart';
 
@@ -53,7 +78,20 @@ Future<void> setupServiceLocator() async {
     )
     ..registerSingleton<AppInfoRepository>(infrastructure.appInfo)
     ..registerSingleton<BookmarkRepository>(infrastructure.bookmarks)
-    ..registerSingleton<ExternalLinkLauncher>(infrastructure.externalLinks);
+    ..registerSingleton<ExternalLinkLauncher>(infrastructure.externalLinks)
+    ..registerSingleton<AuthRepository>(infrastructure.auth)
+    ..registerSingleton<SessionRepository>(infrastructure.sessions)
+    ..registerSingleton<ApiEndpointRepository>(infrastructure.apiEndpoints)
+    ..registerSingleton<AlbumRepository>(infrastructure.albums)
+    ..registerSingleton<MediaThumbnailRepository>(
+      infrastructure.mediaThumbnails,
+    )
+    ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
+    ..registerSingleton<UploadHistoryRepository>(infrastructure.uploadHistory)
+    ..registerSingleton<AutoUploadSettingsRepository>(
+      infrastructure.autoUploadSettings,
+    )
+    ..registerSingleton<PhotoLibraryGateway>(infrastructure.photoLibrary);
 
   sl<AppLogger>().info(
     '[DI] Infrastructure ready '
@@ -101,6 +139,88 @@ Future<void> setupServiceLocator() async {
   sl.registerFactory<OpenBookmarkUseCase>(
     () => OpenBookmarkUseCase(sl<ExternalLinkLauncher>(), sl<AppLogger>()),
   );
+  sl.registerFactory<LoginUseCase>(
+    () => LoginUseCase(
+      sl<AuthRepository>(),
+      sl<SessionRepository>(),
+      sl<ApiEndpointRepository>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<LogoutUseCase>(
+    () => LogoutUseCase(
+      sl<AuthRepository>(),
+      sl<SessionRepository>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<RestoreSessionUseCase>(
+    () => RestoreSessionUseCase(sl<SessionRepository>()),
+  );
+  sl.registerFactory<WatchSessionUseCase>(
+    () => WatchSessionUseCase(sl<SessionRepository>()),
+  );
+  sl.registerFactory<GetApiEndpointUseCase>(
+    () => GetApiEndpointUseCase(sl<ApiEndpointRepository>()),
+  );
+  sl.registerFactory<ListAlbumsUseCase>(
+    () => ListAlbumsUseCase(sl<AlbumRepository>()),
+  );
+  sl.registerFactory<GetAlbumUseCase>(
+    () => GetAlbumUseCase(sl<AlbumRepository>()),
+  );
+  sl.registerFactory<GetMediaThumbnailUseCase>(
+    () => GetMediaThumbnailUseCase(sl<MediaThumbnailRepository>()),
+  );
+  sl.registerFactory<ListUploadCandidatesUseCase>(
+    () => ListUploadCandidatesUseCase(
+      sl<PhotoLibraryGateway>(),
+      sl<UploadHistoryRepository>(),
+    ),
+  );
+  sl.registerFactory<GetLocalThumbnailUseCase>(
+    () => GetLocalThumbnailUseCase(sl<PhotoLibraryGateway>()),
+  );
+  sl.registerFactory<UploadPhotosUseCase>(
+    () => UploadPhotosUseCase(
+      sl<PhotoLibraryGateway>(),
+      sl<PhotoUploadRepository>(),
+      sl<UploadHistoryRepository>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<SyncNewPhotosUseCase>(
+    () => SyncNewPhotosUseCase(
+      sl<AutoUploadSettingsRepository>(),
+      sl<SessionRepository>(),
+      sl<PhotoLibraryGateway>(),
+      sl<UploadHistoryRepository>(),
+      sl<UploadPhotosUseCase>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<GetAutoUploadEnabledUseCase>(
+    () => GetAutoUploadEnabledUseCase(sl<AutoUploadSettingsRepository>()),
+  );
+  sl.registerFactory<SetAutoUploadEnabledUseCase>(
+    () => SetAutoUploadEnabledUseCase(
+      sl<AutoUploadSettingsRepository>(),
+      sl<PhotoLibraryGateway>(),
+      sl<AppLogger>(),
+    ),
+  );
+
+  // ─── Long-lived services ─────────────────────────────────────────────
+
+  // One coordinator for the whole app run; AppWidget starts it after the
+  // first frame and it keeps watching the photo library until shutdown.
+  sl.registerSingleton<AutoUploadCoordinator>(
+    AutoUploadCoordinator(
+      sl<PhotoLibraryGateway>(),
+      sl<SyncNewPhotosUseCase>(),
+      sl<AppLogger>(),
+    ),
+  );
 
   // ─── ViewModels ──────────────────────────────────────────────────────
 
@@ -123,6 +243,16 @@ Future<void> setupServiceLocator() async {
       sl<GetDebugSettingsUseCase>(),
       sl<SetDebugModeUseCase>(),
       sl<SetLogLevelUseCase>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerSingleton<SessionViewModel>(
+    SessionViewModel(
+      sl<LoginUseCase>(),
+      sl<LogoutUseCase>(),
+      sl<RestoreSessionUseCase>(),
+      sl<GetApiEndpointUseCase>(),
+      sl<WatchSessionUseCase>(),
       sl<AppLogger>(),
     ),
   );

@@ -6,6 +6,8 @@ import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:flutterbase/presentation/app_scope.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
+import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
+import 'package:flutterbase/presentation/pages/upload/upload_tab.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 import 'package:flutterbase/shared/app_config.dart';
@@ -27,14 +29,14 @@ class _MainPageState extends State<MainPage> {
     final l10n = AppLocalizations.of(context);
     final tabs = <_TabItem>[
       _TabItem(
-        label: l10n.navHome,
-        icon: Icons.home_outlined,
-        selectedIcon: Icons.home,
+        label: l10n.navAlbums,
+        icon: Icons.photo_album_outlined,
+        selectedIcon: Icons.photo_album,
       ),
       _TabItem(
-        label: l10n.navSearch,
-        icon: Icons.search_outlined,
-        selectedIcon: Icons.search,
+        label: l10n.navUpload,
+        icon: Icons.cloud_upload_outlined,
+        selectedIcon: Icons.cloud_upload,
       ),
       _TabItem(
         label: l10n.navSettings,
@@ -79,8 +81,8 @@ class _MainPageState extends State<MainPage> {
               headerSubtitle: AppConfig.appTagline,
               items: [
                 AppDrawerItem(
-                  label: l10n.navHome,
-                  icon: Icons.home_outlined,
+                  label: l10n.navAlbums,
+                  icon: Icons.photo_album_outlined,
                   isSelected: _selectedIndex == 0,
                   onTap: () {
                     setState(() => _selectedIndex = 0);
@@ -88,8 +90,8 @@ class _MainPageState extends State<MainPage> {
                   },
                 ),
                 AppDrawerItem(
-                  label: l10n.navSearch,
-                  icon: Icons.search_outlined,
+                  label: l10n.navUpload,
+                  icon: Icons.cloud_upload_outlined,
                   isSelected: _selectedIndex == 1,
                   onTap: () {
                     setState(() => _selectedIndex = 1);
@@ -168,10 +170,10 @@ class _MainPageState extends State<MainPage> {
 
   Widget _buildTabContent() {
     return switch (_selectedIndex) {
-      0 => const _HomeContent(),
-      1 => const _SearchContent(),
+      0 => const AlbumsTab(),
+      1 => const UploadTab(),
       2 => const _SettingsContent(),
-      _ => const _HomeContent(),
+      _ => const AlbumsTab(),
     };
   }
 
@@ -187,97 +189,6 @@ class _MainPageState extends State<MainPage> {
 
 // ─── Tab Content ─────────────────────────────────────────────────────────────
 
-class _HomeContent extends StatelessWidget {
-  const _HomeContent();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(AppSpacing.pageMargin),
-      children: [
-        AppSectionHeader(
-          title: l10n.homeWelcomeTitle,
-          subtitle: AppConfig.homeSubtitle,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AppCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                AppConfig.homeCardTitle,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                l10n.homeCardBody,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AppSectionHeader(title: l10n.homeComponentsTitle),
-        const SizedBox(height: AppSpacing.lg),
-        AppPrimaryButton(
-          label: l10n.homePrimaryButton,
-          onPressed: () {},
-          width: double.infinity,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppSecondaryButton(
-          label: l10n.homeSecondaryButton,
-          onPressed: () {},
-          width: double.infinity,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AppTextField(
-          label: l10n.homeTextFieldLabel,
-          hint: l10n.homeTextFieldHint,
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        AppListCard(
-          title: l10n.homeListCardTitle,
-          subtitle: l10n.homeListCardSubtitle,
-          leading: const Icon(Icons.article_outlined),
-          onTap: () {},
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppListCard(
-          title: l10n.homeListCardItem2,
-          subtitle: l10n.homeListCardSubtitle,
-          leading: const Icon(Icons.article_outlined),
-          onTap: () {},
-        ),
-      ],
-    );
-  }
-}
-
-class _SearchContent extends StatelessWidget {
-  const _SearchContent();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(AppSpacing.pageMargin),
-      child: Column(
-        children: [
-          AppTextField(
-            label: l10n.searchFieldLabel,
-            hint: l10n.searchFieldHint,
-            prefixIcon: const Icon(Icons.search),
-          ),
-          const SizedBox(height: AppSpacing.xxxl),
-          AppEmptyView(message: l10n.searchEmptyMessage, icon: Icons.search),
-        ],
-      ),
-    );
-  }
-}
-
 class _SettingsContent extends StatelessWidget {
   const _SettingsContent();
 
@@ -288,10 +199,58 @@ class _SettingsContent extends StatelessWidget {
     final themeViewModel = scope.themeViewModel;
     final languageViewModel = scope.languageViewModel;
     final debugViewModel = scope.debugSettingsViewModel;
+    final sessionViewModel = scope.sessionViewModel;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.pageMargin),
       children: [
         AppSectionHeader(title: l10n.settingsTitle),
+        const SizedBox(height: AppSpacing.lg),
+        // ── Account ─────────────────────────────────────────────────
+        ListenableBuilder(
+          listenable: sessionViewModel,
+          builder: (context, _) => AppCard(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.account_circle_outlined,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    l10n.settingsSignedInAs,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  subtitle: Text(
+                    sessionViewModel.session?.email ?? '',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.componentPadding,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+                const Divider(height: 1),
+                ListTile(
+                  leading: Icon(
+                    Icons.logout_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  title: Text(
+                    l10n.settingsSignOut,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                  onTap: () => unawaited(_confirmSignOut(context)),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.componentPadding,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
         // ── Theme switcher ──────────────────────────────────────────
         AppSectionHeader(title: l10n.settingsTheme),
@@ -461,6 +420,33 @@ class _SettingsContent extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Asks before signing out; the router redirects to the login screen the
+  /// moment the session is gone.
+  static Future<void> _confirmSignOut(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final sessionViewModel = AppScope.of(context).sessionViewModel;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.settingsSignOutConfirmTitle),
+        content: Text(l10n.settingsSignOutConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.settingsSignOutCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.settingsSignOut),
+          ),
+        ],
+      ),
+    );
+    if (confirmed ?? false) {
+      await sessionViewModel.logout();
+    }
   }
 }
 

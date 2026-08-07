@@ -39,6 +39,54 @@ abstract class AppLocalizations {
   String get navHome;
   String get navSearch;
   String get navSettings;
+  String get navAlbums;
+  String get navUpload;
+
+  // ─── Login ────────────────────────────────────────────────────────────
+  String get loginTitle;
+  String get loginSubtitle;
+  String get loginServerLabel;
+  String get loginServerHint;
+  String get loginEmailLabel;
+  String get loginEmailHint;
+  String get loginPasswordLabel;
+  String get loginSubmit;
+  String get loginErrorInvalidInput;
+  String get loginErrorInvalidCredentials;
+  String get loginErrorNetwork;
+
+  // ─── Albums ───────────────────────────────────────────────────────────
+  String get albumsTitle;
+  String get albumsEmpty;
+  String get albumsEmptyHint;
+  String albumsMediaCount(int count);
+  String get albumNotFound;
+  String get albumNotFoundHint;
+  String get albumEmpty;
+
+  // ─── Upload ───────────────────────────────────────────────────────────
+  String get uploadTitle;
+  String get uploadAutoTitle;
+  String get uploadAutoSubtitle;
+  String get uploadAutoDenied;
+  String get uploadPermissionTitle;
+  String get uploadPermissionBody;
+  String get uploadPermissionRetry;
+  String get uploadEmpty;
+  String get uploadRecentSection;
+  String get uploadSelected;
+  String uploadSelectedCount(int count);
+  String get uploadSubmit;
+  String uploadDone(int count);
+  String uploadFailed(int count);
+  String get uploadUploadedBadge;
+
+  // ─── Session / sign out ───────────────────────────────────────────────
+  String get settingsSignOut;
+  String get settingsSignOutConfirmTitle;
+  String get settingsSignOutConfirmBody;
+  String get settingsSignOutCancel;
+  String get settingsSignedInAs;
 
   // ─── Drawer ───────────────────────────────────────────────────────────
   String get drawerClose;

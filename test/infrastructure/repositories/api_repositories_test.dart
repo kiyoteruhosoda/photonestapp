@@ -1,0 +1,389 @@
+import 'dart:convert';
+import 'dart:math';
+import 'dart:typed_data';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:flutterbase/domain/value_objects/album_id.dart';
+import 'package:flutterbase/domain/value_objects/login_credentials.dart';
+import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
+import 'package:flutterbase/infrastructure/repositories/api_album_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+
+import '../../support/fakes.dart';
+import '../../support/recording_app_logger.dart';
+
+void main() {
+  late FakeSessionRepository sessions;
+  late List<http.Request> requests;
+
+  setUp(() {
+    sessions = FakeSessionRepository(testAuthSession);
+    requests = [];
+  });
+
+  PhotoNestApiClient client(
+    Future<http.Response> Function(http.Request request) handler,
+  ) {
+    return PhotoNestApiClient(
+      httpClient: MockClient((request) {
+        requests.add(request);
+        return handler(request);
+      }),
+      sessionStore: sessions,
+      endpointStore: FakeApiEndpointRepository(
+        Uri.parse('https://photos.example.com'),
+      ),
+      appLogger: RecordingAppLogger(),
+    );
+  }
+
+  http.Response json(Map<String, dynamic> body, {int status = 200}) =>
+      http.Response(jsonEncode(body), status);
+
+  group('ApiAuthRepository', () {
+    LoginCredentials credentials() => LoginCredentials(
+      serverUrl: Uri.parse('https://photos.example.com'),
+      email: 'user@example.com',
+      password: 'secret',
+    );
+
+    test('login posts email, password, and the gui:view scope', () async {
+      final repository = ApiAuthRepository(
+        client(
+          (request) async => json({
+            'access_token': 'a1',
+            'refresh_token': 'r1',
+            'token_type': 'Bearer',
+            'scope': 'gui:view album:view',
+          }),
+        ),
+      );
+
+      final session = await repository.login(credentials());
+
+      expect(jsonDecode(requests.single.body), {
+        'email': 'user@example.com',
+        'password': 'secret',
+        'scope': ['gui:view'],
+      });
+      // Login itself must not carry a stale bearer token.
+      expect(requests.single.headers['Authorization'], isNull);
+      expect(session.accessToken, 'a1');
+      expect(session.refreshToken, 'r1');
+      expect(session.email, 'user@example.com');
+      expect(session.scopes, ['gui:view', 'album:view']);
+    });
+
+    test(
+      'login surfaces invalid credentials as AuthenticationError', //
+      () async {
+        final repository = ApiAuthRepository(
+          client(
+            (request) async => json({
+              'detail': {
+                'error': 'invalid_credentials',
+                'message': 'Invalid e-mail or password.',
+              },
+            }, status: 401),
+          ),
+        );
+
+        await expectLater(
+          repository.login(credentials()),
+          throwsA(
+            isA<AuthenticationError>().having(
+              (error) => error.code,
+              'code',
+              'invalid_credentials',
+            ),
+          ),
+        );
+      },
+    );
+
+    test('refresh exchanges the refresh token for a rotated pair', () async {
+      final repository = ApiAuthRepository(
+        client(
+          (request) async => json({
+            'access_token': 'a2',
+            'refresh_token': 'r2',
+            'scope': ['gui:view'],
+          }),
+        ),
+      );
+
+      final refreshed = await repository.refresh(testAuthSession);
+
+      expect(jsonDecode(requests.single.body), {
+        'refresh_token': testAuthSession.refreshToken,
+      });
+      expect(refreshed.accessToken, 'a2');
+      expect(refreshed.refreshToken, 'r2');
+      expect(refreshed.scopes, ['gui:view']);
+    });
+
+    test(
+      'logout posts to the revoke endpoint with the bearer token', //
+      () async {
+        final repository = ApiAuthRepository(
+          client((request) async => json({'result': 'ok'})),
+        );
+
+        await repository.logout(testAuthSession);
+
+        expect(requests.single.url.path, '/api/auth/logout');
+        expect(
+          requests.single.headers['Authorization'],
+          'Bearer ${testAuthSession.accessToken}',
+        );
+      },
+    );
+  });
+
+  group('ApiAlbumRepository', () {
+    test('findAll maps the server payload onto Album entities', () async {
+      final repository = ApiAlbumRepository(
+        client(
+          (request) async => json({
+            'items': [
+              {
+                'id': 1,
+                'title': 'Trip',
+                'description': 'Summer',
+                'coverMediaId': 12,
+                'mediaCount': 34,
+                'createdAt': '2026-01-01T00:00:00Z',
+              },
+              {'id': 2, 'title': 'Empty', 'coverMediaId': null},
+            ],
+            'total': 2,
+            'page': 1,
+            'pageSize': 200,
+          }),
+        ),
+      );
+
+      final albums = await repository.findAll();
+
+      expect(requests.single.url.queryParameters, {
+        'page': '1',
+        'pageSize': '200',
+      });
+      expect(albums, hasLength(2));
+      expect(albums[0].id, AlbumId(1));
+      expect(albums[0].title, 'Trip');
+      expect(albums[0].description, 'Summer');
+      expect(albums[0].coverMediaId, MediaId(12));
+      expect(albums[0].mediaCount, 34);
+      expect(albums[0].createdAt, DateTime.utc(2026));
+      expect(albums[1].coverMediaId, isNull);
+      expect(albums[1].mediaCount, 0);
+    });
+
+    test('findAll rejects a response without items', () async {
+      final repository = ApiAlbumRepository(
+        client((request) async => json({'unexpected': true})),
+      );
+      await expectLater(
+        repository.findAll(),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test('findById unwraps the album envelope and its media', () async {
+      final repository = ApiAlbumRepository(
+        client(
+          (request) async => json({
+            'album': {
+              'id': 3,
+              'title': 'Detail',
+              'mediaCount': 1,
+              'coverMediaId': 5,
+              'media': [
+                {
+                  'id': 5,
+                  'filename': 'IMG.jpg',
+                  'shotAt': '2026-02-03T04:05:06Z',
+                  'thumbnailUrl': '/api/media/5/thumbnail?size=512',
+                },
+              ],
+              'mediaIds': [5],
+            },
+          }),
+        ),
+      );
+
+      final detail = await repository.findById(AlbumId(3));
+
+      expect(requests.single.url.path, '/api/albums/3');
+      expect(detail, isNotNull);
+      expect(detail!.album.title, 'Detail');
+      expect(detail.media.single.id, MediaId(5));
+      expect(detail.media.single.filename, 'IMG.jpg');
+      expect(detail.media.single.shotAt, DateTime.utc(2026, 2, 3, 4, 5, 6));
+    });
+
+    test('findById answers null for the server not_found code', () async {
+      final repository = ApiAlbumRepository(
+        client(
+          (request) async => json({
+            'detail': {'error': 'not_found', 'message': 'Album not found.'},
+          }, status: 404),
+        ),
+      );
+      expect(await repository.findById(AlbumId(9)), isNull);
+    });
+
+    test('findById rethrows other failures', () async {
+      final repository = ApiAlbumRepository(
+        client(
+          (request) async => json({
+            'detail': {'error': 'oops', 'message': 'broken'},
+          }, status: 500),
+        ),
+      );
+      await expectLater(
+        repository.findById(AlbumId(9)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+  });
+
+  group('ApiMediaThumbnailRepository', () {
+    test('fetches the thumbnail bytes at an allowed size', () async {
+      final repository = ApiMediaThumbnailRepository(
+        client((request) async => http.Response.bytes([7, 8], 200)),
+      );
+
+      final bytes = await repository.fetch(MediaId(5), size: 512);
+
+      expect(requests.single.url.path, '/api/media/5/thumbnail');
+      expect(requests.single.url.queryParameters, {'size': '512'});
+      expect(bytes, [7, 8]);
+    });
+
+    test('rejects a size the server does not produce', () {
+      final repository = ApiMediaThumbnailRepository(
+        client((request) async => http.Response.bytes([], 200)),
+      );
+      expect(
+        () => repository.fetch(MediaId(5), size: 300),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+  });
+
+  group('ApiPhotoUploadRepository', () {
+    test('prepares then commits under one upload session', () async {
+      final apiClient = client((request) async {
+        if (request.url.path == '/api/upload/prepare') {
+          return json({
+            'tempFileId': 'tmp-1',
+            'fileName': 'IMG_0001.jpg',
+            'fileSize': 3,
+            'status': 'analyzed',
+          });
+        }
+        expect(request.url.path, '/api/upload/commit');
+        expect(jsonDecode(request.body), {
+          'files': [
+            {'tempFileId': 'tmp-1'},
+          ],
+        });
+        return json({
+          'uploaded': [
+            {'tempFileId': 'tmp-1', 'status': 'success'},
+          ],
+        });
+      });
+      final repository = ApiPhotoUploadRepository(
+        apiClient,
+        random: Random(42),
+      );
+
+      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2, 3]));
+
+      expect(requests, hasLength(2));
+      final prepare = requests[0];
+      final commit = requests[1];
+      expect(
+        prepare.headers['Content-Type'],
+        startsWith('multipart/form-data'),
+      );
+      // The same generated session id must accompany both calls.
+      final sessionId = prepare.headers['X-Upload-Session'];
+      expect(sessionId, isNotNull);
+      expect(sessionId, hasLength(32));
+      expect(commit.headers['X-Upload-Session'], sessionId);
+      // The multipart body carries the file part with an image content type.
+      final body = utf8.decode(prepare.bodyBytes, allowMalformed: true);
+      expect(body, contains('name="file"'));
+      expect(body, contains('filename="IMG_0001.jpg"'));
+      expect(body, contains('content-type: image/jpeg'));
+    });
+
+    test('a commit rejection surfaces the server message', () async {
+      final apiClient = client((request) async {
+        if (request.url.path == '/api/upload/prepare') {
+          return json({'tempFileId': 'tmp-1'});
+        }
+        return json({
+          'uploaded': [
+            {'tempFileId': 'tmp-1', 'status': 'error', 'message': 'corrupt'},
+          ],
+        });
+      });
+      final repository = ApiPhotoUploadRepository(apiClient);
+
+      await expectLater(
+        repository.upload(testLocalPhoto(), Uint8List.fromList([1])),
+        throwsA(
+          isA<InfrastructureError>().having(
+            (error) => error.message,
+            'message',
+            'corrupt',
+          ),
+        ),
+      );
+    });
+
+    test('a prepare response without a file id is an error', () async {
+      final repository = ApiPhotoUploadRepository(
+        client((request) async => json({'status': 'analyzed'})),
+      );
+      await expectLater(
+        repository.upload(testLocalPhoto(), Uint8List.fromList([1])),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test(
+      'an unsupported extension is refused before any network call', //
+      () async {
+        final repository = ApiPhotoUploadRepository(
+          client((request) async => json({})),
+        );
+        await expectLater(
+          repository.upload(
+            testLocalPhoto(fileName: 'clip.mp4'),
+            Uint8List.fromList([1]),
+          ),
+          throwsA(
+            isA<InfrastructureError>().having(
+              (error) => error.code,
+              'code',
+              'unsupported_format',
+            ),
+          ),
+        );
+        expect(requests, isEmpty);
+      },
+    );
+  });
+}

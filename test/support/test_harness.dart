@@ -3,7 +3,14 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
+import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
+import 'package:flutterbase/application/usecases/album/list_albums_usecase.dart';
 import 'package:flutterbase/application/usecases/app_info/get_app_info_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
+import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/add_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/get_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/bookmark/list_bookmarks_usecase.dart';
@@ -14,18 +21,29 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/presentation/app_scope.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
+import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
 import 'package:flutterbase/presentation/providers/bookmark_providers.dart';
+import 'package:flutterbase/presentation/providers/upload_providers.dart';
 import 'package:flutterbase/presentation/theme/app_theme.dart';
 import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
+import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:go_router/go_router.dart';
 
@@ -46,6 +64,16 @@ class TestScope {
     FakeBookmarkRepository? bookmarkRepository,
     RecordingExternalLinkLauncher? linkLauncher,
     RecordingAppLogger? logger,
+    FakeAuthRepository? authRepository,
+    FakeSessionRepository? sessionRepository,
+    FakeApiEndpointRepository? apiEndpointRepository,
+    FakeAlbumRepository? albumRepository,
+    FakeMediaThumbnailRepository? mediaThumbnailRepository,
+    FakePhotoUploadRepository? photoUploadRepository,
+    FakeUploadHistoryRepository? uploadHistoryRepository,
+    FakeAutoUploadSettingsRepository? autoUploadSettingsRepository,
+    FakePhotoLibraryGateway? photoLibrary,
+    AuthSession? initialSession,
   }) : themeRepository = themeRepository ?? FakeThemePreferenceRepository(),
        languageRepository =
            languageRepository ?? FakeLanguagePreferenceRepository(),
@@ -54,7 +82,26 @@ class TestScope {
        appInfoRepository = appInfoRepository ?? FakeAppInfoRepository(),
        bookmarkRepository = bookmarkRepository ?? FakeBookmarkRepository(),
        linkLauncher = linkLauncher ?? RecordingExternalLinkLauncher(),
-       logger = logger ?? RecordingAppLogger() {
+       logger = logger ?? RecordingAppLogger(),
+       authRepository = authRepository ?? FakeAuthRepository(),
+       // Widget tests exercise screens that sit behind the login guard, so
+       // the default scope is signed in; pass `initialSession: null` via a
+       // fresh FakeSessionRepository to start signed out.
+       sessionRepository =
+           sessionRepository ??
+           FakeSessionRepository(initialSession ?? testAuthSession),
+       apiEndpointRepository =
+           apiEndpointRepository ?? FakeApiEndpointRepository(),
+       albumRepository = albumRepository ?? FakeAlbumRepository(),
+       mediaThumbnailRepository =
+           mediaThumbnailRepository ?? FakeMediaThumbnailRepository(),
+       photoUploadRepository =
+           photoUploadRepository ?? FakePhotoUploadRepository(),
+       uploadHistoryRepository =
+           uploadHistoryRepository ?? FakeUploadHistoryRepository(),
+       autoUploadSettingsRepository =
+           autoUploadSettingsRepository ?? FakeAutoUploadSettingsRepository(),
+       photoLibrary = photoLibrary ?? FakePhotoLibraryGateway() {
     themeViewModel = ThemeViewModel(
       GetThemePreferenceUseCase(this.themeRepository),
       SetThemePreferenceUseCase(this.themeRepository),
@@ -71,6 +118,18 @@ class TestScope {
       SetLogLevelUseCase(this.debugSettingsRepository, this.logger),
       this.logger,
     );
+    sessionViewModel = SessionViewModel(
+      LoginUseCase(
+        this.authRepository,
+        this.sessionRepository,
+        this.apiEndpointRepository,
+        this.logger,
+      ),
+      LogoutUseCase(this.authRepository, this.sessionRepository, this.logger),
+      RestoreSessionUseCase(this.sessionRepository),
+      GetApiEndpointUseCase(this.apiEndpointRepository),
+      this.logger,
+    );
   }
 
   final FakeThemePreferenceRepository themeRepository;
@@ -80,10 +139,20 @@ class TestScope {
   final FakeBookmarkRepository bookmarkRepository;
   final RecordingExternalLinkLauncher linkLauncher;
   final RecordingAppLogger logger;
+  final FakeAuthRepository authRepository;
+  final FakeSessionRepository sessionRepository;
+  final FakeApiEndpointRepository apiEndpointRepository;
+  final FakeAlbumRepository albumRepository;
+  final FakeMediaThumbnailRepository mediaThumbnailRepository;
+  final FakePhotoUploadRepository photoUploadRepository;
+  final FakeUploadHistoryRepository uploadHistoryRepository;
+  final FakeAutoUploadSettingsRepository autoUploadSettingsRepository;
+  final FakePhotoLibraryGateway photoLibrary;
 
   late final ThemeViewModel themeViewModel;
   late final LanguageViewModel languageViewModel;
   late final DebugSettingsViewModel debugSettingsViewModel;
+  late final SessionViewModel sessionViewModel;
 
   /// Number of times a per-screen ViewModel has been requested.
   int aboutViewModelsCreated = 0;
@@ -112,6 +181,12 @@ class TestScope {
   /// The Riverpod overrides the composition root installs, with fakes in
   /// place of the real adapters.
   List<Override> providerOverrides() {
+    final uploadPhotos = UploadPhotosUseCase(
+      photoLibrary,
+      photoUploadRepository,
+      uploadHistoryRepository,
+      logger,
+    );
     return <Override>[
       appLoggerProvider.overrideWithValue(logger),
       listBookmarksUseCaseProvider.overrideWithValue(
@@ -128,6 +203,46 @@ class TestScope {
       ),
       openBookmarkUseCaseProvider.overrideWithValue(
         OpenBookmarkUseCase(linkLauncher, logger),
+      ),
+      listAlbumsUseCaseProvider.overrideWithValue(
+        ListAlbumsUseCase(albumRepository),
+      ),
+      getAlbumUseCaseProvider.overrideWithValue(
+        GetAlbumUseCase(albumRepository),
+      ),
+      getMediaThumbnailUseCaseProvider.overrideWithValue(
+        GetMediaThumbnailUseCase(mediaThumbnailRepository),
+      ),
+      listUploadCandidatesUseCaseProvider.overrideWithValue(
+        ListUploadCandidatesUseCase(photoLibrary, uploadHistoryRepository),
+      ),
+      uploadPhotosUseCaseProvider.overrideWithValue(uploadPhotos),
+      getLocalThumbnailUseCaseProvider.overrideWithValue(
+        GetLocalThumbnailUseCase(photoLibrary),
+      ),
+      getAutoUploadEnabledUseCaseProvider.overrideWithValue(
+        GetAutoUploadEnabledUseCase(autoUploadSettingsRepository),
+      ),
+      setAutoUploadEnabledUseCaseProvider.overrideWithValue(
+        SetAutoUploadEnabledUseCase(
+          autoUploadSettingsRepository,
+          photoLibrary,
+          logger,
+        ),
+      ),
+      autoUploadCoordinatorProvider.overrideWithValue(
+        AutoUploadCoordinator(
+          photoLibrary,
+          SyncNewPhotosUseCase(
+            autoUploadSettingsRepository,
+            sessionRepository,
+            photoLibrary,
+            uploadHistoryRepository,
+            uploadPhotos,
+            logger,
+          ),
+          logger,
+        ),
       ),
     ];
   }
@@ -164,6 +279,7 @@ class TestScope {
         themeViewModel: themeViewModel,
         languageViewModel: languageViewModel,
         debugSettingsViewModel: debugSettingsViewModel,
+        sessionViewModel: sessionViewModel,
         createAboutViewModel: createAboutViewModel,
         createDebugViewModel: createDebugViewModel,
         child: MaterialApp.router(
@@ -197,6 +313,7 @@ class TestScope {
       },
       errorBuilder: placeholder,
       routes: <RouteBase>[
+        GoRoute(path: AppRoutes.login, builder: placeholder),
         GoRoute(
           path: AppRoutes.main,
           builder: (context, state) => home,
@@ -205,6 +322,7 @@ class TestScope {
             GoRoute(path: 'debug', builder: placeholder),
             GoRoute(path: 'logs', builder: placeholder),
             GoRoute(path: 'link', builder: placeholder),
+            GoRoute(path: 'albums/:id', builder: placeholder),
             GoRoute(
               path: 'bookmarks',
               builder: placeholder,

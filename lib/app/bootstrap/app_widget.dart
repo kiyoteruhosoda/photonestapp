@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutterbase/app/bootstrap/app_router.dart';
 import 'package:flutterbase/app/di/service_locator.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
 import 'package:flutterbase/presentation/app_scope.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/theme/app_theme.dart';
@@ -10,6 +13,7 @@ import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
+import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
 import 'package:go_router/go_router.dart';
 
@@ -34,6 +38,8 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
   late final ThemeViewModel _themeViewModel;
   late final LanguageViewModel _languageViewModel;
   late final DebugSettingsViewModel _debugSettingsViewModel;
+  late final SessionViewModel _sessionViewModel;
+  late final AutoUploadCoordinator _autoUploadCoordinator;
 
   /// Built once: a router recreated on every rebuild would drop the
   /// navigation stack, including the screen a deep link just opened.
@@ -46,7 +52,15 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
     _themeViewModel = sl<ThemeViewModel>();
     _languageViewModel = sl<LanguageViewModel>();
     _debugSettingsViewModel = sl<DebugSettingsViewModel>();
-    _router = AppRouter.create(logger: _logger);
+    _sessionViewModel = sl<SessionViewModel>();
+    _router = AppRouter.create(
+      logger: _logger,
+      sessionViewModel: _sessionViewModel,
+    );
+    // Watches the photo library for the whole app run. Each sync pass
+    // re-checks the preconditions itself, so it is safe to start
+    // unconditionally — signed out or disabled just means cheap no-ops.
+    _autoUploadCoordinator = sl<AutoUploadCoordinator>()..start();
     WidgetsBinding.instance.addObserver(this);
     _logger.info('[App] AppWidget initialised');
   }
@@ -54,6 +68,7 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    unawaited(_autoUploadCoordinator.stop());
     _router.dispose();
     super.dispose();
   }
@@ -61,6 +76,11 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _logger.debug('[App] Lifecycle → ${state.name}');
+    // Photos taken while the app was backgrounded produce no change event
+    // on every platform, so returning to the foreground is a sync trigger.
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_autoUploadCoordinator.triggerSync());
+    }
   }
 
   @override
@@ -70,6 +90,7 @@ class _AppWidgetState extends State<AppWidget> with WidgetsBindingObserver {
       themeViewModel: _themeViewModel,
       languageViewModel: _languageViewModel,
       debugSettingsViewModel: _debugSettingsViewModel,
+      sessionViewModel: _sessionViewModel,
       createAboutViewModel: sl.call<AboutViewModel>,
       createDebugViewModel: sl.call<DebugViewModel>,
       child: ListenableBuilder(

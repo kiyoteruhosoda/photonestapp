@@ -6,13 +6,101 @@ class AppLocalizationsJa extends AppLocalizations {
 
   // ─── Navigation ───────────────────────────────────────────────────────
   @override
-  String get appName => 'フラッターベース';
+  String get appName => 'PhotoNest';
   @override
   String get navHome => 'ホーム';
   @override
   String get navSearch => '検索';
   @override
   String get navSettings => '設定';
+  @override
+  String get navAlbums => 'アルバム';
+  @override
+  String get navUpload => 'アップロード';
+
+  // ─── Login ────────────────────────────────────────────────────────────
+  @override
+  String get loginTitle => 'ログイン';
+  @override
+  String get loginSubtitle => 'PhotoNest サーバーにログインします';
+  @override
+  String get loginServerLabel => 'サーバー URL';
+  @override
+  String get loginServerHint => 'https://photos.example.com';
+  @override
+  String get loginEmailLabel => 'メールアドレス';
+  @override
+  String get loginEmailHint => 'you@example.com';
+  @override
+  String get loginPasswordLabel => 'パスワード';
+  @override
+  String get loginSubmit => 'ログイン';
+  @override
+  String get loginErrorInvalidInput => 'サーバー URL・メールアドレス・パスワードを確認してください。';
+  @override
+  String get loginErrorInvalidCredentials => 'メールアドレスまたはパスワードが正しくありません。';
+  @override
+  String get loginErrorNetwork => 'サーバーに接続できません。URL と通信環境を確認してください。';
+
+  // ─── Albums ───────────────────────────────────────────────────────────
+  @override
+  String get albumsTitle => 'アルバム';
+  @override
+  String get albumsEmpty => 'アルバムがありません';
+  @override
+  String get albumsEmptyHint => 'サーバーで作成したアルバムがここに表示されます。';
+  @override
+  String albumsMediaCount(int count) => '$count 件';
+  @override
+  String get albumNotFound => 'アルバムが見つかりません';
+  @override
+  String get albumNotFoundHint => 'サーバー側で削除された可能性があります。';
+  @override
+  String get albumEmpty => 'このアルバムにはまだ写真がありません。';
+
+  // ─── Upload ───────────────────────────────────────────────────────────
+  @override
+  String get uploadTitle => 'アップロード';
+  @override
+  String get uploadAutoTitle => '新しい写真を自動アップロード';
+  @override
+  String get uploadAutoSubtitle => 'これから撮影した写真を自動的にアップロードします。';
+  @override
+  String get uploadAutoDenied => '自動アップロードには写真ライブラリへのアクセス許可が必要です。';
+  @override
+  String get uploadPermissionTitle => '写真へのアクセスがありません';
+  @override
+  String get uploadPermissionBody => '写真をアップロードするには、写真ライブラリへのアクセスを許可してください。';
+  @override
+  String get uploadPermissionRetry => 'アクセスを許可';
+  @override
+  String get uploadEmpty => 'この端末に写真が見つかりません。';
+  @override
+  String get uploadRecentSection => '最近の写真';
+  @override
+  String get uploadSelected => '選択中';
+  @override
+  String uploadSelectedCount(int count) => '$count 件選択中';
+  @override
+  String get uploadSubmit => '選択した写真をアップロード';
+  @override
+  String uploadDone(int count) => '$count 件アップロードしました。';
+  @override
+  String uploadFailed(int count) => '$count 件アップロードできませんでした。';
+  @override
+  String get uploadUploadedBadge => 'アップロード済み';
+
+  // ─── Session / sign out ───────────────────────────────────────────────
+  @override
+  String get settingsSignOut => 'ログアウト';
+  @override
+  String get settingsSignOutConfirmTitle => 'ログアウトしますか？';
+  @override
+  String get settingsSignOutConfirmBody => '再度ログインするまで自動アップロードは停止します。';
+  @override
+  String get settingsSignOutCancel => 'キャンセル';
+  @override
+  String get settingsSignedInAs => 'ログイン中のアカウント';
 
   // ─── Drawer ───────────────────────────────────────────────────────────
   @override

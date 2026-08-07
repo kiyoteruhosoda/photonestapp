@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/app/bootstrap/app_router.dart';
+import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/entities/bookmark.dart';
+import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
+import 'package:flutterbase/presentation/pages/albums/album_detail_page.dart';
+import 'package:flutterbase/presentation/pages/auth/login_page.dart';
 import 'package:flutterbase/presentation/pages/bookmarks/bookmark_detail_page.dart';
 import 'package:flutterbase/presentation/pages/bookmarks/bookmarks_page.dart';
 import 'package:flutterbase/presentation/pages/main_page.dart';
@@ -24,21 +28,26 @@ void main() {
   /// This is the closest a widget test gets to a deep link: Android hands
   /// Flutter the *path* of the tapped URL, and the framework starts the
   /// Router there — which is exactly what `initialLocation` does here.
-  Future<TestScope> openAt(WidgetTester tester, String location) async {
+  Future<TestScope> openAt(
+    WidgetTester tester,
+    String location, {
+    TestScope? scope,
+  }) async {
     tester.view
       ..physicalSize = tallSurface
       ..devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final scope = TestScope();
+    final resolved = scope ?? TestScope();
     final router = AppRouter.create(
-      logger: scope.logger,
+      logger: resolved.logger,
+      sessionViewModel: resolved.sessionViewModel,
       initialLocation: location,
     );
     addTearDown(router.dispose);
-    await tester.pumpWidget(scope.wrapRouter(router));
+    await tester.pumpWidget(resolved.wrapRouter(router));
     await tester.pumpAndSettle();
-    return scope;
+    return resolved;
   }
 
   group('AppRouter — in-app locations', () {
@@ -98,6 +107,7 @@ void main() {
 
       final router = AppRouter.create(
         logger: scope.logger,
+        sessionViewModel: scope.sessionViewModel,
         initialLocation: '/bookmarks/7',
       );
       addTearDown(router.dispose);
@@ -152,6 +162,84 @@ void main() {
         scope.logger.messagesAt(LogLevel.debug),
         contains(contains('[Router] → /bookmarks/7')),
       );
+    });
+  });
+
+  group('AppRouter — authentication guard', () {
+    TestScope signedOut() =>
+        TestScope(sessionRepository: FakeSessionRepository());
+
+    testWidgets('a signed-out start lands on the login page', (tester) async {
+      await openAt(tester, AppRoutes.main, scope: signedOut());
+      expect(find.byType(LoginPage), findsOneWidget);
+    });
+
+    testWidgets('a deep link while signed out is redirected to login', (
+      tester,
+    ) async {
+      await openAt(tester, '/bookmarks/7', scope: signedOut());
+      expect(find.byType(LoginPage), findsOneWidget);
+    });
+
+    testWidgets('a signed-in user asking for /login gets the main page', (
+      tester,
+    ) async {
+      await openAt(tester, AppRoutes.login);
+      expect(find.byType(MainPage), findsOneWidget);
+    });
+
+    testWidgets('logging in navigates from the login page to the main page', (
+      tester,
+    ) async {
+      final scope = signedOut();
+      await openAt(tester, AppRoutes.main, scope: scope);
+      expect(find.byType(LoginPage), findsOneWidget);
+
+      final loggedIn = await scope.sessionViewModel.login(
+        serverUrl: 'https://photos.example.com',
+        email: 'user@example.com',
+        password: 'secret',
+      );
+      expect(loggedIn, isTrue);
+      await tester.pumpAndSettle();
+      expect(find.byType(MainPage), findsOneWidget);
+    });
+
+    testWidgets('logging out navigates back to the login page', (tester) async {
+      final scope = await openAt(tester, AppRoutes.main);
+      expect(find.byType(MainPage), findsOneWidget);
+
+      await scope.sessionViewModel.logout();
+      await tester.pumpAndSettle();
+      expect(find.byType(LoginPage), findsOneWidget);
+    });
+
+    testWidgets('an album link opens the album detail screen', (tester) async {
+      final scope = TestScope(
+        albumRepository: FakeAlbumRepository(
+          details: {
+            AlbumId(3): AlbumDetail(
+              album: testAlbum(
+                id: 3,
+                title: 'Linked album',
+                coverMediaId: null,
+              ),
+              media: [testAlbumMediaItem()],
+            ),
+          },
+        ),
+      );
+      await openAt(tester, '/albums/3', scope: scope);
+      expect(find.byType(AlbumDetailPage), findsOneWidget);
+      expect(find.text('Linked album'), findsOneWidget);
+    });
+
+    testWidgets('a non-numeric album id renders the not-found state', (
+      tester,
+    ) async {
+      await openAt(tester, '/albums/not-an-id');
+      expect(find.byType(AlbumDetailPage), findsOneWidget);
+      expect(find.textContaining(l10n.albumNotFound), findsOneWidget);
     });
   });
 }

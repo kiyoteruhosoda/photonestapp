@@ -4,6 +4,7 @@ import 'package:flutterbase/presentation/viewmodels/about_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_settings_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/debug_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/language_viewmodel.dart';
+import 'package:flutterbase/presentation/viewmodels/session_viewmodel.dart';
 import 'package:flutterbase/presentation/viewmodels/theme_viewmodel.dart';
 
 /// Presentation-side dependency boundary.
@@ -22,6 +23,7 @@ class AppScope extends InheritedWidget {
     required this.themeViewModel,
     required this.languageViewModel,
     required this.debugSettingsViewModel,
+    required this.sessionViewModel,
     required this.createAboutViewModel,
     required this.createDebugViewModel,
     required super.child,
@@ -34,6 +36,7 @@ class AppScope extends InheritedWidget {
   final ThemeViewModel themeViewModel;
   final LanguageViewModel languageViewModel;
   final DebugSettingsViewModel debugSettingsViewModel;
+  final SessionViewModel sessionViewModel;
 
   /// Builds a fresh [AboutViewModel] for a single About route.
   final AboutViewModel Function() createAboutViewModel;
@@ -62,5 +65,6 @@ class AppScope extends InheritedWidget {
       logger != oldWidget.logger ||
       themeViewModel != oldWidget.themeViewModel ||
       languageViewModel != oldWidget.languageViewModel ||
-      debugSettingsViewModel != oldWidget.debugSettingsViewModel;
+      debugSettingsViewModel != oldWidget.debugSettingsViewModel ||
+      sessionViewModel != oldWidget.sessionViewModel;
 }

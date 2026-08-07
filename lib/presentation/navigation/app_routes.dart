@@ -1,3 +1,4 @@
+import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/bookmark_id.dart';
 
 /// Every location the app can be at, as `go_router` path patterns.
@@ -18,6 +19,16 @@ class AppRoutes {
   /// Home, with the bottom navigation bar.
   static const String main = '/';
 
+  /// Sign-in screen. The router redirects here while no session exists, and
+  /// away from here once one does.
+  static const String login = '/login';
+
+  /// Path parameter naming the album on [albumDetail].
+  static const String albumIdParam = 'id';
+
+  /// One album's media grid. The album list itself is the home tab.
+  static const String albumDetail = '/albums/:$albumIdParam';
+
   static const String about = '/about';
   static const String debug = '/debug';
   static const String logs = '/logs';
@@ -37,4 +48,7 @@ class AppRoutes {
 
   /// Concrete location of the detail screen for [id].
   static String bookmarkDetailPath(BookmarkId id) => '$bookmarks/${id.value}';
+
+  /// Concrete location of the album detail screen for [id].
+  static String albumDetailPath(AlbumId id) => '/albums/${id.value}';
 }

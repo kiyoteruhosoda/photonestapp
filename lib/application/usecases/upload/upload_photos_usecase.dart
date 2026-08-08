@@ -1,8 +1,10 @@
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:flutterbase/domain/entities/upload_failure.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 
 /// Why a single photo could not be uploaded, as something the UI can
@@ -42,6 +44,45 @@ final class PhotoUploadFailure {
   @override
   String toString() =>
       'PhotoUploadFailure(${photo.localId}: ${reason.name} — $message)';
+}
+
+/// How far a batch has got: which photo is in flight, and how much of it
+/// has been sent.
+///
+/// The per-photo byte counts matter because a batch can be one long video:
+/// counting settled photos alone leaves the bar frozen for minutes.
+final class UploadProgress {
+  const UploadProgress({
+    required this.completed,
+    required this.total,
+    required this.fileName,
+    this.sentBytes = 0,
+    this.totalBytes = 0,
+  });
+
+  /// Photos settled so far (uploaded or failed).
+  final int completed;
+
+  /// Batch size.
+  final int total;
+
+  /// The photo currently being sent.
+  final String fileName;
+
+  /// Bytes of [fileName] handed to the network so far.
+  final int sentBytes;
+
+  /// Size of [fileName] in bytes, or 0 while it is unknown.
+  final int totalBytes;
+
+  /// How far the whole batch has got, 0…1 — settled photos plus the
+  /// fraction of the one in flight, so a single large file still moves the
+  /// bar.
+  double get fraction {
+    if (total == 0) return 0;
+    final inFlight = totalBytes == 0 ? 0.0 : sentBytes / totalBytes;
+    return ((completed + inFlight) / total).clamp(0.0, 1.0);
+  }
 }
 
 /// Cooperative cancellation flag for an upload batch.
@@ -87,17 +128,24 @@ final class UploadPhotosUseCase {
     this._library,
     this._uploads,
     this._history,
-    this._logger,
-  );
+    this._failures,
+    this._logger, {
+    this.automatic = false,
+  });
 
   final PhotoLibraryGateway _library;
   final PhotoUploadRepository _uploads;
   final UploadHistoryRepository _history;
+  final UploadFailureRepository _failures;
   final AppLogger _logger;
 
-  /// [onProgress] fires after each photo settles (uploaded or failed) with
-  /// the number of settled photos and the batch size. [cancellation] stops
-  /// the batch before the next photo once cancelled.
+  /// Whether this instance serves the background pass. Recorded with each
+  /// failure so the list can say a photo failed while nobody was watching.
+  final bool automatic;
+
+  /// [onProgress] fires as the batch advances — once per byte-progress
+  /// report from the photo in flight, and once more as each photo settles.
+  /// [cancellation] stops the batch before the next photo once cancelled.
   ///
   /// [mayContinue] is awaited before each photo and stops the batch when it
   /// answers false. It exists for preconditions that can stop holding
@@ -107,7 +155,7 @@ final class UploadPhotosUseCase {
   Future<UploadPhotosResult> execute(
     List<LocalPhoto> photos, {
     DateTime? uploadedAt,
-    void Function(int completed, int total)? onProgress,
+    void Function(UploadProgress progress)? onProgress,
     UploadCancellation? cancellation,
     Future<bool> Function()? mayContinue,
   }) async {
@@ -132,8 +180,31 @@ final class UploadPhotosUseCase {
         );
         break;
       }
-      await _uploadOne(photo, uploadedAt, uploaded, failed);
-      onProgress?.call(uploaded.length + failed.length, photos.length);
+      final settled = uploaded.length + failed.length;
+      await _uploadOne(
+        photo,
+        uploadedAt,
+        uploaded,
+        failed,
+        onBytes: onProgress == null
+            ? null
+            : (sent, total) => onProgress(
+                UploadProgress(
+                  completed: settled,
+                  total: photos.length,
+                  fileName: photo.fileName,
+                  sentBytes: sent,
+                  totalBytes: total,
+                ),
+              ),
+      );
+      onProgress?.call(
+        UploadProgress(
+          completed: uploaded.length + failed.length,
+          total: photos.length,
+          fileName: photo.fileName,
+        ),
+      );
     }
 
     _logger.info(
@@ -150,44 +221,87 @@ final class UploadPhotosUseCase {
     LocalPhoto photo,
     DateTime? uploadedAt,
     List<LocalPhoto> uploaded,
-    List<PhotoUploadFailure> failed,
-  ) async {
+    List<PhotoUploadFailure> failed, {
+    UploadBytesProgress? onBytes,
+  }) async {
     try {
-      await _sendOriginal(photo);
+      await _sendOriginal(photo, onBytes);
     } on _AssetVanished {
-      failed.add(
-        PhotoUploadFailure(
-          photo: photo,
-          reason: PhotoUploadFailureReason.missingFromLibrary,
-          message: 'Photo is no longer in the device library.',
-        ),
+      await _recordFailure(
+        photo,
+        PhotoUploadFailureReason.missingFromLibrary,
+        'Photo is no longer in the device library.',
+        failed,
       );
       return;
     } on AppError catch (error) {
       _logger.warning('[Upload] ${photo.fileName} failed: ${error.message}');
-      failed.add(
-        PhotoUploadFailure(
-          photo: photo,
-          reason: _reasonFor(error),
-          message: error.message,
-        ),
-      );
+      await _recordFailure(photo, _reasonFor(error), error.message, failed);
       return;
     }
     await _history.markUploaded(photo, uploadedAt ?? DateTime.now().toUtc());
+    // A photo that finally went through is no longer a live problem, so its
+    // record goes away rather than lingering in the failure list forever.
+    await _failures.clear(photo.localId);
     uploaded.add(photo);
     _logger.info('[Upload] sent ${photo.fileName}');
+  }
+
+  /// Adds the failure to the batch's list and to the durable record.
+  ///
+  /// Persisting is what makes a background pass's failures nameable after a
+  /// restart. A store that cannot be written is logged and swallowed: the
+  /// batch's own outcome is the more important answer, and failing the run
+  /// over a bookkeeping row would be worse than losing the row.
+  Future<void> _recordFailure(
+    LocalPhoto photo,
+    PhotoUploadFailureReason reason,
+    String message,
+    List<PhotoUploadFailure> failed,
+  ) async {
+    failed.add(
+      PhotoUploadFailure(photo: photo, reason: reason, message: message),
+    );
+    try {
+      await _failures.record(
+        photo: photo,
+        reason: _persistedReasonFor(reason),
+        message: message,
+        automatic: automatic,
+        failedAt: DateTime.now().toUtc(),
+      );
+    } on AppError catch (error) {
+      _logger.warning('[Upload] could not record the failure: $error');
+    }
+  }
+
+  static UploadFailureReason _persistedReasonFor(
+    PhotoUploadFailureReason reason,
+  ) {
+    return switch (reason) {
+      PhotoUploadFailureReason.missingFromLibrary =>
+        UploadFailureReason.missingFromLibrary,
+      PhotoUploadFailureReason.unsupportedFormat =>
+        UploadFailureReason.unsupportedFormat,
+      PhotoUploadFailureReason.sessionExpired =>
+        UploadFailureReason.sessionExpired,
+      PhotoUploadFailureReason.unreachable => UploadFailureReason.unreachable,
+      PhotoUploadFailureReason.rejected => UploadFailureReason.rejected,
+    };
   }
 
   /// Streams the original from its file when the platform exposes one —
   /// what keeps a long video out of the app heap — and falls back to an
   /// in-memory read otherwise. Throws [_AssetVanished] when the asset is
   /// gone from the library either way.
-  Future<void> _sendOriginal(LocalPhoto photo) async {
+  Future<void> _sendOriginal(
+    LocalPhoto photo,
+    UploadBytesProgress? onBytes,
+  ) async {
     final path = await _library.originalFilePath(photo.localId);
     if (path != null) {
       try {
-        await _uploads.uploadFromPath(photo, path);
+        await _uploads.uploadFromPath(photo, path, onBytes: onBytes);
         return;
       } on InfrastructureError catch (error) {
         if (error.code != 'missing_file') rethrow;
@@ -196,7 +310,7 @@ final class UploadPhotosUseCase {
     }
     final bytes = await _library.readOriginalBytes(photo.localId);
     if (bytes == null) throw const _AssetVanished();
-    await _uploads.upload(photo, bytes);
+    await _uploads.upload(photo, bytes, onBytes: onBytes);
   }
 
   static PhotoUploadFailureReason _reasonFor(AppError error) {

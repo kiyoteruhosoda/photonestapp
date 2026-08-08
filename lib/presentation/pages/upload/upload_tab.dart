@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/domain/entities/upload_failure.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
@@ -63,7 +63,7 @@ class _UploadTabState extends ConsumerState<UploadTab> {
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
-  Future<void> _showFailures(UploadPhotosResult result) {
+  Future<void> _showFailures(List<UploadFailure> failures) {
     final l10n = AppLocalizations.of(context);
     return showDialog<void>(
       context: context,
@@ -73,9 +73,9 @@ class _UploadTabState extends ConsumerState<UploadTab> {
           width: double.maxFinite,
           child: ListView.builder(
             shrinkWrap: true,
-            itemCount: result.failed.length,
+            itemCount: failures.length,
             itemBuilder: (context, index) {
-              final failure = result.failed[index];
+              final failure = failures[index];
               return ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
@@ -87,7 +87,16 @@ class _UploadTabState extends ConsumerState<UploadTab> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                subtitle: Text(describeUploadFailure(failure.reason, l10n)),
+                subtitle: Text(
+                  [
+                    describeRecordedFailure(failure.reason, l10n),
+                    // A count that keeps climbing is what separates "the
+                    // next pass will fix it" from "this will never work".
+                    if (failure.attempts > 1)
+                      l10n.uploadFailureAttempts(failure.attempts),
+                    if (failure.automatic) l10n.uploadFailureAutomatic,
+                  ].join(' · '),
+                ),
               );
             },
           ),
@@ -261,16 +270,30 @@ class _UploadTabState extends ConsumerState<UploadTab> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          LinearProgressIndicator(
-            value: run.total == 0 ? null : run.completed / run.total,
-          ),
+          // Driven by bytes, not by settled photos: one long video would
+          // otherwise hold the bar still for minutes and read as frozen.
+          LinearProgressIndicator(value: run.fraction),
           const SizedBox(height: AppSpacing.sm),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                l10n.uploadProgress(run.completed, run.total),
-                style: Theme.of(context).textTheme.bodyMedium,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.uploadProgress(run.completed, run.total),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    if (run.fileName.isNotEmpty)
+                      Text(
+                        run.fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                  ],
+                ),
               ),
               TextButton(
                 onPressed: ref.read(uploadRunProvider.notifier).cancel,
@@ -282,15 +305,23 @@ class _UploadTabState extends ConsumerState<UploadTab> {
       );
     }
 
-    final lastResult = run.lastResult;
+    // Read from the store rather than from the last run: a failure that
+    // happened in a background pass, or before the app was last closed, is
+    // exactly the one the reader has no other way of seeing.
+    final failures = switch (ref.watch(uploadFailuresProvider)) {
+      AsyncData<List<UploadFailure>>(:final value) => value,
+      _ => const <UploadFailure>[],
+    };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (lastResult != null && lastResult.hasFailures) ...[
+        if (failures.isNotEmpty) ...[
           _FailureSummary(
-            count: lastResult.failed.length,
-            onShowDetails: () => unawaited(_showFailures(lastResult)),
-            onDismiss: ref.read(uploadRunProvider.notifier).dismissResult,
+            count: failures.length,
+            onShowDetails: () => unawaited(_showFailures(failures)),
+            onDismiss: () => unawaited(
+              ref.read(uploadFailuresProvider.notifier).dismissAll(),
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
         ],

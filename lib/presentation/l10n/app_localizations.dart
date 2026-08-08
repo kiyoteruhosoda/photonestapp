@@ -107,6 +107,8 @@ abstract class AppLocalizations {
   String get uploadCancelled;
   String get uploadShowFailures;
   String get uploadFailureListTitle;
+  String uploadFailureAttempts(int attempts);
+  String get uploadFailureAutomatic;
   String get uploadFailureMissing;
   String get uploadFailureUnsupported;
   String get uploadFailureRejected;

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/domain/entities/upload_failure.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/pages/upload/upload_tab.dart';
@@ -230,6 +231,73 @@ void main() {
     expect(tester.widget<SwitchListTile>(unmeteredSwitch).value, isFalse);
     // The background schedule was re-registered without the restriction.
     expect(scope.backgroundSyncScheduler.scheduledUnmeteredOnly.last, isFalse);
+  });
+
+  testWidgets('a failure recorded before this run is still listed', (
+    tester,
+  ) async {
+    // Nothing was uploaded in this session: the record came from an earlier
+    // run — a background pass overnight, or the app being closed mid-batch.
+    final scope = scopeWithPhotos(['a']);
+    await scope.uploadFailureRepository.record(
+      photo: testLocalPhoto(localId: 'gone', fileName: 'VID_9.mov'),
+      reason: UploadFailureReason.unsupportedFormat,
+      message: 'server said no',
+      automatic: true,
+      failedAt: DateTime.utc(2026, 8, 8, 3),
+    );
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(l10n.uploadFailed(1)), findsOneWidget);
+
+    await tester.tap(find.text(l10n.uploadShowFailures));
+    await tester.pumpAndSettle();
+
+    expect(find.text('VID_9.mov'), findsOneWidget);
+    expect(find.textContaining(l10n.uploadFailureUnsupported), findsOneWidget);
+    // The record says it happened while nobody was watching.
+    expect(find.textContaining(l10n.uploadFailureAutomatic), findsOneWidget);
+  });
+
+  testWidgets('a photo failing again shows how many attempts it has cost', (
+    tester,
+  ) async {
+    final scope = scopeWithPhotos(['a']);
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await scope.uploadFailureRepository.record(
+        photo: testLocalPhoto(localId: 'gone', fileName: 'VID_9.mov'),
+        reason: UploadFailureReason.unsupportedFormat,
+        message: 'server said no',
+        automatic: true,
+        failedAt: DateTime.utc(2026, 8, 8, 3),
+      );
+    }
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.uploadShowFailures));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(l10n.uploadFailureAttempts(3)), findsOneWidget);
+  });
+
+  testWidgets('dismissing the summary forgets the records', (tester) async {
+    final scope = scopeWithPhotos(['a']);
+    await scope.uploadFailureRepository.record(
+      photo: testLocalPhoto(localId: 'gone', fileName: 'VID_9.mov'),
+      reason: UploadFailureReason.rejected,
+      message: 'server said no',
+      automatic: false,
+      failedAt: DateTime.utc(2026, 8, 8, 3),
+    );
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+
+    expect(scope.uploadFailureRepository.failures, isEmpty);
+    expect(find.text(l10n.uploadShowFailures), findsNothing);
   });
 
   testWidgets('a video candidate carries the play badge', (tester) async {

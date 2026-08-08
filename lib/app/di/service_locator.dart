@@ -30,14 +30,17 @@ import 'package:flutterbase/application/usecases/notification/record_backup_resu
 import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/watch_upload_failures_usecase.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
@@ -56,6 +59,7 @@ import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/infrastructure_module.dart';
 import 'package:get_it/get_it.dart';
@@ -108,6 +112,7 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<MediaPlaybackRepository>(infrastructure.mediaPlayback)
     ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
     ..registerSingleton<UploadHistoryRepository>(infrastructure.uploadHistory)
+    ..registerSingleton<UploadFailureRepository>(infrastructure.uploadFailures)
     ..registerSingleton<SyncLeaseRepository>(infrastructure.syncLease)
     ..registerSingleton<AutoUploadSettingsRepository>(
       infrastructure.autoUploadSettings,
@@ -229,8 +234,18 @@ Future<void> setupServiceLocator() async {
       sl<PhotoLibraryGateway>(),
       sl<PhotoUploadRepository>(),
       sl<UploadHistoryRepository>(),
+      sl<UploadFailureRepository>(),
       sl<AppLogger>(),
     ),
+  );
+  sl.registerFactory<ListUploadFailuresUseCase>(
+    () => ListUploadFailuresUseCase(sl<UploadFailureRepository>()),
+  );
+  sl.registerFactory<WatchUploadFailuresUseCase>(
+    () => WatchUploadFailuresUseCase(sl<UploadFailureRepository>()),
+  );
+  sl.registerFactory<DismissUploadFailuresUseCase>(
+    () => DismissUploadFailuresUseCase(sl<UploadFailureRepository>()),
   );
   sl.registerFactory<SyncNewPhotosUseCase>(
     () => SyncNewPhotosUseCase(

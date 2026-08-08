@@ -142,6 +142,10 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get uploadShowFailures => '詳細';
   @override
+  String uploadFailureAttempts(int attempts) => '$attempts 回失敗';
+  @override
+  String get uploadFailureAutomatic => '自動アップロード';
+  @override
   String get uploadFailureListTitle => 'アップロードに失敗した写真';
   @override
   String get uploadFailureMissing => '端末のライブラリに見つかりません。';

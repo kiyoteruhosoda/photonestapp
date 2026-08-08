@@ -1,5 +1,6 @@
 import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/domain/entities/upload_failure.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 
@@ -33,6 +34,24 @@ String describeUploadFailure(
     PhotoUploadFailureReason.sessionExpired => l10n.commonErrorSessionExpired,
     PhotoUploadFailureReason.unreachable => l10n.commonErrorNetwork,
     PhotoUploadFailureReason.rejected => l10n.uploadFailureRejected,
+  };
+}
+
+/// Maps a persisted upload failure's reason onto a localised message.
+///
+/// A separate mapping from [describeUploadFailure] because the persisted
+/// record has its own domain enum: the batch's in-memory reasons belong to
+/// the Application layer and must not become the storage format.
+String describeRecordedFailure(
+  UploadFailureReason reason,
+  AppLocalizations l10n,
+) {
+  return switch (reason) {
+    UploadFailureReason.missingFromLibrary => l10n.uploadFailureMissing,
+    UploadFailureReason.unsupportedFormat => l10n.uploadFailureUnsupported,
+    UploadFailureReason.sessionExpired => l10n.commonErrorSessionExpired,
+    UploadFailureReason.unreachable => l10n.commonErrorNetwork,
+    UploadFailureReason.rejected => l10n.uploadFailureRejected,
   };
 }
 

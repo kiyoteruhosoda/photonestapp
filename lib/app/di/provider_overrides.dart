@@ -28,13 +28,16 @@ import 'package:flutterbase/application/usecases/notification/mark_notifications
 import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/watch_upload_failures_usecase.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_info_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
@@ -88,6 +91,15 @@ List<Override> buildProviderOverrides() {
       sl<ListUploadCandidatesUseCase>(),
     ),
     uploadPhotosUseCaseProvider.overrideWithValue(sl<UploadPhotosUseCase>()),
+    listUploadFailuresUseCaseProvider.overrideWithValue(
+      sl<ListUploadFailuresUseCase>(),
+    ),
+    watchUploadFailuresUseCaseProvider.overrideWithValue(
+      sl<WatchUploadFailuresUseCase>(),
+    ),
+    dismissUploadFailuresUseCaseProvider.overrideWithValue(
+      sl<DismissUploadFailuresUseCase>(),
+    ),
     getLocalThumbnailUseCaseProvider.overrideWithValue(
       sl<GetLocalThumbnailUseCase>(),
     ),

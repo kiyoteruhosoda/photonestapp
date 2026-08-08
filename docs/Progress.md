@@ -13,43 +13,9 @@
 |---|---|---|---|---|---|---|---|
 | 1 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | 🟡要判断 | 大 | 大 | 小 | 小 |
 | 2 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | 🟡要判断 | 大 | 中 | 小 | 小 |
-| 3 | 23 | アップロードの進捗が枚数単位で、失敗の詳細がアプリ再起動で消える | ⬜未着手 | 小 | 中 | 中 | 中 |
 
 
 ## 詳細
-
-### 23. アップロードの進捗が枚数単位で、失敗の詳細が残らない
-
-手動アップロードの基本的な導線は揃っている。`_buildRunControls` が
-「何枚中何枚目」の `LinearProgressIndicator` と中断ボタンを出し、
-`_FailureSummary` → `_showFailures` が失敗したファイルと理由を一覧し、
-`_uploadSelected` は成功した ID だけを `_selected` から外すので、
-失敗分は選択されたまま残りボタンを押せば再試行になる。自動パスも
-`markUploaded` を成功時にしか呼ばないため、失敗した写真は次のパスで
-自然に再試行される。残っているのは以下の 3 点。
-
-**(a) 進捗が枚数単位で、1 ファイル内のバイト進捗がない**
-
-`UploadPhotosUseCase.execute` の `onProgress` は写真が 1 枚片付くたびに
-`(completed, total)` を返す。サーバー側が単発 multipart で再開もできない
-（photonest の Progress F11）ため、大きい動画を 1 本上げている間は
-バーが止まったまま数分動かず、固まったように見える。
-
-**(b) 失敗一覧がアプリ再起動で消える**
-
-`UploadRunNotifier` はメモリ上の `Notifier` で、失敗の詳細は
-`UploadRunState.lastResult` にしか無い。アプリを閉じるとどのファイルが
-なぜ落ちたのか分からなくなる。
-
-**(c) 自動パスの失敗はファイルが特定できない**
-
-`RecordBackupResultUseCase` は `uploadedCount` / `failedCount` の件数だけを
-`backup_notifications` に記録する。バックグラウンドで落ちた写真は
-次のパスで再試行されるので取りこぼしはないが、繰り返し失敗し続ける写真
-（未対応フォーマット等）にユーザーが気付けない。
-
-対応: (a) はアップロードポートに進捗コールバックを足す。(b)(c) は失敗を
-sqflite に永続化し、通知の詳細から辿れるようにする。
 
 ### 6. `applicationId` の変更
 

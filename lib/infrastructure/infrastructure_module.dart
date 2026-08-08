@@ -22,6 +22,7 @@ import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:flutterbase/infrastructure/background/workmanager_background_sync_scheduler.dart';
@@ -48,6 +49,7 @@ import 'package:flutterbase/infrastructure/repositories/sqflite_album_snapshot_r
 import 'package:flutterbase/infrastructure/repositories/sqflite_backup_notification_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_sync_lease_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/sqflite_upload_failure_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -82,6 +84,7 @@ final class InfrastructureModule {
     required this.mediaPlayback,
     required this.photoUploads,
     required this.uploadHistory,
+    required this.uploadFailures,
     required this.syncLease,
     required this.autoUploadSettings,
     required this.photoLibrary,
@@ -169,6 +172,11 @@ final class InfrastructureModule {
         sessions,
         apiEndpoints,
       ),
+      uploadFailures: SqfliteUploadFailureRepository(
+        database,
+        sessions,
+        apiEndpoints,
+      ),
       syncLease: SqfliteSyncLeaseRepository(database),
       autoUploadSettings: SharedPreferencesAutoUploadSettingsRepository(
         preferences,
@@ -200,6 +208,7 @@ final class InfrastructureModule {
   final MediaPlaybackRepository mediaPlayback;
   final PhotoUploadRepository photoUploads;
   final UploadHistoryRepository uploadHistory;
+  final UploadFailureRepository uploadFailures;
   final SyncLeaseRepository syncLease;
   final AutoUploadSettingsRepository autoUploadSettings;
   final PhotoLibraryGateway photoLibrary;

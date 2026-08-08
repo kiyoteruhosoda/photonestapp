@@ -154,6 +154,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get uploadShowFailures => 'Details';
   @override
+  String uploadFailureAttempts(int attempts) => '$attempts attempts';
+  @override
+  String get uploadFailureAutomatic => 'auto-upload';
+  @override
   String get uploadFailureListTitle => 'Failed uploads';
   @override
   String get uploadFailureMissing => 'No longer in the device library.';

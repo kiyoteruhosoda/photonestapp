@@ -73,6 +73,14 @@ abstract class AppLocalizations {
 
   // ─── Video playback ───────────────────────────────────────────────────
   String get mediaVideoLabel;
+  String mediaViewerPosition(int position, int total);
+  String get mediaShowOriginal;
+  String get mediaOriginalUnavailable;
+  String get mediaSaveToDevice;
+  String get mediaSaveDone;
+  String get mediaSaveNoAccess;
+  String get mediaSaveDownloadFailed;
+  String get mediaSaveWriteFailed;
   String get videoNotReady;
   String get videoUnavailable;
 
@@ -99,6 +107,8 @@ abstract class AppLocalizations {
   String get uploadCancelled;
   String get uploadShowFailures;
   String get uploadFailureListTitle;
+  String uploadFailureAttempts(int attempts);
+  String get uploadFailureAutomatic;
   String get uploadFailureMissing;
   String get uploadFailureUnsupported;
   String get uploadFailureRejected;

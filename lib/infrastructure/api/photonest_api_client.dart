@@ -78,18 +78,37 @@ final class PhotoNestApiClient {
     return response.bodyBytes;
   }
 
+  /// GETs an absolute URL the server itself issued — a signed `/api/dl/…`
+  /// link — and returns the raw body.
+  ///
+  /// Sent unauthenticated on purpose: the signature *is* the authorisation,
+  /// and the URL outlives no session, so attaching a bearer token would only
+  /// leak it to whatever host the link points at.
+  Future<Uint8List> getBytesFrom(Uri url) async {
+    final response = await _sendWithRetry(
+      authenticated: false,
+      build: () => http.Request('GET', url),
+    );
+    return response.bodyBytes;
+  }
+
   /// POSTs one file as `multipart/form-data` and decodes the JSON response.
   ///
   /// [buildFile] is async (and called once per attempt) because a file part
   /// streaming from disk has to be reopened for the post-refresh retry.
+  ///
+  /// [onBytes] observes the request body as it leaves, so a caller can show
+  /// how far a large file has got. It restarts from zero when the request is
+  /// retried after a token refresh — the bytes really are being sent again.
   Future<Map<String, dynamic>> postMultipart(
     String path, {
     required Future<http.MultipartFile> Function() buildFile,
     Map<String, String>? headers,
+    void Function(int sent, int total)? onBytes,
   }) async {
     final response = await _sendWithRetry(
       authenticated: true,
-      build: () async => http.MultipartRequest('POST', _resolve(path))
+      build: () async => _ObservedMultipartRequest(_resolve(path), onBytes)
         ..headers.addAll(headers ?? const {})
         ..files.add(await buildFile()),
     );
@@ -273,5 +292,37 @@ final class PhotoNestApiClient {
       return AuthenticationError(message, code: code);
     }
     return InfrastructureError(message, code: code);
+  }
+}
+
+/// A multipart request that reports its body as it is consumed.
+///
+/// `http` offers no progress hook, but it does finalise the body into a
+/// stream just before sending, so counting the chunks that pass through is
+/// enough. The total is the request's own `contentLength`, which multipart
+/// always knows.
+final class _ObservedMultipartRequest extends http.MultipartRequest {
+  _ObservedMultipartRequest(Uri url, this._onBytes) : super('POST', url);
+
+  final void Function(int sent, int total)? _onBytes;
+
+  @override
+  http.ByteStream finalize() {
+    final stream = super.finalize();
+    final report = _onBytes;
+    if (report == null) return stream;
+    final total = contentLength;
+    var sent = 0;
+    return http.ByteStream(
+      stream.transform(
+        StreamTransformer<List<int>, List<int>>.fromHandlers(
+          handleData: (chunk, sink) {
+            sent += chunk.length;
+            report(sent, total);
+            sink.add(chunk);
+          },
+        ),
+      ),
+    );
   }
 }

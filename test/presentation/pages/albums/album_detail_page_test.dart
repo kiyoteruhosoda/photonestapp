@@ -98,7 +98,7 @@ void main() {
     expect(scope.mediaThumbnailRepository.fetched, isEmpty);
   });
 
-  testWidgets('tapping a tile opens the full-screen preview and taps close', (
+  testWidgets('tapping a tile opens the full-screen viewer and closes', (
     tester,
   ) async {
     final scope = TestScope(
@@ -112,13 +112,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(Dialog), findsOneWidget);
-    // The preview asks for the large rendition.
+    // The viewer asks for the large rendition.
     expect(
       scope.mediaThumbnailRepository.fetched.map((entry) => entry.$2),
       contains(2048),
     );
 
-    await tester.tap(find.byType(InteractiveViewer));
+    await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
   });

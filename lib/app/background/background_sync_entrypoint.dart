@@ -36,6 +36,7 @@ void backgroundSyncDispatcher() {
           infrastructure.photoLibrary,
           infrastructure.photoUploads,
           infrastructure.uploadHistory,
+          infrastructure.uploadFailures,
           logger,
         ),
         RecordBackupResultUseCase(infrastructure.backupNotifications, logger),

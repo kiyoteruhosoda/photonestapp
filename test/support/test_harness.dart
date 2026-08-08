@@ -18,9 +18,11 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -28,14 +30,17 @@ import 'package:flutterbase/application/usecases/notification/record_backup_resu
 import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/watch_upload_failures_usecase.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
@@ -76,9 +81,11 @@ class TestScope {
     FakeMediaThumbnailRepository? mediaThumbnailRepository,
     FakeMediaThumbnailCacheRepository? mediaThumbnailCacheRepository,
     FakeMediaLibraryRepository? mediaLibraryRepository,
+    FakeMediaOriginalRepository? mediaOriginalRepository,
     FakeMediaPlaybackRepository? mediaPlaybackRepository,
     FakePhotoUploadRepository? photoUploadRepository,
     FakeUploadHistoryRepository? uploadHistoryRepository,
+    FakeUploadFailureRepository? uploadFailureRepository,
     FakeAutoUploadSettingsRepository? autoUploadSettingsRepository,
     FakePhotoLibraryGateway? photoLibrary,
     FakeNetworkConnectionGateway? networkConnection,
@@ -110,12 +117,16 @@ class TestScope {
            mediaThumbnailCacheRepository ?? FakeMediaThumbnailCacheRepository(),
        mediaLibraryRepository =
            mediaLibraryRepository ?? FakeMediaLibraryRepository(),
+       mediaOriginalRepository =
+           mediaOriginalRepository ?? FakeMediaOriginalRepository(),
        mediaPlaybackRepository =
            mediaPlaybackRepository ?? FakeMediaPlaybackRepository(),
        photoUploadRepository =
            photoUploadRepository ?? FakePhotoUploadRepository(),
        uploadHistoryRepository =
            uploadHistoryRepository ?? FakeUploadHistoryRepository(),
+       uploadFailureRepository =
+           uploadFailureRepository ?? FakeUploadFailureRepository(),
        autoUploadSettingsRepository =
            autoUploadSettingsRepository ?? FakeAutoUploadSettingsRepository(),
        photoLibrary = photoLibrary ?? FakePhotoLibraryGateway(),
@@ -135,9 +146,11 @@ class TestScope {
   final FakeMediaThumbnailRepository mediaThumbnailRepository;
   final FakeMediaThumbnailCacheRepository mediaThumbnailCacheRepository;
   final FakeMediaLibraryRepository mediaLibraryRepository;
+  final FakeMediaOriginalRepository mediaOriginalRepository;
   final FakeMediaPlaybackRepository mediaPlaybackRepository;
   final FakePhotoUploadRepository photoUploadRepository;
   final FakeUploadHistoryRepository uploadHistoryRepository;
+  final FakeUploadFailureRepository uploadFailureRepository;
   final FakeAutoUploadSettingsRepository autoUploadSettingsRepository;
   final FakePhotoLibraryGateway photoLibrary;
   final FakeNetworkConnectionGateway networkConnection;
@@ -190,6 +203,7 @@ class TestScope {
       photoLibrary,
       photoUploadRepository,
       uploadHistoryRepository,
+      uploadFailureRepository,
       logger,
     );
     return <Override>[
@@ -237,10 +251,25 @@ class TestScope {
       listLibraryMediaUseCaseProvider.overrideWithValue(
         ListLibraryMediaUseCase(mediaLibraryRepository, logger),
       ),
+      getMediaOriginalUseCaseProvider.overrideWithValue(
+        GetMediaOriginalUseCase(mediaOriginalRepository),
+      ),
+      saveMediaOriginalUseCaseProvider.overrideWithValue(
+        SaveMediaOriginalUseCase(mediaOriginalRepository, photoLibrary, logger),
+      ),
       listUploadCandidatesUseCaseProvider.overrideWithValue(
         ListUploadCandidatesUseCase(photoLibrary, uploadHistoryRepository),
       ),
       uploadPhotosUseCaseProvider.overrideWithValue(uploadPhotos),
+      listUploadFailuresUseCaseProvider.overrideWithValue(
+        ListUploadFailuresUseCase(uploadFailureRepository),
+      ),
+      watchUploadFailuresUseCaseProvider.overrideWithValue(
+        WatchUploadFailuresUseCase(uploadFailureRepository),
+      ),
+      dismissUploadFailuresUseCaseProvider.overrideWithValue(
+        DismissUploadFailuresUseCase(uploadFailureRepository),
+      ),
       getLocalThumbnailUseCaseProvider.overrideWithValue(
         GetLocalThumbnailUseCase(photoLibrary),
       ),

@@ -10,6 +10,7 @@ import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:flutterbase/presentation/providers/settings_providers.dart';
+import 'package:flutterbase/presentation/providers/upload_providers.dart';
 import 'package:flutterbase/presentation/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 
@@ -77,6 +78,11 @@ class _AppWidgetState extends ConsumerState<AppWidget>
     // on every platform, so returning to the foreground is a sync trigger.
     if (state == AppLifecycleState.resumed) {
       unawaited(_autoUploadCoordinator.triggerSync());
+      // The background upload engine records its failures in its own
+      // isolate, so its writes never reach this isolate's change stream.
+      // Coming back to the foreground is when a pass is most likely to have
+      // happened unseen, so the list is re-read rather than left stale.
+      unawaited(ref.read(uploadFailuresProvider.notifier).refresh());
     }
   }
 

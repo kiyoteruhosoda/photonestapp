@@ -111,7 +111,9 @@ class _MediaGrid extends ConsumerWidget {
         }
         final item = media[index];
         return InkWell(
-          onTap: () => unawaited(showMediaViewer(context, item)),
+          onTap: () => unawaited(
+            showMediaViewer(context, items: media, initialIndex: index),
+          ),
           child: MediaTile(item: item),
         );
       },

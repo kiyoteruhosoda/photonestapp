@@ -55,7 +55,11 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
   };
 
   @override
-  Future<void> upload(LocalPhoto photo, Uint8List bytes) {
+  Future<void> upload(
+    LocalPhoto photo,
+    Uint8List bytes, {
+    UploadBytesProgress? onBytes,
+  }) {
     return _uploadWith(
       photo,
       () async => http.MultipartFile.fromBytes(
@@ -64,11 +68,16 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
         filename: photo.fileName,
         contentType: _contentTypeFor(photo.fileName),
       ),
+      onBytes: onBytes,
     );
   }
 
   @override
-  Future<void> uploadFromPath(LocalPhoto photo, String path) {
+  Future<void> uploadFromPath(
+    LocalPhoto photo,
+    String path, {
+    UploadBytesProgress? onBytes,
+  }) {
     // `fromPath` streams from disk chunk by chunk, so a multi-gigabyte
     // video costs a buffer, not its whole size, in memory.
     return _uploadWith(photo, () async {
@@ -86,13 +95,14 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
           cause: error,
         );
       }
-    });
+    }, onBytes: onBytes);
   }
 
   Future<void> _uploadWith(
     LocalPhoto photo,
-    Future<http.MultipartFile> Function() buildFile,
-  ) async {
+    Future<http.MultipartFile> Function() buildFile, {
+    UploadBytesProgress? onBytes,
+  }) async {
     final session = _newSessionId();
     final headers = {_sessionHeader: session};
 
@@ -100,6 +110,7 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
       '/upload/prepare',
       headers: headers,
       buildFile: buildFile,
+      onBytes: onBytes,
     );
     final tempFileId = prepared['tempFileId'] as String?;
     if (tempFileId == null) {

@@ -11,7 +11,8 @@ import 'package:flutterbase/domain/entities/backup_notification.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/entities/media_library_page.dart';
-import 'package:flutterbase/domain/entities/media_playback_source.dart';
+import 'package:flutterbase/domain/entities/signed_media_url.dart';
+import 'package:flutterbase/domain/entities/upload_failure.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
@@ -23,6 +24,7 @@ import 'package:flutterbase/domain/repositories/backup_notification_repository.d
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_library_repository.dart';
+import 'package:flutterbase/domain/repositories/media_original_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
@@ -30,6 +32,7 @@ import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/app_language.dart';
@@ -325,6 +328,99 @@ MediaItem testMediaItem({
 /// Builds one server media item the server has no capture instant for.
 MediaItem testMediaItemWithoutShotAt({int id = 10, String filename = 'a.jpg'}) {
   return MediaItem(id: MediaId(id), filename: filename);
+}
+
+/// In-memory [UploadFailureRepository].
+final class FakeUploadFailureRepository implements UploadFailureRepository {
+  final Map<String, UploadFailure> failures = <String, UploadFailure>{};
+
+  // ignore: close_sinks
+  final StreamController<void> changed = StreamController<void>.broadcast();
+
+  /// When set, [record] throws this instead of storing.
+  AppError? recordFailure;
+
+  /// When set, [clear] throws this instead of forgetting.
+  AppError? clearFailure;
+
+  @override
+  Stream<void> get changes => changed.stream;
+
+  @override
+  Future<List<UploadFailure>> list() async {
+    final all = failures.values.toList()
+      ..sort((a, b) => b.failedAt.compareTo(a.failedAt));
+    return all;
+  }
+
+  @override
+  Future<void> record({
+    required LocalPhoto photo,
+    required UploadFailureReason reason,
+    required String message,
+    required bool automatic,
+    required DateTime failedAt,
+  }) async {
+    final error = recordFailure;
+    if (error != null) throw error;
+    failures[photo.localId] = UploadFailure(
+      photo: photo,
+      reason: reason,
+      message: message,
+      failedAt: failedAt,
+      attempts: (failures[photo.localId]?.attempts ?? 0) + 1,
+      automatic: automatic,
+    );
+    changed.add(null);
+  }
+
+  @override
+  Future<void> clear(String localId) async {
+    final error = clearFailure;
+    if (error != null) throw error;
+    if (failures.remove(localId) != null) changed.add(null);
+  }
+
+  @override
+  Future<void> clearAll() async {
+    if (failures.isEmpty) return;
+    failures.clear();
+    changed.add(null);
+  }
+}
+
+/// In-memory [MediaOriginalRepository].
+final class FakeMediaOriginalRepository implements MediaOriginalRepository {
+  /// URL handed back by [originalOf].
+  Uri url = Uri.parse('https://photos.example.com/api/dl/original-token');
+
+  /// Bytes handed back by [downloadOriginal].
+  Uint8List bytes = Uint8List.fromList(const [1, 2, 3]);
+
+  /// Media ids [originalOf] was asked for, in order.
+  final List<MediaId> requested = <MediaId>[];
+
+  /// Media ids [downloadOriginal] was asked for, in order.
+  final List<MediaId> downloaded = <MediaId>[];
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<SignedMediaUrl> originalOf(MediaId id) async {
+    requested.add(id);
+    final error = failure;
+    if (error != null) throw error;
+    return SignedMediaUrl(url: url);
+  }
+
+  @override
+  Future<Uint8List> downloadOriginal(MediaId id) async {
+    downloaded.add(id);
+    final error = failure;
+    if (error != null) throw error;
+    return bytes;
+  }
 }
 
 /// In-memory [MediaLibraryRepository].
@@ -640,14 +736,14 @@ final class FakeMediaThumbnailCacheRepository
 
 /// In-memory [MediaPlaybackRepository] issuing a fixed source per media id.
 final class FakeMediaPlaybackRepository implements MediaPlaybackRepository {
-  final Map<int, MediaPlaybackSource> sources = <int, MediaPlaybackSource>{};
+  final Map<int, SignedMediaUrl> sources = <int, SignedMediaUrl>{};
   final List<MediaId> requested = <MediaId>[];
 
   /// When set, [sourceOf] throws this instead of answering.
   AppError? failure;
 
   @override
-  Future<MediaPlaybackSource> sourceOf(MediaId id) async {
+  Future<SignedMediaUrl> sourceOf(MediaId id) async {
     requested.add(id);
     final error = failure;
     if (error != null) throw error;
@@ -722,15 +818,33 @@ final class FakePhotoUploadRepository implements PhotoUploadRepository {
   /// Uploads that came in as file paths, in order.
   final List<(LocalPhoto, String)> uploadedFromPath = <(LocalPhoto, String)>[];
 
+  /// Byte-progress steps every upload reports, as (sent, total). A test
+  /// sets this to drive a progress bar without a real transfer.
+  List<(int, int)> byteProgress = const <(int, int)>[];
+
   @override
-  Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+  Future<void> upload(
+    LocalPhoto photo,
+    Uint8List bytes, {
+    UploadBytesProgress? onBytes,
+  }) async {
     await _admit(photo);
+    for (final (sent, total) in byteProgress) {
+      onBytes?.call(sent, total);
+    }
     uploaded.add((photo, bytes));
   }
 
   @override
-  Future<void> uploadFromPath(LocalPhoto photo, String path) async {
+  Future<void> uploadFromPath(
+    LocalPhoto photo,
+    String path, {
+    UploadBytesProgress? onBytes,
+  }) async {
     await _admit(photo);
+    for (final (sent, total) in byteProgress) {
+      onBytes?.call(sent, total);
+    }
     uploadedFromPath.add((photo, path));
   }
 
@@ -889,6 +1003,25 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
   @override
   Future<Uint8List?> readThumbnail(String localId, {required int size}) async =>
       thumbnailsById[localId];
+
+  /// Assets handed to [saveToLibrary], in order.
+  final List<(String, Uint8List, bool)> savedToLibrary =
+      <(String, Uint8List, bool)>[];
+
+  /// When false, [saveToLibrary] refuses — models a denied media-store
+  /// grant.
+  bool saveGranted = true;
+
+  @override
+  Future<bool> saveToLibrary({
+    required String fileName,
+    required Uint8List bytes,
+    required bool isVideo,
+  }) async {
+    if (!saveGranted || !accessGranted) return false;
+    savedToLibrary.add((fileName, bytes, isVideo));
+    return true;
+  }
 
   @override
   Stream<void> get libraryChanges => changes.stream;

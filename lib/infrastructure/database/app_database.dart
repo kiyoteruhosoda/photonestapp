@@ -15,7 +15,7 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 7;
+  static const int schemaVersion = 8;
 
   /// Table remembering which device photos were already uploaded.
   static const String uploadedPhotosTable = 'uploaded_photos';
@@ -32,6 +32,9 @@ final class AppDatabase {
   /// Table snapshotting album metadata (list and detail pages) for offline
   /// fallback rendering.
   static const String albumSnapshotsTable = 'album_snapshots';
+
+  /// Table remembering which device photos failed to upload, and why.
+  static const String uploadFailuresTable = 'upload_failures';
 
   /// Opens the database, creating or migrating the schema as needed.
   ///
@@ -61,6 +64,7 @@ final class AppDatabase {
     await db.execute(_createSyncLeases);
     await db.execute(_createBackupNotifications);
     await db.execute(_createAlbumSnapshots);
+    await db.execute(_createUploadFailures);
   }
 
   /// `local_id` is the platform's asset identifier; `account_key` names the
@@ -137,6 +141,26 @@ CREATE TABLE $albumSnapshotsTable (
 )
 ''';
 
+  /// One row per device photo that is currently failing to upload, scoped
+  /// to the account it was being sent to. `attempts` counts consecutive
+  /// failures, which is what separates a photo the next pass will fix from
+  /// one that will never succeed (an unsupported format). A successful
+  /// upload deletes the row, so the table only ever holds live problems.
+  static const String _createUploadFailures =
+      '''
+CREATE TABLE $uploadFailuresTable (
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  message TEXT NOT NULL,
+  attempts INTEGER NOT NULL,
+  automatic INTEGER NOT NULL,
+  failed_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
+)
+''';
+
   /// Applies the migrations between two schema versions.
   ///
   /// Written as a fall-through ladder — `if (from < 2) { … }`, then
@@ -163,6 +187,9 @@ CREATE TABLE $albumSnapshotsTable (
     }
     if (from < 7) {
       await db.execute(_createAlbumSnapshots);
+    }
+    if (from < 8) {
+      await db.execute(_createUploadFailures);
     }
   }
 }

@@ -12,6 +12,7 @@ import '../../support/recording_app_logger.dart';
 void main() {
   late FakePhotoLibraryGateway library;
   late FakeUploadHistoryRepository history;
+  late FakeUploadFailureRepository failures;
   late FakePhotoUploadRepository uploads;
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
@@ -24,6 +25,7 @@ void main() {
   setUp(() {
     library = FakePhotoLibraryGateway();
     history = FakeUploadHistoryRepository();
+    failures = FakeUploadFailureRepository();
     uploads = FakePhotoUploadRepository();
     settings = FakeAutoUploadSettingsRepository(
       enabled: true,
@@ -47,7 +49,7 @@ void main() {
         library,
         history,
         syncLease,
-        UploadPhotosUseCase(library, uploads, history, logger),
+        UploadPhotosUseCase(library, uploads, history, failures, logger),
         RecordBackupResultUseCase(notifications, logger),
         logger,
         leaseHolder: 'foreground',

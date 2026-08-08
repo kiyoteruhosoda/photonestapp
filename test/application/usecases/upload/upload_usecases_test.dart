@@ -10,7 +10,9 @@ import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/domain/entities/upload_failure.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:flutterbase/domain/value_objects/log_level.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/recording_app_logger.dart';
@@ -18,6 +20,7 @@ import '../../../support/recording_app_logger.dart';
 void main() {
   late FakePhotoLibraryGateway library;
   late FakeUploadHistoryRepository history;
+  late FakeUploadFailureRepository failures;
   late FakePhotoUploadRepository uploads;
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
@@ -29,6 +32,7 @@ void main() {
   setUp(() {
     library = FakePhotoLibraryGateway();
     history = FakeUploadHistoryRepository();
+    failures = FakeUploadFailureRepository();
     uploads = FakePhotoUploadRepository();
     settings = FakeAutoUploadSettingsRepository();
     sessions = FakeSessionRepository(testAuthSession);
@@ -39,7 +43,7 @@ void main() {
   });
 
   UploadPhotosUseCase uploadUseCase() =>
-      UploadPhotosUseCase(library, uploads, history, logger);
+      UploadPhotosUseCase(library, uploads, history, failures, logger);
 
   SyncNewPhotosUseCase syncUseCase() => SyncNewPhotosUseCase(
     settings,
@@ -191,11 +195,96 @@ void main() {
       final ticks = <(int, int)>[];
       await uploadUseCase().execute(
         photos,
-        onProgress: (completed, total) => ticks.add((completed, total)),
+        onProgress: (progress) =>
+            ticks.add((progress.completed, progress.total)),
       );
 
       expect(ticks, [(1, 3), (2, 3), (3, 3)]);
     });
+
+    test('byte progress from the file in flight moves the fraction', () async {
+      final photos = [testLocalPhoto(localId: 'a')];
+      library.bytesById['a'] = Uint8List.fromList([1]);
+      uploads.byteProgress = [(50, 200), (200, 200)];
+
+      final fractions = <double>[];
+      await uploadUseCase().execute(
+        photos,
+        onProgress: (progress) => fractions.add(progress.fraction),
+      );
+
+      // A single photo whose bytes are half sent is a half-done batch —
+      // without this the bar would sit at 0 until the file completed.
+      expect(fractions, [0.25, 1.0, 1.0]);
+    });
+
+    test('a failure is recorded so it survives the run', () async {
+      // 'b' has no bytes, so it fails.
+      await uploadUseCase().execute([testLocalPhoto(localId: 'b')]);
+
+      final recorded = await failures.list();
+      expect(recorded.single.photo.localId, 'b');
+      expect(recorded.single.reason, UploadFailureReason.missingFromLibrary);
+      expect(recorded.single.attempts, 1);
+      expect(recorded.single.automatic, isFalse);
+    });
+
+    test('repeated failures accumulate an attempt count', () async {
+      final photo = testLocalPhoto(localId: 'b');
+      await uploadUseCase().execute([photo]);
+      await uploadUseCase().execute([photo]);
+
+      expect((await failures.list()).single.attempts, 2);
+    });
+
+    test('an automatic batch records that nobody was watching', () async {
+      // The flag rides on the call, not on the instance: the same use case
+      // serves the manual screen and both automatic paths (the foreground
+      // coordinator and the WorkManager engine).
+      await uploadUseCase().execute([
+        testLocalPhoto(localId: 'b'),
+      ], automatic: true);
+
+      expect((await failures.list()).single.automatic, isTrue);
+    });
+
+    test('a record that cannot be cleared does not lose the upload', () async {
+      // The server has already accepted the file; a failing bookkeeping
+      // delete must not abort the batch or drop the photo from the result.
+      final photo = testLocalPhoto(localId: 'a');
+      library.bytesById['a'] = Uint8List.fromList([1]);
+      failures.clearFailure = const InfrastructureError('database is locked');
+
+      final result = await uploadUseCase().execute([photo]);
+
+      expect(result.uploaded.map((photo) => photo.localId), ['a']);
+      expect(history.marked, hasLength(1));
+    });
+
+    test('a photo that finally uploads stops being a failure', () async {
+      final photo = testLocalPhoto(localId: 'b');
+      await uploadUseCase().execute([photo]);
+      expect(await failures.list(), hasLength(1));
+
+      library.bytesById['b'] = Uint8List.fromList([1]);
+      await uploadUseCase().execute([photo]);
+
+      expect(await failures.list(), isEmpty);
+    });
+
+    test(
+      'a failure store that cannot be written does not fail the batch',
+      () async {
+        failures.recordFailure = const InfrastructureError('disk full');
+
+        final result = await uploadUseCase().execute([
+          testLocalPhoto(localId: 'b'),
+        ]);
+
+        expect(result.failed, hasLength(1));
+        expect(logger.messagesAt(LogLevel.warning), isNotEmpty);
+      },
+    );
 
     test(
       'cancellation stops before the next photo, keeping what was sent', //
@@ -212,8 +301,8 @@ void main() {
         final cancellation = UploadCancellation();
         final result = await uploadUseCase().execute(
           photos,
-          onProgress: (completed, _) {
-            if (completed == 1) cancellation.cancel();
+          onProgress: (progress) {
+            if (progress.completed == 1) cancellation.cancel();
           },
           cancellation: cancellation,
         );
@@ -260,6 +349,22 @@ void main() {
       library.accessGranted = false;
       final report = await syncUseCase().execute();
       expect(report.skipped, SyncSkipReason.noLibraryAccess);
+    });
+
+    test('failures from a sync pass are recorded as automatic', () async {
+      settings
+        ..enabled = true
+        ..since = DateTime.utc(2026, 8, 1);
+      // No bytes for this photo, so the upload fails.
+      library.photos = [
+        testLocalPhoto(localId: 'broken', takenAt: DateTime.utc(2026, 8, 3)),
+      ];
+
+      await syncUseCase().execute();
+
+      // True for the foreground coordinator's passes too, not just the
+      // WorkManager engine's — neither has a user watching.
+      expect((await failures.list()).single.automatic, isTrue);
     });
 
     test('skips a metered connection while restricted to unmetered', () async {

@@ -1,12 +1,14 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/entities/media_library_page.dart';
-import 'package:flutterbase/domain/entities/media_playback_source.dart';
+import 'package:flutterbase/domain/entities/signed_media_url.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
@@ -26,6 +28,20 @@ final Provider<GetMediaPlaybackUseCase> getMediaPlaybackUseCaseProvider =
     Provider<GetMediaPlaybackUseCase>((ref) {
       throw UnimplementedError(
         missingOverrideMessage('getMediaPlaybackUseCaseProvider'),
+      );
+    });
+
+final Provider<GetMediaOriginalUseCase> getMediaOriginalUseCaseProvider =
+    Provider<GetMediaOriginalUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('getMediaOriginalUseCaseProvider'),
+      );
+    });
+
+final Provider<SaveMediaOriginalUseCase> saveMediaOriginalUseCaseProvider =
+    Provider<SaveMediaOriginalUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('saveMediaOriginalUseCaseProvider'),
       );
     });
 
@@ -63,9 +79,20 @@ final mediaThumbnailProvider =
 /// Deliberately not kept alive: signed URLs expire in minutes, so the
 /// player asks again each time it opens instead of caching a dead link.
 final mediaPlaybackSourceProvider = FutureProvider.autoDispose
-    .family<MediaPlaybackSource, MediaId>((ref, id) {
+    .family<SignedMediaUrl, MediaId>((ref, id) {
       ref.watch(sessionIdentityProvider);
       return ref.read(getMediaPlaybackUseCaseProvider).execute(id);
+    });
+
+/// A fresh signed URL for one media item's original.
+///
+/// Like the playback source, deliberately not kept alive: the URL expires in
+/// minutes, so the viewer asks again each time the reader opens the original
+/// instead of caching a dead link.
+final mediaOriginalSourceProvider = FutureProvider.autoDispose
+    .family<SignedMediaUrl, MediaId>((ref, id) {
+      ref.watch(sessionIdentityProvider);
+      return ref.read(getMediaOriginalUseCaseProvider).execute(id);
     });
 
 // ─── Library timeline ──────────────────────────────────────────────────────

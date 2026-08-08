@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:path/path.dart' as p;
 import 'package:photo_manager/photo_manager.dart';
 
 /// [PhotoLibraryGateway] backed by the `photo_manager` plugin.
@@ -74,6 +76,41 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
   Future<Uint8List?> readThumbnail(String localId, {required int size}) async {
     final asset = await AssetEntity.fromId(localId);
     return asset?.thumbnailDataWithSize(ThumbnailSize.square(size));
+  }
+
+  @override
+  Future<bool> saveToLibrary({
+    required String fileName,
+    required Uint8List bytes,
+    required bool isVideo,
+  }) async {
+    // Saving writes to the media store, which needs the same grant reading
+    // does on the Android versions that ask for one at all.
+    if (!await ensureAccess()) return false;
+    if (!isVideo) {
+      final saved = await PhotoManager.editor.saveImage(
+        bytes,
+        filename: fileName,
+        title: fileName,
+      );
+      return saved.id.isNotEmpty;
+    }
+    // `saveVideo` takes a file rather than a buffer, so the bytes go to a
+    // temporary file first. It is removed either way — leaving copies of
+    // whole videos in the cache directory would quietly fill the device.
+    final temporary = File(
+      p.join(Directory.systemTemp.path, 'photonest-save-$fileName'),
+    );
+    try {
+      await temporary.writeAsBytes(bytes, flush: true);
+      final saved = await PhotoManager.editor.saveVideo(
+        temporary,
+        title: fileName,
+      );
+      return saved.id.isNotEmpty;
+    } finally {
+      if (temporary.existsSync()) await temporary.delete();
+    }
   }
 
   @override

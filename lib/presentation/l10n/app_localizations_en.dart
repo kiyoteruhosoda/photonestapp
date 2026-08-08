@@ -77,6 +77,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mediaVideoLabel => 'Video';
+  @override
+  String mediaViewerPosition(int position, int total) => '$position / $total';
+  @override
+  String get mediaShowOriginal => 'Show the original';
+  @override
+  String get mediaOriginalUnavailable => 'Could not load the original.';
+  @override
+  String get mediaSaveToDevice => 'Save to this device';
+  @override
+  String get mediaSaveDone => 'Saved to your device.';
+  @override
+  String get mediaSaveNoAccess => 'Photo library access is required to save.';
+  @override
+  String get mediaSaveDownloadFailed => 'Could not download the original.';
+  @override
+  String get mediaSaveWriteFailed => 'Could not save to your device.';
 
   @override
   String get videoNotReady =>
@@ -137,6 +153,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadCancelled => 'Upload cancelled.';
   @override
   String get uploadShowFailures => 'Details';
+  @override
+  String uploadFailureAttempts(int attempts) => '$attempts attempts';
+  @override
+  String get uploadFailureAutomatic => 'auto-upload';
   @override
   String get uploadFailureListTitle => 'Failed uploads';
   @override

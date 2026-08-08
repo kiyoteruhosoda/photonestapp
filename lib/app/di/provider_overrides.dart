@@ -17,22 +17,27 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/watch_upload_failures_usecase.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_info_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
@@ -64,6 +69,12 @@ List<Override> buildProviderOverrides() {
     listLibraryMediaUseCaseProvider.overrideWithValue(
       sl<ListLibraryMediaUseCase>(),
     ),
+    getMediaOriginalUseCaseProvider.overrideWithValue(
+      sl<GetMediaOriginalUseCase>(),
+    ),
+    saveMediaOriginalUseCaseProvider.overrideWithValue(
+      sl<SaveMediaOriginalUseCase>(),
+    ),
     listBackupNotificationsUseCaseProvider.overrideWithValue(
       sl<ListBackupNotificationsUseCase>(),
     ),
@@ -80,6 +91,15 @@ List<Override> buildProviderOverrides() {
       sl<ListUploadCandidatesUseCase>(),
     ),
     uploadPhotosUseCaseProvider.overrideWithValue(sl<UploadPhotosUseCase>()),
+    listUploadFailuresUseCaseProvider.overrideWithValue(
+      sl<ListUploadFailuresUseCase>(),
+    ),
+    watchUploadFailuresUseCaseProvider.overrideWithValue(
+      sl<WatchUploadFailuresUseCase>(),
+    ),
+    dismissUploadFailuresUseCaseProvider.overrideWithValue(
+      sl<DismissUploadFailuresUseCase>(),
+    ),
     getLocalThumbnailUseCaseProvider.overrideWithValue(
       sl<GetLocalThumbnailUseCase>(),
     ),

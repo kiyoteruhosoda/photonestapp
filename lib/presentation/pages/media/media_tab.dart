@@ -102,7 +102,16 @@ class _Timeline extends ConsumerWidget {
                   }
                   final item = group.media[itemIndex];
                   return InkWell(
-                    onTap: () => unawaited(showMediaViewer(context, item)),
+                    // The viewer pages across the whole timeline, not just
+                    // this day's section — swiping past midnight is what a
+                    // reader expects from a chronological list.
+                    onTap: () => unawaited(
+                      showMediaViewer(
+                        context,
+                        items: state.media,
+                        initialIndex: state.media.indexOf(item),
+                      ),
+                    ),
                     child: MediaTile(item: item),
                   );
                 },

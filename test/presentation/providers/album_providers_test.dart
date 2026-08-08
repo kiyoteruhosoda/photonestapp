@@ -87,6 +87,57 @@ void main() {
   });
 
   test(
+    'without an advertised total, an exactly full page keeps paging',
+    () async {
+      // 200 items and no `mediaTotal`: both pages are exactly full, so a
+      // page-length fallback would have ended paging at 100.
+      final repository = FakeAlbumRepository(
+        details: {albumId: detailWith(mediaRange(1, 200))},
+      )..reportsMediaTotal = false;
+      final scope = TestScope(albumRepository: repository);
+      final notifier = scope.container.read(
+        albumDetailProvider(albumId).notifier,
+      );
+      await scope.container.read(albumDetailProvider(albumId).future);
+
+      var state = scope.container.read(albumDetailProvider(albumId)).value!;
+      expect(state.media.length, 100);
+      expect(state.hasMore, isTrue);
+
+      await notifier.loadMore();
+      state = scope.container.read(albumDetailProvider(albumId)).value!;
+      expect(state.media.length, 200);
+      // Page 2 was full too, so the end is still unproven.
+      expect(state.hasMore, isTrue);
+
+      // Page 3 comes back empty — the short page that proves the end.
+      await notifier.loadMore();
+      state = scope.container.read(albumDetailProvider(albumId)).value!;
+      expect(state.media.length, 200);
+      expect(state.hasMore, isFalse);
+      expect(
+        repository.mediaPageRequests.map((request) => request.$2).toList(),
+        [1, 2, 3],
+      );
+    },
+  );
+
+  test(
+    'without an advertised total, a short first page ends paging',
+    () async {
+      final repository = FakeAlbumRepository(
+        details: {albumId: detailWith(mediaRange(1, 30))},
+      )..reportsMediaTotal = false;
+      final scope = TestScope(albumRepository: repository);
+      await scope.container.read(albumDetailProvider(albumId).future);
+
+      final state = scope.container.read(albumDetailProvider(albumId)).value!;
+      expect(state.media.length, 30);
+      expect(state.hasMore, isFalse);
+    },
+  );
+
+  test(
     'a short page ends paging even when the advertised total is stale',
     () async {
       final repository = FakeAlbumRepository(

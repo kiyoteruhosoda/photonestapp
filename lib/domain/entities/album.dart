@@ -44,19 +44,26 @@ final class Album {
 /// the album detail endpoint.
 ///
 /// Large albums are read page by page; [mediaTotal] is what tells a reader
-/// how much remains beyond [media]. A server that does not page simply
-/// reports everything in one page whose total equals its length.
+/// how much remains beyond [media]. A server that does not report a total
+/// leaves it null — the total is then *unknown*, not "whatever this page
+/// held". Falling back to the page length here would silently end paging
+/// whenever a page happened to be exactly full.
 final class AlbumDetail {
-  const AlbumDetail({required this.album, required this.media, int? mediaTotal})
-    : mediaTotal = mediaTotal ?? media.length;
+  const AlbumDetail({
+    required this.album,
+    required this.media,
+    this.mediaTotal,
+  });
 
   final Album album;
 
   /// One page of media in the album's display order.
   final List<AlbumMediaItem> media;
 
-  /// How many media items the album holds in total, across all pages.
-  final int mediaTotal;
+  /// How many media items the album holds in total, across all pages, or
+  /// null when the server did not say. Readers who need an end-of-paging
+  /// signal without a total must rely on a short page instead.
+  final int? mediaTotal;
 
   @override
   bool operator ==(Object other) =>
@@ -67,5 +74,6 @@ final class AlbumDetail {
 
   @override
   String toString() =>
-      'AlbumDetail(${album.id.value}, ${media.length} of $mediaTotal media)';
+      'AlbumDetail(${album.id.value}, ${media.length} of '
+      '${mediaTotal ?? '?'} media)';
 }

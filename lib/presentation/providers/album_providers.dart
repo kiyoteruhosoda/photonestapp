@@ -100,8 +100,10 @@ final class AlbumDetailState {
   /// album grew or was reordered mid-paging) are deduplicated on append.
   final List<AlbumMediaItem> media;
 
-  /// The album's total media count, across all pages.
-  final int mediaTotal;
+  /// The album's total media count, across all pages, or null while it is
+  /// unknown — a server that omits the total. Unknown means "assume more":
+  /// paging then continues until a short page proves the end.
+  final int? mediaTotal;
 
   /// How many pages have been fetched. The next request is always
   /// `pagesLoaded + 1` — deriving the page from [media]'s length would
@@ -116,7 +118,13 @@ final class AlbumDetailState {
   final bool loadMoreFailed;
 
   /// Whether the server holds media beyond what [media] already covers.
-  bool get hasMore => media.length < mediaTotal;
+  ///
+  /// An unknown total counts as "more": stopping on a guess would silently
+  /// truncate the album, while one extra request merely comes back short.
+  bool get hasMore {
+    final total = mediaTotal;
+    return total == null || media.length < total;
+  }
 
   AlbumDetailState copyWith({
     List<AlbumMediaItem>? media,
@@ -166,10 +174,14 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
         .read(getAlbumUseCaseProvider)
         .execute(albumId, mediaPage: 1, mediaPageSize: albumMediaPageSize);
     if (detail == null) return null;
+    // Without an advertised total, a short first page is the server saying
+    // the album is complete; a full one leaves the total unknown so paging
+    // continues.
+    final exhausted = detail.media.length < albumMediaPageSize;
     return AlbumDetailState(
       album: detail.album,
       media: detail.media,
-      mediaTotal: detail.mediaTotal,
+      mediaTotal: detail.mediaTotal ?? (exhausted ? detail.media.length : null),
     );
   }
 

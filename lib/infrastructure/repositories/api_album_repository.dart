@@ -66,8 +66,8 @@ final class ApiAlbumRepository implements AlbumRepository {
         .whereType<Map<String, dynamic>>()
         .map(_mediaItemFrom)
         .toList();
-    // A server without media paging ignores the query and sends everything;
-    // its "total" is then simply the page it sent.
+    // A server that reports no `mediaTotal` leaves the total unknown; the
+    // reader falls back to short-page detection to find the end.
     final total = album['mediaTotal'];
     return AlbumDetail(
       album: _albumFrom(album),

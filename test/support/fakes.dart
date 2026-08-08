@@ -408,6 +408,10 @@ final class FakeAlbumRepository implements AlbumRepository {
   List<Album> albums;
   Map<AlbumId, AlbumDetail> details;
 
+  /// When false, [findById] omits `mediaTotal` — models a server that does
+  /// not report the album's total media count.
+  bool reportsMediaTotal = true;
+
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
@@ -439,7 +443,7 @@ final class FakeAlbumRepository implements AlbumRepository {
     return AlbumDetail(
       album: detail.album,
       media: page,
-      mediaTotal: detail.media.length,
+      mediaTotal: reportsMediaTotal ? detail.media.length : null,
     );
   }
 

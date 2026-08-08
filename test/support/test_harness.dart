@@ -13,11 +13,6 @@ import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/add_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/get_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/list_bookmarks_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/open_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/remove_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/get_debug_settings_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
@@ -39,7 +34,6 @@ import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_info_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
-import 'package:flutterbase/presentation/providers/bookmark_providers.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:flutterbase/presentation/providers/settings_providers.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
@@ -62,8 +56,6 @@ class TestScope {
     FakeLanguagePreferenceRepository? languageRepository,
     FakeDebugSettingsRepository? debugSettingsRepository,
     FakeAppInfoRepository? appInfoRepository,
-    FakeBookmarkRepository? bookmarkRepository,
-    RecordingExternalLinkLauncher? linkLauncher,
     RecordingAppLogger? logger,
     FakeAuthRepository? authRepository,
     FakeSessionRepository? sessionRepository,
@@ -83,8 +75,6 @@ class TestScope {
        debugSettingsRepository =
            debugSettingsRepository ?? FakeDebugSettingsRepository(),
        appInfoRepository = appInfoRepository ?? FakeAppInfoRepository(),
-       bookmarkRepository = bookmarkRepository ?? FakeBookmarkRepository(),
-       linkLauncher = linkLauncher ?? RecordingExternalLinkLauncher(),
        logger = logger ?? RecordingAppLogger(),
        authRepository = authRepository ?? FakeAuthRepository(),
        // Widget tests exercise screens that sit behind the login guard, so
@@ -114,8 +104,6 @@ class TestScope {
   final FakeLanguagePreferenceRepository languageRepository;
   final FakeDebugSettingsRepository debugSettingsRepository;
   final FakeAppInfoRepository appInfoRepository;
-  final FakeBookmarkRepository bookmarkRepository;
-  final RecordingExternalLinkLauncher linkLauncher;
   final RecordingAppLogger logger;
   final FakeAuthRepository authRepository;
   final FakeSessionRepository sessionRepository;
@@ -181,21 +169,6 @@ class TestScope {
     );
     return <Override>[
       appLoggerProvider.overrideWithValue(logger),
-      listBookmarksUseCaseProvider.overrideWithValue(
-        ListBookmarksUseCase(bookmarkRepository),
-      ),
-      getBookmarkUseCaseProvider.overrideWithValue(
-        GetBookmarkUseCase(bookmarkRepository),
-      ),
-      addBookmarkUseCaseProvider.overrideWithValue(
-        AddBookmarkUseCase(bookmarkRepository, logger),
-      ),
-      removeBookmarkUseCaseProvider.overrideWithValue(
-        RemoveBookmarkUseCase(bookmarkRepository, logger),
-      ),
-      openBookmarkUseCaseProvider.overrideWithValue(
-        OpenBookmarkUseCase(linkLauncher, logger),
-      ),
       listAlbumsUseCaseProvider.overrideWithValue(
         ListAlbumsUseCase(albumRepository),
       ),
@@ -362,11 +335,6 @@ class TestScope {
             GoRoute(path: 'logs', builder: placeholder),
             GoRoute(path: 'link', builder: placeholder),
             GoRoute(path: 'albums/:id', builder: placeholder),
-            GoRoute(
-              path: 'bookmarks',
-              builder: placeholder,
-              routes: <RouteBase>[GoRoute(path: ':id', builder: placeholder)],
-            ),
           ],
         ),
       ],

@@ -11,11 +11,11 @@ void main() {
     testWidgets('names the location that failed to match', (tester) async {
       await pumpInScope(
         tester,
-        NotFoundPage(uri: Uri.parse('/bookmarks/nope?from=email')),
+        NotFoundPage(uri: Uri.parse('/albums/nope?from=email')),
       );
 
       expect(find.text(l10n.commonNotFound), findsOneWidget);
-      expect(find.text('/bookmarks/nope?from=email'), findsOneWidget);
+      expect(find.text('/albums/nope?from=email'), findsOneWidget);
     });
 
     testWidgets('offers a way back to Home', (tester) async {

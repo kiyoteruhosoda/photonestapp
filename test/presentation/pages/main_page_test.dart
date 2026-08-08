@@ -276,16 +276,6 @@ void main() {
       expect(scope.location, '/debug');
     });
 
-    testWidgets('Bookmarks in the drawer navigates to /bookmarks', (
-      tester,
-    ) async {
-      final scope = await pumpInScope(tester, const MainPage());
-      await openDrawer(tester);
-      await tester.tap(inDrawer(l10n.drawerBookmarks));
-      await tester.pumpAndSettle();
-      expect(scope.location, '/bookmarks');
-    });
-
     testWidgets('Deep Links in the drawer navigates to /link', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
       await openDrawer(tester);
@@ -415,13 +405,6 @@ void main() {
       await selectTab(tester, 2);
       await scrollAndTap(tester, l10n.settingsDebug);
       expect(scope.location, '/debug');
-    });
-
-    testWidgets('the Bookmarks row navigates to /bookmarks', (tester) async {
-      final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
-      await scrollAndTap(tester, l10n.settingsBookmarks);
-      expect(scope.location, '/bookmarks');
     });
 
     testWidgets('the Deep Links row navigates to /link', (tester) async {

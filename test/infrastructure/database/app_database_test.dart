@@ -21,7 +21,7 @@ void main() {
     await db.close();
   });
 
-  test('creates the bookmarks table at the current schema version', () async {
+  test('creates every table at the current schema version', () async {
     expect(await db.getVersion(), AppDatabase.schemaVersion);
 
     final tables = await db.query(
@@ -32,23 +32,19 @@ void main() {
     );
     expect(
       tables.map((row) => row['name']),
-      contains(AppDatabase.bookmarksTable),
+      containsAll(<String>[
+        AppDatabase.uploadedPhotosTable,
+        AppDatabase.mediaThumbnailsTable,
+        AppDatabase.syncLeasesTable,
+      ]),
     );
   });
 
-  test('the bookmarks table has the columns the repository writes', () async {
-    final columns = await db.rawQuery(
-      'PRAGMA table_info(${AppDatabase.bookmarksTable})',
-    );
+  test('enforces NOT NULL on the columns the repositories always supply', () {
     expect(
-      columns.map((row) => row['name']),
-      containsAll(<String>['id', 'title', 'url', 'created_at']),
-    );
-  });
-
-  test('enforces NOT NULL on the columns the domain always supplies', () {
-    expect(
-      db.insert(AppDatabase.bookmarksTable, <String, Object?>{'title': 'x'}),
+      db.insert(AppDatabase.uploadedPhotosTable, <String, Object?>{
+        'local_id': 'x',
+      }),
       throwsA(isA<DatabaseException>()),
     );
   });
@@ -56,26 +52,6 @@ void main() {
   test('turns foreign keys on, which SQLite leaves off by default', () async {
     final result = await db.rawQuery('PRAGMA foreign_keys');
     expect(result.first.values.first, 1);
-  });
-
-  test('assigns ids automatically and never reuses them', () async {
-    Future<int> insert(String title) =>
-        db.insert(AppDatabase.bookmarksTable, <String, Object?>{
-          'title': title,
-          'url': 'https://a.example',
-          'created_at': DateTime.utc(2026).toIso8601String(),
-        });
-
-    final first = await insert('a');
-    final second = await insert('b');
-    expect(second, greaterThan(first));
-
-    await db.delete(
-      AppDatabase.bookmarksTable,
-      where: 'id = ?',
-      whereArgs: <Object?>[second],
-    );
-    expect(await insert('c'), greaterThan(second));
   });
 
   test('creates the uploaded_photos table for the upload history', () async {
@@ -91,7 +67,9 @@ void main() {
   test('upgrading a v1 database adds the uploaded_photos table', () async {
     // Build a database exactly as schema v1 left it, then let AppDatabase
     // migrate it. This is the on-device path for anyone who installed the
-    // app before the upload feature existed.
+    // app before the upload feature existed. v1 held only the template's
+    // bookmarks table (dropped again by the v5 migration), so the fixture
+    // spells its schema out literally.
     final path = '${await databaseFactory.getDatabasesPath()}/migrate-test.db';
     await databaseFactory.deleteDatabase(path);
 
@@ -100,7 +78,7 @@ void main() {
       options: OpenDatabaseOptions(
         version: 1,
         onCreate: (db, version) => db.execute('''
-CREATE TABLE ${AppDatabase.bookmarksTable} (
+CREATE TABLE bookmarks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
   url TEXT NOT NULL,
@@ -128,6 +106,43 @@ CREATE TABLE ${AppDatabase.bookmarksTable} (
       tables.map((row) => row['name']),
       contains(AppDatabase.uploadedPhotosTable),
     );
+  });
+
+  test('upgrading drops the template bookmarks table', () async {
+    // The bookmarks sample feature was removed in schema v5; a device
+    // upgrading from any earlier version loses its table.
+    final path = '${await databaseFactory.getDatabasesPath()}/migrate-drop.db';
+    await databaseFactory.deleteDatabase(path);
+
+    final v1 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 1,
+        onCreate: (db, version) => db.execute('''
+CREATE TABLE bookmarks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)
+'''),
+      ),
+    );
+    await v1.close();
+
+    final migrated = await AppDatabase.open(path: path);
+    addTearDown(() async {
+      await migrated.close();
+      await databaseFactory.deleteDatabase(path);
+    });
+
+    final tables = await migrated.query(
+      'sqlite_master',
+      columns: <String>['name'],
+      where: 'type = ?',
+      whereArgs: <Object?>['table'],
+    );
+    expect(tables.map((row) => row['name']), isNot(contains('bookmarks')));
   });
 
   test('creates the media_thumbnails table for the offline cache', () async {
@@ -161,7 +176,7 @@ CREATE TABLE ${AppDatabase.bookmarksTable} (
         version: 2,
         onCreate: (db, version) async {
           await db.execute('''
-CREATE TABLE ${AppDatabase.bookmarksTable} (
+CREATE TABLE bookmarks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
   url TEXT NOT NULL,
@@ -221,7 +236,7 @@ CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
         version: 3,
         onCreate: (db, version) async {
           await db.execute('''
-CREATE TABLE ${AppDatabase.bookmarksTable} (
+CREATE TABLE bookmarks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   title TEXT NOT NULL,
   url TEXT NOT NULL,
@@ -279,10 +294,11 @@ CREATE TABLE ${AppDatabase.mediaThumbnailsTable} (
     await databaseFactory.deleteDatabase(path);
 
     final first = await AppDatabase.open(path: path);
-    await first.insert(AppDatabase.bookmarksTable, <String, Object?>{
-      'title': 'kept',
-      'url': 'https://a.example',
-      'created_at': DateTime.utc(2026).toIso8601String(),
+    await first.insert(AppDatabase.uploadedPhotosTable, <String, Object?>{
+      'account_key': 'server|user',
+      'local_id': 'photo-1',
+      'file_name': 'kept.jpg',
+      'uploaded_at': DateTime.utc(2026).toIso8601String(),
     });
     await first.close();
 
@@ -292,6 +308,6 @@ CREATE TABLE ${AppDatabase.mediaThumbnailsTable} (
       await databaseFactory.deleteDatabase(path);
     });
 
-    expect(await second.query(AppDatabase.bookmarksTable), hasLength(1));
+    expect(await second.query(AppDatabase.uploadedPhotosTable), hasLength(1));
   });
 }

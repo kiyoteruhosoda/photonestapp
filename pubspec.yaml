@@ -119,9 +119,8 @@ flutter_launcher_icons:
 # runtime dependency — so this list is the only place a "declared but unused"
 # package can hide, and reviewing it is reviewing the whole starter stack.
 #
-# The list is empty on purpose: every package the template declares is now
-# exercised by the bookmarks sample under lib/ (see
-# docs/adr/0002-starter-stack.md). Add an entry only when a package is
-# declared ahead of the code that will import it.
+# The list is empty on purpose: every declared package is exercised by the
+# app code under lib/ (see docs/adr/0002-starter-stack.md). Add an entry
+# only when a package is declared ahead of the code that will import it.
 dependency_policy:
   reserved: []

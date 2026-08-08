@@ -3,9 +3,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 /// [ExternalLinkLauncher] backed by the `url_launcher` plugin.
 ///
-/// [LaunchMode.externalApplication] is deliberate: a bookmark should leave the
-/// app and land in the browser (or in whichever app has verified the domain),
-/// not in an in-app web view that hides the address bar.
+/// [LaunchMode.externalApplication] is deliberate: an external link should
+/// leave the app and land in the browser (or in whichever app has verified
+/// the domain), not in an in-app web view that hides the address bar.
 final class UrlLauncherExternalLinkLauncher implements ExternalLinkLauncher {
   const UrlLauncherExternalLinkLauncher();
 

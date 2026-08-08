@@ -39,7 +39,7 @@ class AppConfig {
   /// Scheme of the verified App Link. Android only verifies `https`.
   static const String appLinkScheme = 'https';
 
-  /// Unverified fallback scheme, e.g. `flutterbase://bookmarks/1`.
+  /// Unverified fallback scheme, e.g. `flutterbase://albums/1`.
   ///
   /// Any app may claim a custom scheme, so this is for local testing and for
   /// platforms without App Links — never for links a stranger can send.
@@ -51,11 +51,11 @@ class AppConfig {
 
   /// The custom-scheme equivalent of [appLink].
   ///
-  /// Produces the three-slash form (`flutterbase:///bookmarks/1`) on purpose.
+  /// Produces the three-slash form (`flutterbase:///albums/1`) on purpose.
   /// Android's Flutter embedding builds the in-app route from the incoming
-  /// URI's *path* and discards its authority, so `flutterbase://bookmarks/1`
+  /// URI's *path* and discards its authority, so `flutterbase://albums/1`
   /// would arrive as the route `/1` — with an empty authority the whole
-  /// `/bookmarks/1` survives and matches the same route the App Link does.
+  /// `/albums/1` survives and matches the same route the App Link does.
   static Uri customLink(String path) => Uri.parse('$customLinkScheme://$path');
 
   // ─── Typography ───────────────────────────────────────────────────

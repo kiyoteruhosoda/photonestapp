@@ -8,7 +8,6 @@ import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
-import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
@@ -37,7 +36,6 @@ import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_debug_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
-import 'package:flutterbase/infrastructure/repositories/sqflite_bookmark_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_sync_lease_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
@@ -60,7 +58,6 @@ final class InfrastructureModule {
     required this.themePreference,
     required this.languagePreference,
     required this.appInfo,
-    required this.bookmarks,
     required this.externalLinks,
     required this.auth,
     required this.sessions,
@@ -131,7 +128,6 @@ final class InfrastructureModule {
         preferences,
       ),
       appInfo: const PackageInfoAppInfoRepository(),
-      bookmarks: SqfliteBookmarkRepository(database),
       externalLinks: const UrlLauncherExternalLinkLauncher(),
       auth: ApiAuthRepository(apiClient),
       sessions: sessions,
@@ -166,7 +162,6 @@ final class InfrastructureModule {
   final ThemePreferenceRepository themePreference;
   final LanguagePreferenceRepository languagePreference;
   final AppInfoRepository appInfo;
-  final BookmarkRepository bookmarks;
   final ExternalLinkLauncher externalLinks;
   final AuthRepository auth;
   final SessionRepository sessions;

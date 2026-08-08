@@ -2,13 +2,11 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
-import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/entities/album_media_item.dart';
 import 'package:flutterbase/domain/entities/app_info.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/entities/bookmark.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
@@ -17,7 +15,6 @@ import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
-import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
@@ -31,7 +28,6 @@ import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/app_language.dart';
 import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
-import 'package:flutterbase/domain/value_objects/bookmark_id.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:flutterbase/domain/value_objects/login_credentials.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
@@ -141,93 +137,6 @@ final class FakeAppInfoRepository implements AppInfoRepository {
     callCount++;
     if (failure != null) throw Exception('$failure');
     return info ?? testAppInfo;
-  }
-}
-
-/// A fixed instant, so a test never has to reason about the wall clock.
-final DateTime testBookmarkCreatedAt = DateTime.utc(2026, 8, 3, 12, 30);
-
-/// Builds a stored bookmark without going through a repository.
-Bookmark testBookmark({
-  int id = 1,
-  String title = 'Flutter',
-  String url = 'https://docs.flutter.dev',
-  DateTime? createdAt,
-}) {
-  return Bookmark(
-    id: BookmarkId(id),
-    title: title,
-    url: Uri.parse(url),
-    createdAt: createdAt ?? testBookmarkCreatedAt,
-  );
-}
-
-/// In-memory [BookmarkRepository].
-///
-/// Assigns ids the way SQLite does — monotonically, never reusing one — so a
-/// test that deletes and re-adds sees the same id behaviour as production.
-final class FakeBookmarkRepository implements BookmarkRepository {
-  FakeBookmarkRepository([List<Bookmark>? initial]) {
-    for (final bookmark in initial ?? const <Bookmark>[]) {
-      _stored[bookmark.id] = bookmark;
-      if (bookmark.id.value >= _nextId) _nextId = bookmark.id.value + 1;
-    }
-  }
-
-  final Map<BookmarkId, Bookmark> _stored = <BookmarkId, Bookmark>{};
-  int _nextId = 1;
-
-  /// Ids passed to [remove], in call order.
-  final List<BookmarkId> removed = <BookmarkId>[];
-
-  /// Drafts passed to [add], in call order.
-  final List<BookmarkDraft> added = <BookmarkDraft>[];
-
-  /// When set, every method throws this instead of answering.
-  AppError? failure;
-
-  /// Creation timestamp handed to the next [add].
-  DateTime createdAt = testBookmarkCreatedAt;
-
-  List<Bookmark> get stored => _stored.values.toList();
-
-  @override
-  Future<List<Bookmark>> findAll() async {
-    _failIfAsked();
-    final all = _stored.values.toList()
-      ..sort((a, b) => b.id.value.compareTo(a.id.value));
-    return all;
-  }
-
-  @override
-  Future<Bookmark?> findById(BookmarkId id) async {
-    _failIfAsked();
-    return _stored[id];
-  }
-
-  @override
-  Future<Bookmark> add(BookmarkDraft draft) async {
-    _failIfAsked();
-    added.add(draft);
-    final bookmark = Bookmark.fromDraft(
-      id: BookmarkId(_nextId++),
-      draft: draft,
-      createdAt: createdAt,
-    );
-    _stored[bookmark.id] = bookmark;
-    return bookmark;
-  }
-
-  @override
-  Future<void> remove(BookmarkId id) async {
-    _failIfAsked();
-    removed.add(id);
-    _stored.remove(id);
-  }
-
-  void _failIfAsked() {
-    final error = failure;
-    if (error != null) throw error;
   }
 }
 
@@ -714,20 +623,4 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
 
   @override
   Stream<void> get libraryChanges => changes.stream;
-}
-
-/// Records the URLs handed to the platform instead of launching them.
-final class RecordingExternalLinkLauncher implements ExternalLinkLauncher {
-  RecordingExternalLinkLauncher({this.result = true});
-
-  /// What [open] reports back — false models "no app can handle this".
-  bool result;
-
-  final List<Uri> opened = <Uri>[];
-
-  @override
-  Future<bool> open(Uri url) async {
-    opened.add(url);
-    return result;
-  }
 }

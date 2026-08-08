@@ -18,8 +18,7 @@ import 'package:flutterbase/presentation/providers/session_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 //
-// One provider per use case, overridden by the composition root — the same
-// pattern as the bookmarks feature.
+// One provider per use case, overridden by the composition root.
 
 final Provider<ListAlbumsUseCase> listAlbumsUseCaseProvider =
     Provider<ListAlbumsUseCase>((ref) {

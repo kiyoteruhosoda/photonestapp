@@ -15,10 +15,7 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 4;
-
-  /// Table holding the bookmarks sample feature.
-  static const String bookmarksTable = 'bookmarks';
+  static const int schemaVersion = 5;
 
   /// Table remembering which device photos were already uploaded.
   static const String uploadedPhotosTable = 'uploaded_photos';
@@ -52,14 +49,6 @@ final class AppDatabase {
   }
 
   static Future<void> _create(Database db, int version) async {
-    await db.execute('''
-CREATE TABLE $bookmarksTable (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  url TEXT NOT NULL,
-  created_at TEXT NOT NULL
-)
-''');
     await db.execute(_createUploadedPhotos);
     await db.execute(_createMediaThumbnails);
     await db.execute(_createSyncLeases);
@@ -123,6 +112,12 @@ CREATE TABLE $syncLeasesTable (
     }
     if (from < 4) {
       await db.execute(_createSyncLeases);
+    }
+    if (from < 5) {
+      // v5 removed the template's bookmarks sample feature; schemas 1–4
+      // created its table in `_create`, so an upgrading device drops it
+      // here. IF EXISTS keeps the step idempotent.
+      await db.execute('DROP TABLE IF EXISTS bookmarks');
     }
   }
 }

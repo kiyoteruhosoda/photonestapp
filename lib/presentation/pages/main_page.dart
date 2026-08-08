@@ -112,11 +112,6 @@ class _MainPageState extends ConsumerState<MainPage> {
               ],
               bottomItems: [
                 AppDrawerItem(
-                  label: l10n.drawerBookmarks,
-                  icon: Icons.bookmark_outline,
-                  onTap: () => _leaveDrawerFor(context, AppRoutes.bookmarks),
-                ),
-                AppDrawerItem(
                   label: l10n.drawerDeepLink,
                   icon: Icons.link_outlined,
                   onTap: () => _leaveDrawerFor(context, AppRoutes.deepLink),
@@ -367,12 +362,6 @@ class _SettingsContent extends ConsumerWidget {
             ],
           ),
         const SizedBox(height: AppSpacing.lg),
-        AppListCard(
-          title: l10n.settingsBookmarks,
-          leading: const Icon(Icons.bookmark_outline),
-          onTap: () => unawaited(context.push<void>(AppRoutes.bookmarks)),
-        ),
-        const SizedBox(height: AppSpacing.sm),
         AppListCard(
           title: l10n.settingsDeepLink,
           leading: const Icon(Icons.link_outlined),

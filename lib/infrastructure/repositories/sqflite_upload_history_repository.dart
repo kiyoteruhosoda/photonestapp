@@ -11,7 +11,7 @@ import 'package:sqflite/sqflite.dart';
 ///
 /// The history exists to keep automatic upload idempotent, so it lives in
 /// the database rather than preferences: it grows with the photo library
-/// and must survive as reliably as the bookmarks do. Rows are keyed by
+/// and preferences offer no durable, queryable storage. Rows are keyed by
 /// server + account as well as photo id — a photo uploaded to account A
 /// still counts as pending after signing into account B.
 final class SqfliteUploadHistoryRepository implements UploadHistoryRepository {

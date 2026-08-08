@@ -4,6 +4,7 @@ import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
+import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
@@ -37,6 +38,7 @@ import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_debug_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/sqflite_album_snapshot_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_backup_notification_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_sync_lease_repository.dart';
@@ -66,6 +68,7 @@ final class InfrastructureModule {
     required this.sessions,
     required this.apiEndpoints,
     required this.albums,
+    required this.albumSnapshots,
     required this.mediaThumbnails,
     required this.mediaThumbnailCache,
     required this.mediaPlayback,
@@ -137,6 +140,11 @@ final class InfrastructureModule {
       sessions: sessions,
       apiEndpoints: apiEndpoints,
       albums: ApiAlbumRepository(apiClient),
+      albumSnapshots: SqfliteAlbumSnapshotRepository(
+        database,
+        sessions,
+        apiEndpoints,
+      ),
       mediaThumbnails: ApiMediaThumbnailRepository(apiClient),
       mediaThumbnailCache: SqfliteMediaThumbnailCacheRepository(
         database,
@@ -172,6 +180,7 @@ final class InfrastructureModule {
   final SessionRepository sessions;
   final ApiEndpointRepository apiEndpoints;
   final AlbumRepository albums;
+  final AlbumSnapshotRepository albumSnapshots;
   final MediaThumbnailRepository mediaThumbnails;
   final MediaThumbnailCacheRepository mediaThumbnailCache;
   final MediaPlaybackRepository mediaPlayback;

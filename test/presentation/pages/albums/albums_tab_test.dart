@@ -39,6 +39,24 @@ void main() {
     expect(find.text('Recovered'), findsOneWidget);
   });
 
+  testWidgets('offline, the saved snapshot still renders the list', (
+    tester,
+  ) async {
+    // The cold-start regression from PR #6: server unreachable, but the
+    // album list was snapshotted on an earlier run — the tab must render
+    // it instead of the error state.
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository()
+        ..failure = const NetworkUnreachableError('offline'),
+      albumSnapshotRepository: FakeAlbumSnapshotRepository()
+        ..savedAlbums = [testAlbum(id: 1, title: 'Trip', coverMediaId: null)],
+    );
+    await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
+
+    expect(find.text('Trip'), findsOneWidget);
+    expect(find.text(l10n.commonErrorNetwork), findsNothing);
+  });
+
   testWidgets('renders a card per album with title and count', (tester) async {
     final scope = TestScope(
       albumRepository: FakeAlbumRepository(

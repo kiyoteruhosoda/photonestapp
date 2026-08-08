@@ -12,6 +12,7 @@ import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
+import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
@@ -429,8 +430,13 @@ final class FakeAlbumRepository implements AlbumRepository {
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
+  /// When set, awaited before each request is answered (or fails) — lets a
+  /// test change the signed-in identity while the request is in flight.
+  Future<void> Function()? gate;
+
   @override
   Future<List<Album>> findAll() async {
+    await gate?.call();
     _failIfAsked();
     return albums;
   }
@@ -444,6 +450,7 @@ final class FakeAlbumRepository implements AlbumRepository {
     int mediaPage = 1,
     int mediaPageSize = 100,
   }) async {
+    await gate?.call();
     _failIfAsked();
     mediaPageRequests.add((id, mediaPage, mediaPageSize));
     final detail = details[id];
@@ -459,6 +466,74 @@ final class FakeAlbumRepository implements AlbumRepository {
       media: page,
       mediaTotal: reportsMediaTotal ? detail.media.length : null,
     );
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// In-memory [AlbumSnapshotRepository].
+final class FakeAlbumSnapshotRepository implements AlbumSnapshotRepository {
+  /// The saved album list, or null when nothing was ever saved.
+  List<Album>? savedAlbums;
+
+  /// Saved detail pages by (album id, media page, media page size).
+  final Map<(int, int, int), AlbumDetail> savedDetails =
+      <(int, int, int), AlbumDetail>{};
+
+  /// How many times [saveAlbums] was called.
+  int albumSaveCount = 0;
+
+  /// Album ids [removeDetail] was asked to forget, in call order.
+  final List<AlbumId> removedDetails = <AlbumId>[];
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<void> saveAlbums(List<Album> albums) async {
+    _failIfAsked();
+    albumSaveCount++;
+    savedAlbums = List.of(albums);
+    // The interface contract: a full list is authoritative, so detail pages
+    // of albums it no longer holds are forgotten in the same save.
+    final visible = albums.map((album) => album.id.value).toSet();
+    savedDetails.removeWhere((key, _) => !visible.contains(key.$1));
+  }
+
+  @override
+  Future<List<Album>?> findAlbums() async {
+    _failIfAsked();
+    return savedAlbums;
+  }
+
+  @override
+  Future<void> saveDetail(
+    AlbumDetail detail, {
+    required int mediaPage,
+    required int mediaPageSize,
+  }) async {
+    _failIfAsked();
+    savedDetails[(detail.album.id.value, mediaPage, mediaPageSize)] = detail;
+  }
+
+  @override
+  Future<AlbumDetail?> findDetail(
+    AlbumId id, {
+    required int mediaPage,
+    required int mediaPageSize,
+  }) async {
+    _failIfAsked();
+    return savedDetails[(id.value, mediaPage, mediaPageSize)];
+  }
+
+  @override
+  Future<void> removeDetail(AlbumId id) async {
+    _failIfAsked();
+    removedDetails.add(id);
+    savedDetails.removeWhere((key, _) => key.$1 == id.value);
   }
 
   void _failIfAsked() {

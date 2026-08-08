@@ -106,8 +106,7 @@ final class SyncNewPhotosUseCase {
     // anyway never triggers a permission prompt. The background pass is
     // already gated by the same rule at the scheduler level; this is what
     // stops a photo taken with the app open from going out over mobile data.
-    if (_settings.isUnmeteredOnly() && !await _network.isUnmetered()) {
-      _logger.info('[AutoUpload] connection is metered — skipping this pass');
+    if (!await _mayUploadOverCurrentConnection()) {
       return const SyncReport.skippedBecause(SyncSkipReason.meteredConnection);
     }
     if (!await _library.ensureAccess()) {
@@ -130,6 +129,16 @@ final class SyncNewPhotosUseCase {
     } finally {
       await _syncLease.release(leaseHolder);
     }
+  }
+
+  /// Whether the connection the device is on right now is one auto-upload is
+  /// allowed to spend. Both the setting and the connection are re-read on
+  /// every call, so neither is captured at the start of a pass.
+  Future<bool> _mayUploadOverCurrentConnection() async {
+    if (!_settings.isUnmeteredOnly()) return true;
+    if (await _network.isUnmetered()) return true;
+    _logger.info('[AutoUpload] connection is metered — not uploading');
+    return false;
   }
 
   Future<SyncReport> _runPass() async {
@@ -156,7 +165,15 @@ final class SyncNewPhotosUseCase {
     }
 
     _logger.info('[AutoUpload] found ${pending.length} new photo(s)');
-    final result = await _uploadPhotos.execute(pending);
+    // Re-checked before every photo rather than once for the batch: sending
+    // originals can take many minutes, in which time the device can leave
+    // Wi-Fi — or the user can switch the restriction on — and the rest of the
+    // batch would otherwise keep going out over mobile data. Photos left
+    // unattempted stay unrecorded, so the next pass picks them up.
+    final result = await _uploadPhotos.execute(
+      pending,
+      mayContinue: _mayUploadOverCurrentConnection,
+    );
     // Recorded from inside the pass so both isolates — foreground app and
     // background WorkManager engine — leave the same trace in the list.
     await _recordBackupResult.execute(

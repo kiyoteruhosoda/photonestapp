@@ -771,9 +771,15 @@ final class FakeNetworkConnectionGateway implements NetworkConnectionGateway {
   bool unmetered;
   int checks = 0;
 
+  /// Scripted answers, one per call, for tests that need the connection to
+  /// change part-way through a batch. Falls back to [unmetered] once
+  /// exhausted.
+  List<bool> scriptedAnswers = <bool>[];
+
   @override
   Future<bool> isUnmetered() async {
-    checks++;
+    final index = checks++;
+    if (index < scriptedAnswers.length) return scriptedAnswers[index];
     return unmetered;
   }
 }

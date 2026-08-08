@@ -271,6 +271,61 @@ void main() {
       expect(library.accessRequests, 0);
     });
 
+    test(
+      'stops the batch when the connection turns metered part-way',
+      () async {
+        settings
+          ..enabled = true
+          ..since = DateTime.utc(2026, 8, 1);
+        for (var i = 0; i < 3; i++) {
+          library.photos.add(
+            testLocalPhoto(
+              localId: 'photo-$i',
+              takenAt: DateTime.utc(2026, 8, 3, 10 - i),
+            ),
+          );
+          library.bytesById['photo-$i'] = Uint8List.fromList([i]);
+        }
+        // Leaves Wi-Fi after the first photo has been sent.
+        network.scriptedAnswers = [true, true, false];
+
+        final report = await syncUseCase().execute();
+
+        expect(report.uploadedCount, 1);
+        expect(report.result?.cancelled, isTrue);
+        // The two that never went out stay unrecorded, so the next pass — on
+        // Wi-Fi — picks them up.
+        expect(history.marked, hasLength(1));
+      },
+    );
+
+    test(
+      'stops the batch when the restriction is switched on part-way',
+      () async {
+        settings
+          ..enabled = true
+          ..unmeteredOnly = false
+          ..since = DateTime.utc(2026, 8, 1);
+        network.unmetered = false;
+        for (var i = 0; i < 3; i++) {
+          library.photos.add(
+            testLocalPhoto(
+              localId: 'photo-$i',
+              takenAt: DateTime.utc(2026, 8, 3, 10 - i),
+            ),
+          );
+          library.bytesById['photo-$i'] = Uint8List.fromList([i]);
+        }
+        // The user flips "only over Wi-Fi" while the batch is running.
+        uploads.gate = (_) async => settings.unmeteredOnly = true;
+
+        final report = await syncUseCase().execute();
+
+        expect(report.uploadedCount, 1);
+        expect(report.result?.cancelled, isTrue);
+      },
+    );
+
     test('uploads over a metered connection once the restriction is '
         'lifted', () async {
       settings

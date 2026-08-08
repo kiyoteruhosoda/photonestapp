@@ -164,6 +164,8 @@ Future<void> setupServiceLocator() async {
     () => ListAlbumsUseCase(
       sl<AlbumRepository>(),
       sl<AlbumSnapshotRepository>(),
+      sl<SessionRepository>(),
+      sl<ApiEndpointRepository>(),
       sl<AppLogger>(),
     ),
   );
@@ -171,6 +173,8 @@ Future<void> setupServiceLocator() async {
     () => GetAlbumUseCase(
       sl<AlbumRepository>(),
       sl<AlbumSnapshotRepository>(),
+      sl<SessionRepository>(),
+      sl<ApiEndpointRepository>(),
       sl<AppLogger>(),
     ),
   );

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
 import 'package:flutterbase/application/usecases/album/list_albums_usecase.dart';
 import 'package:flutterbase/domain/entities/album.dart';
+import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
@@ -12,17 +13,33 @@ import '../../../support/recording_app_logger.dart';
 void main() {
   late FakeAlbumRepository repository;
   late FakeAlbumSnapshotRepository snapshots;
+  late FakeSessionRepository sessions;
+  late FakeApiEndpointRepository endpoints;
   late RecordingAppLogger logger;
 
   setUp(() {
     repository = FakeAlbumRepository();
     snapshots = FakeAlbumSnapshotRepository();
+    sessions = FakeSessionRepository(testAuthSession);
+    endpoints = FakeApiEndpointRepository(
+      Uri.parse('https://photos.example.com'),
+    );
     logger = RecordingAppLogger();
   });
 
+  /// Switches the signed-in account, as a login to another identity would.
+  Future<void> switchAccount() => sessions.save(
+    AuthSession(
+      accessToken: 'other-access-token',
+      refreshToken: 'other-refresh-token',
+      email: 'other@example.com',
+      scopes: const ['gui:view'],
+    ),
+  );
+
   group('ListAlbumsUseCase', () {
     ListAlbumsUseCase usecase() =>
-        ListAlbumsUseCase(repository, snapshots, logger);
+        ListAlbumsUseCase(repository, snapshots, sessions, endpoints, logger);
 
     test('returns the repository albums and snapshots them', () async {
       repository.albums = [testAlbum(id: 1), testAlbum(id: 2)];
@@ -78,10 +95,41 @@ void main() {
 
       expect(usecase().execute(), throwsA(isA<InfrastructureError>()));
     });
+
+    test('does not write the snapshot when the identity changes '
+        'mid-fetch', () async {
+      // The fetch was authenticated as the original account; by the time it
+      // lands another account is signed in, and the snapshot store files
+      // rows under whoever is signed in now — writing would poison the new
+      // account's offline view with the old account's albums.
+      repository.albums = [testAlbum(id: 1)];
+      repository.gate = switchAccount;
+
+      final albums = await usecase().execute();
+
+      expect(albums, hasLength(1));
+      expect(snapshots.savedAlbums, isNull);
+      expect(logger.messagesAt(LogLevel.warning), hasLength(1));
+    });
+
+    test('does not serve the new identity\'s snapshot when the identity '
+        'changes mid-fetch', () async {
+      snapshots.savedAlbums = [testAlbum(id: 7)];
+      repository.failure = const NetworkUnreachableError('offline');
+      repository.gate = switchAccount;
+
+      // The stored snapshot now belongs to the newly signed-in account, not
+      // to whoever dispatched this request — the failure must surface.
+      await expectLater(
+        usecase().execute(),
+        throwsA(isA<NetworkUnreachableError>()),
+      );
+    });
   });
 
   group('GetAlbumUseCase', () {
-    GetAlbumUseCase usecase() => GetAlbumUseCase(repository, snapshots, logger);
+    GetAlbumUseCase usecase() =>
+        GetAlbumUseCase(repository, snapshots, sessions, endpoints, logger);
 
     test('returns the album with its media and snapshots the page', () async {
       final detail = AlbumDetail(
@@ -168,6 +216,38 @@ void main() {
 
       expect(await usecase().execute(AlbumId(3)), isNotNull);
       expect(logger.messagesAt(LogLevel.warning), hasLength(1));
+    });
+
+    test('does not write the snapshot when the identity changes '
+        'mid-fetch', () async {
+      repository.details = {
+        AlbumId(3): AlbumDetail(
+          album: testAlbum(id: 3),
+          media: [testAlbumMediaItem()],
+        ),
+      };
+      // Same server, different account — the endpoint alone is not the
+      // identity.
+      repository.gate = switchAccount;
+
+      expect(await usecase().execute(AlbumId(3)), isNotNull);
+      expect(snapshots.savedDetails, isEmpty);
+      expect(logger.messagesAt(LogLevel.warning), hasLength(1));
+    });
+
+    test('does not drop the new identity\'s snapshot for an album the old '
+        'identity cannot see', () async {
+      // The vanished-album cleanup must only ever touch the snapshot of the
+      // identity the answer belongs to.
+      snapshots.savedDetails[(9, 1, 100)] = AlbumDetail(
+        album: testAlbum(id: 9),
+        media: const [],
+      );
+      repository.gate = switchAccount;
+
+      expect(await usecase().execute(AlbumId(9)), isNull);
+      expect(snapshots.removedDetails, isEmpty);
+      expect(snapshots.savedDetails, hasLength(1));
     });
   });
 }

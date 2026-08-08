@@ -3,6 +3,8 @@ import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
+import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
+import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 
 /// Loads one album with one page of its media, or null when it does not
@@ -20,11 +22,26 @@ import 'package:flutterbase/domain/value_objects/album_id.dart';
 /// ([AuthenticationError]) must surface. A broken snapshot store degrades
 /// to server-only behaviour — those failures are logged and swallowed here,
 /// deliberately, like the thumbnail cache's.
+///
+/// The signed-in identity is captured before the fetch is dispatched: the
+/// snapshot store scopes rows to whoever is signed in *now*, so if the user
+/// switches account (or signs out) while the request is in flight, touching
+/// the snapshot afterwards would file one account's pages under another's
+/// key — or serve or drop the other account's. When the identity has
+/// changed by the time the response lands, the snapshot is left untouched.
 final class GetAlbumUseCase {
-  const GetAlbumUseCase(this._albums, this._snapshots, this._logger);
+  const GetAlbumUseCase(
+    this._albums,
+    this._snapshots,
+    this._sessions,
+    this._endpoints,
+    this._logger,
+  );
 
   final AlbumRepository _albums;
   final AlbumSnapshotRepository _snapshots;
+  final SessionRepository _sessions;
+  final ApiEndpointRepository _endpoints;
   final AppLogger _logger;
 
   Future<AlbumDetail?> execute(
@@ -32,6 +49,7 @@ final class GetAlbumUseCase {
     int mediaPage = 1,
     int mediaPageSize = 100,
   }) async {
+    final requester = _signedInIdentity();
     final AlbumDetail? detail;
     try {
       detail = await _albums.findById(
@@ -40,6 +58,13 @@ final class GetAlbumUseCase {
         mediaPageSize: mediaPageSize,
       );
     } on InfrastructureError catch (error) {
+      if (_signedInIdentity() != requester) {
+        _logger.warning(
+          '[Album] identity changed mid-fetch — '
+          'not serving the snapshot of album ${id.value}',
+        );
+        rethrow;
+      }
       final snapshot = await _findSnapshot(id, mediaPage, mediaPageSize);
       if (snapshot != null) {
         _logger.warning(
@@ -49,6 +74,13 @@ final class GetAlbumUseCase {
         return snapshot;
       }
       rethrow;
+    }
+    if (_signedInIdentity() != requester) {
+      _logger.warning(
+        '[Album] identity changed mid-fetch — '
+        'snapshot of album ${id.value} left untouched',
+      );
+      return detail;
     }
     try {
       if (detail == null) {
@@ -82,4 +114,9 @@ final class GetAlbumUseCase {
       return null;
     }
   }
+
+  /// Who is signed in right now — the same (server, account) pair the
+  /// snapshot store scopes its rows by.
+  ({String? email, Uri? server}) _signedInIdentity() =>
+      (email: _sessions.load()?.email, server: _endpoints.load());
 }

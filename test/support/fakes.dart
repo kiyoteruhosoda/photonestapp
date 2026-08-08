@@ -430,8 +430,13 @@ final class FakeAlbumRepository implements AlbumRepository {
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
+  /// When set, awaited before each request is answered (or fails) — lets a
+  /// test change the signed-in identity while the request is in flight.
+  Future<void> Function()? gate;
+
   @override
   Future<List<Album>> findAll() async {
+    await gate?.call();
     _failIfAsked();
     return albums;
   }
@@ -445,6 +450,7 @@ final class FakeAlbumRepository implements AlbumRepository {
     int mediaPage = 1,
     int mediaPageSize = 100,
   }) async {
+    await gate?.call();
     _failIfAsked();
     mediaPageRequests.add((id, mediaPage, mediaPageSize));
     final detail = details[id];
@@ -491,6 +497,10 @@ final class FakeAlbumSnapshotRepository implements AlbumSnapshotRepository {
     _failIfAsked();
     albumSaveCount++;
     savedAlbums = List.of(albums);
+    // The interface contract: a full list is authoritative, so detail pages
+    // of albums it no longer holds are forgotten in the same save.
+    final visible = albums.map((album) => album.id.value).toSet();
+    savedDetails.removeWhere((key, _) => !visible.contains(key.$1));
   }
 
   @override

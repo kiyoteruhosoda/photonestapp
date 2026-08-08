@@ -196,10 +196,22 @@ class TestScope {
         WatchBackupNotificationsUseCase(notificationRepository),
       ),
       listAlbumsUseCaseProvider.overrideWithValue(
-        ListAlbumsUseCase(albumRepository, albumSnapshotRepository, logger),
+        ListAlbumsUseCase(
+          albumRepository,
+          albumSnapshotRepository,
+          sessionRepository,
+          apiEndpointRepository,
+          logger,
+        ),
       ),
       getAlbumUseCaseProvider.overrideWithValue(
-        GetAlbumUseCase(albumRepository, albumSnapshotRepository, logger),
+        GetAlbumUseCase(
+          albumRepository,
+          albumSnapshotRepository,
+          sessionRepository,
+          apiEndpointRepository,
+          logger,
+        ),
       ),
       getMediaThumbnailUseCaseProvider.overrideWithValue(
         GetMediaThumbnailUseCase(

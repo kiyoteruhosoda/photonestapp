@@ -177,14 +177,18 @@ final class FakeBackupNotificationRepository
 
   final Map<int, BackupNotification> _stored = <int, BackupNotification>{};
   int _nextId = 1;
+  final StreamController<void> _changes = StreamController<void>.broadcast();
 
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
-  /// How many times [markAllRead] ran.
-  int markAllReadCalls = 0;
+  /// The id batches [markRead] was asked to mark, in call order.
+  final List<List<int>> markReadCalls = <List<int>>[];
 
   List<BackupNotification> get stored => _stored.values.toList();
+
+  @override
+  Stream<void> get changes => _changes.stream;
 
   @override
   Future<List<BackupNotification>> findAll() async {
@@ -207,6 +211,7 @@ final class FakeBackupNotificationRepository
       occurredAt: occurredAt,
     );
     _stored[notification.id] = notification;
+    _changes.add(null);
     return notification;
   }
 
@@ -217,12 +222,13 @@ final class FakeBackupNotificationRepository
   }
 
   @override
-  Future<void> markAllRead() async {
+  Future<void> markRead(List<int> ids) async {
     _failIfAsked();
-    markAllReadCalls++;
-    for (final entry in _stored.entries.toList()) {
-      final n = entry.value;
-      _stored[entry.key] = BackupNotification(
+    markReadCalls.add(List.of(ids));
+    for (final id in ids) {
+      final n = _stored[id];
+      if (n == null) continue;
+      _stored[id] = BackupNotification(
         id: n.id,
         uploadedCount: n.uploadedCount,
         failedCount: n.failedCount,
@@ -230,6 +236,7 @@ final class FakeBackupNotificationRepository
         isRead: true,
       );
     }
+    _changes.add(null);
   }
 
   void _failIfAsked() {

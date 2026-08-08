@@ -3,6 +3,7 @@ import 'package:flutterbase/application/usecases/notification/get_unread_notific
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
 
@@ -85,16 +86,45 @@ void main() {
   });
 
   group('MarkNotificationsReadUseCase', () {
-    test('marks everything as seen', () async {
+    test('marks exactly the given ids as seen', () async {
       notifications = FakeBackupNotificationRepository([
         testBackupNotification(id: 1),
         testBackupNotification(id: 2),
       ]);
 
-      await MarkNotificationsReadUseCase(notifications).execute();
+      await MarkNotificationsReadUseCase(notifications).execute([1]);
 
-      expect(notifications.stored.every((n) => n.isRead), isTrue);
-      expect(notifications.markAllReadCalls, 1);
+      expect(notifications.markReadCalls, [
+        [1],
+      ]);
+      final byId = {for (final n in notifications.stored) n.id: n};
+      expect(byId[1]!.isRead, isTrue);
+      // Id 2 was not in the batch — its result has not been seen yet.
+      expect(byId[2]!.isRead, isFalse);
+    });
+
+    test('an empty batch never reaches the repository', () async {
+      await MarkNotificationsReadUseCase(notifications).execute(const []);
+      expect(notifications.markReadCalls, isEmpty);
+    });
+  });
+
+  group('WatchBackupNotificationsUseCase', () {
+    test('signals when a result is recorded', () async {
+      final events = <void>[];
+      final subscription = WatchBackupNotificationsUseCase(
+        notifications,
+      ).execute().listen(events.add);
+      addTearDown(subscription.cancel);
+
+      await notifications.add(
+        uploadedCount: 1,
+        failedCount: 0,
+        occurredAt: testNotificationOccurredAt,
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(events, hasLength(1));
     });
   });
 }

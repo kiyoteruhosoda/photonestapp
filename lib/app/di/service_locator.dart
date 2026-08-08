@@ -23,6 +23,7 @@ import 'package:flutterbase/application/usecases/notification/get_unread_notific
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
@@ -217,6 +218,9 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerFactory<MarkNotificationsReadUseCase>(
     () => MarkNotificationsReadUseCase(sl<BackupNotificationRepository>()),
+  );
+  sl.registerFactory<WatchBackupNotificationsUseCase>(
+    () => WatchBackupNotificationsUseCase(sl<BackupNotificationRepository>()),
   );
   sl.registerFactory<GetAutoUploadEnabledUseCase>(
     () => GetAutoUploadEnabledUseCase(sl<AutoUploadSettingsRepository>()),

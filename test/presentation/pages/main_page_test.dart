@@ -302,6 +302,25 @@ void main() {
       expect(find.byType(Badge), findsNothing);
     });
 
+    testWidgets('the badge appears when a sync pass records a result', (
+      tester,
+    ) async {
+      final scope = await pumpInScope(tester, const MainPage());
+      expect(find.byType(Badge), findsNothing);
+
+      // What RecordBackupResultUseCase does after a foreground pass — the
+      // change stream is what carries it to the bell.
+      await scope.notificationRepository.add(
+        uploadedCount: 2,
+        failedCount: 0,
+        occurredAt: testNotificationOccurredAt,
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Badge), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
+    });
+
     testWidgets('Deep Links in the drawer navigates to /link', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
       await openDrawer(tester);

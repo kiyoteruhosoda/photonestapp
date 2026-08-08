@@ -42,7 +42,9 @@ void main() {
     expect(find.textContaining(l10n.uploadFailed(2)), findsOneWidget);
   });
 
-  testWidgets('opening the list marks everything read', (tester) async {
+  testWidgets('opening the list marks the loaded notifications read', (
+    tester,
+  ) async {
     final repository = FakeBackupNotificationRepository([
       testBackupNotification(id: 1),
     ]);
@@ -50,12 +52,39 @@ void main() {
 
     await pumpInScope(tester, const NotificationsPage(), scope: scope);
 
-    expect(repository.markAllReadCalls, 1);
+    expect(repository.markReadCalls, [
+      [1],
+    ]);
     expect(await repository.unreadCount(), 0);
-    // The badge provider was refreshed too.
+    // The badge provider sees the same store.
     expect(
       await scope.container.read(unreadNotificationCountProvider.future),
       0,
+    );
+  });
+
+  testWidgets('a result recorded while the list is open stays unread', (
+    tester,
+  ) async {
+    final repository = FakeBackupNotificationRepository([
+      testBackupNotification(id: 1),
+    ]);
+    final scope = TestScope(notificationRepository: repository);
+    await pumpInScope(tester, const NotificationsPage(), scope: scope);
+
+    // A foreground sync pass finishes while the user is looking at the
+    // already-loaded list — its result has not been seen.
+    await repository.add(
+      uploadedCount: 2,
+      failedCount: 0,
+      occurredAt: testNotificationOccurredAt,
+    );
+    await tester.pumpAndSettle();
+
+    expect(await repository.unreadCount(), 1);
+    expect(
+      await scope.container.read(unreadNotificationCountProvider.future),
+      1,
     );
   });
 
@@ -70,13 +99,15 @@ void main() {
     await pumpInScope(tester, const NotificationsPage(), scope: scope);
     expect(find.byType(AppErrorView), findsOneWidget);
     // A list that never rendered informed nobody — everything stays unread.
-    expect(repository.markAllReadCalls, 0);
+    expect(repository.markReadCalls, isEmpty);
 
     repository.failure = null;
     await tester.tap(find.text(l10n.commonRetry));
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.notificationBackupCompleted), findsOneWidget);
-    expect(repository.markAllReadCalls, 1);
+    expect(repository.markReadCalls, [
+      [1],
+    ]);
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutterbase/domain/entities/backup_notification.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
@@ -11,9 +13,16 @@ import 'package:sqflite/sqflite.dart';
 /// was closed is visible the next time the list opens.
 final class SqfliteBackupNotificationRepository
     implements BackupNotificationRepository {
-  const SqfliteBackupNotificationRepository(this._database);
+  SqfliteBackupNotificationRepository(this._database);
 
   final Database _database;
+
+  /// Broadcast so the badge and any future listener can subscribe at once.
+  /// Never closed: the repository lives as long as the app process.
+  final StreamController<void> _changes = StreamController<void>.broadcast();
+
+  @override
+  Stream<void> get changes => _changes.stream;
 
   @override
   Future<List<BackupNotification>> findAll() async {
@@ -45,6 +54,7 @@ final class SqfliteBackupNotificationRepository
             'occurred_at': occurredAt.toUtc().toIso8601String(),
             'read': 0,
           });
+      _changes.add(null);
       return BackupNotification(
         id: id,
         uploadedCount: uploadedCount,
@@ -76,9 +86,17 @@ final class SqfliteBackupNotificationRepository
   }
 
   @override
-  Future<void> markAllRead() async {
+  Future<void> markRead(List<int> ids) async {
+    if (ids.isEmpty) return;
     try {
-      await _database.update(AppDatabase.backupNotificationsTable, {'read': 1});
+      final placeholders = List.filled(ids.length, '?').join(', ');
+      await _database.update(
+        AppDatabase.backupNotificationsTable,
+        {'read': 1},
+        where: 'id IN ($placeholders)',
+        whereArgs: ids,
+      );
+      _changes.add(null);
     } on DatabaseException catch (error) {
       throw InfrastructureError(
         'Could not mark the notifications as read.',

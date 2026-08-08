@@ -44,40 +44,59 @@ void main() {
     expect(all.first.occurredAt.isUtc, isTrue);
   });
 
-  test('notifications arrive unread; markAllRead clears the count', () async {
-    await repository.add(
+  test('notifications arrive unread; markRead clears the given ids', () async {
+    final first = await repository.add(
       uploadedCount: 1,
       failedCount: 0,
       occurredAt: occurredAt,
     );
-    await repository.add(
+    final second = await repository.add(
       uploadedCount: 2,
       failedCount: 0,
       occurredAt: occurredAt,
     );
     expect(await repository.unreadCount(), 2);
 
-    await repository.markAllRead();
+    await repository.markRead([first.id, second.id]);
 
     expect(await repository.unreadCount(), 0);
     final all = await repository.findAll();
     expect(all.every((n) => n.isRead), isTrue);
   });
 
-  test('a notification recorded after markAllRead is unread again', () async {
-    await repository.add(
+  test('markRead touches only the given ids', () async {
+    final seen = await repository.add(
       uploadedCount: 1,
       failedCount: 0,
       occurredAt: occurredAt,
     );
-    await repository.markAllRead();
-
-    await repository.add(
+    final unseen = await repository.add(
       uploadedCount: 4,
       failedCount: 1,
       occurredAt: occurredAt,
     );
 
+    await repository.markRead([seen.id]);
+
     expect(await repository.unreadCount(), 1);
+    final byId = {for (final n in await repository.findAll()) n.id: n};
+    expect(byId[seen.id]!.isRead, isTrue);
+    expect(byId[unseen.id]!.isRead, isFalse);
+  });
+
+  test('mutations signal the change stream', () async {
+    final events = <void>[];
+    final subscription = repository.changes.listen(events.add);
+    addTearDown(subscription.cancel);
+
+    final added = await repository.add(
+      uploadedCount: 1,
+      failedCount: 0,
+      occurredAt: occurredAt,
+    );
+    await repository.markRead([added.id]);
+    await Future<void>.delayed(Duration.zero);
+
+    expect(events, hasLength(2));
   });
 }

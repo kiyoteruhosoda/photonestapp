@@ -6,6 +6,12 @@ import 'package:flutterbase/domain/entities/backup_notification.dart';
 /// backup did, which stays true after signing into another account.
 /// Implementations live in Infrastructure and assign the ids.
 abstract interface class BackupNotificationRepository {
+  /// Emits after every mutation this isolate makes — an add or a mark-read —
+  /// so a live badge can re-read the unread count. Writes from the other
+  /// isolate (the background WorkManager engine) are not observable here;
+  /// they are picked up on the next cold read.
+  Stream<void> get changes;
+
   /// All notifications, newest first.
   Future<List<BackupNotification>> findAll();
 
@@ -22,6 +28,10 @@ abstract interface class BackupNotificationRepository {
   /// How many notifications the user has not seen yet.
   Future<int> unreadCount();
 
-  /// Marks every notification as seen. Opening the list calls this.
-  Future<void> markAllRead();
+  /// Marks the given notifications as seen.
+  ///
+  /// Only ids the reader actually loaded belong here: a blanket "mark
+  /// everything" would also swallow results recorded after the list was
+  /// read, before the user ever saw them.
+  Future<void> markRead(List<int> ids);
 }

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/pages/media/media_tab.dart';
+import 'package:flutterbase/presentation/providers/media_providers.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 
 import '../../../support/fakes.dart';
@@ -28,6 +29,70 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(l10n.commonErrorNetwork), findsOneWidget);
+    });
+
+    testWidgets('an empty library can be reloaded from the empty state', (
+      tester,
+    ) async {
+      final repository = FakeMediaLibraryRepository();
+      final scope = TestScope(mediaLibraryRepository: repository);
+      await pumpInScope(tester, const Scaffold(body: MediaTab()), scope: scope);
+      await tester.pumpAndSettle();
+
+      // The first photo arrives from somewhere else — the upload tab, or
+      // another client — while the empty state is on screen.
+      repository.media = [testMediaItem(id: 1)];
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MediaTile), findsOneWidget);
+    });
+
+    testWidgets('the next page waits for the reader instead of downloading '
+        'the whole library at once', (tester) async {
+      // A phone-sized surface, so the first page does not fit on screen —
+      // the default test surface is tall enough to show all of it, which
+      // would legitimately reach the load-more cell.
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = FakeMediaLibraryRepository(
+        media: [for (var i = 1; i <= 250; i++) testMediaItem(id: i)],
+      );
+      final scope = TestScope(mediaLibraryRepository: repository);
+      await pumpInScope(tester, const Scaffold(body: MediaTab()), scope: scope);
+      await tester.pumpAndSettle();
+
+      // The load-more cell sits far below the fold, so only the first page
+      // has been asked for. Building it eagerly would chain straight through
+      // the whole library at startup.
+      expect(repository.requestedPages, [(1, libraryMediaPageSize)]);
+    });
+
+    testWidgets('scrolling to the end pages the next window in', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(const Size(400, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = FakeMediaLibraryRepository(
+        media: [for (var i = 1; i <= 250; i++) testMediaItem(id: i)],
+      );
+      final scope = TestScope(mediaLibraryRepository: repository);
+      await pumpInScope(tester, const Scaffold(body: MediaTab()), scope: scope);
+      await tester.pumpAndSettle();
+
+      // Scroll towards the end. The load-more cell is built — and the next
+      // page requested — as soon as it comes within the grid's build range.
+      final scrollable = find.byType(Scrollable).first;
+      for (var i = 0; i < 60 && repository.requestedPages.length < 2; i++) {
+        await tester.drag(scrollable, const Offset(0, -600));
+        await tester.pump();
+      }
+      await tester.pumpAndSettle();
+
+      expect(repository.requestedPages, [
+        (1, libraryMediaPageSize),
+        (2, libraryMediaPageSize),
+      ]);
     });
 
     testWidgets('media is grouped under the day it was captured', (

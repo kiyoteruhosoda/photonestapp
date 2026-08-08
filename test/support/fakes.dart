@@ -343,9 +343,14 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
   /// When set, every request throws this instead of answering.
   AppError? failure;
 
+  /// When set, awaited before each request is answered — lets a test hold a
+  /// page mid-flight and restart the timeline underneath it.
+  Future<void> Function()? gate;
+
   @override
   Future<MediaLibraryPage> findPage({int page = 1, int pageSize = 100}) async {
     requestedPages.add((page, pageSize));
+    await gate?.call();
     final error = failure;
     if (error != null) throw error;
     final start = (page - 1) * pageSize;

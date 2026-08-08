@@ -132,11 +132,20 @@ libraryMediaProvider =
 
 /// Pages the library in from the server.
 class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
+  /// Bumped by every (re)build. A page request that was already in flight
+  /// when the timeline restarted — a pull-to-refresh, or a sign-in to
+  /// another account or server — carries the old number and is discarded,
+  /// instead of overwriting the fresh state with media captured before the
+  /// `await`. Getting this wrong leaves the previous identity's media on
+  /// screen indefinitely.
+  int _generation = 0;
+
   @override
   Future<LibraryMediaState> build() async {
     // Rebuilds when the signed-in identity changes, so a login to another
     // account or server never shows the previous identity's media.
     ref.watch(sessionIdentityProvider);
+    _generation++;
     final page = await ref
         .read(listLibraryMediaUseCaseProvider)
         .execute(page: 1, pageSize: libraryMediaPageSize);
@@ -159,6 +168,7 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
     // is nothing to append to.
     final current = state.value;
     if (current == null || current.loadingMore || !current.hasMore) return;
+    final generation = _generation;
     state = AsyncValue.data(
       current.copyWith(loadingMore: true, loadMoreFailed: false),
     );
@@ -170,11 +180,13 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
           .read(listLibraryMediaUseCaseProvider)
           .execute(page: nextPage, pageSize: libraryMediaPageSize);
     } on Object {
+      if (generation != _generation) return;
       state = AsyncValue.data(
         current.copyWith(loadingMore: false, loadMoreFailed: true),
       );
       return;
     }
+    if (generation != _generation) return;
     // Appending by id keeps the list stable when media was added or removed
     // between page reads — a duplicate would render the same tile twice.
     final known = current.media.map((MediaItem item) => item.id).toSet();

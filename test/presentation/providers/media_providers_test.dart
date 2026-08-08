@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
@@ -100,6 +102,64 @@ void main() {
 
     expect(repository.requestedPages, hasLength(1));
   });
+
+  test(
+    'a page that lands after a refresh does not restore the old list',
+    () async {
+      final repository = FakeMediaLibraryRepository(media: mediaRange(1, 250));
+      final scope = TestScope(mediaLibraryRepository: repository);
+      final notifier = scope.container.read(libraryMediaProvider.notifier);
+      await scope.container.read(libraryMediaProvider.future);
+
+      // Hold page 2 mid-flight.
+      final held = Completer<void>();
+      repository.gate = () => held.future;
+      final pending = notifier.loadMore();
+
+      // The library is replaced and the timeline restarted while page 2 is
+      // still in the air — a pull-to-refresh, or a sign-in elsewhere.
+      repository
+        ..gate = null
+        ..media = mediaRange(500, 3);
+      await notifier.reload();
+
+      held.complete();
+      await pending;
+
+      final state = scope.container.read(libraryMediaProvider).value!;
+      expect(state.media.map((item) => item.id.value), [500, 501, 502]);
+      expect(state.pagesLoaded, 1);
+      expect(state.loadingMore, isFalse);
+    },
+  );
+
+  test(
+    'a page that fails after a refresh does not flag the fresh state',
+    () async {
+      final repository = FakeMediaLibraryRepository(media: mediaRange(1, 250));
+      final scope = TestScope(mediaLibraryRepository: repository);
+      final notifier = scope.container.read(libraryMediaProvider.notifier);
+      await scope.container.read(libraryMediaProvider.future);
+
+      final held = Completer<void>();
+      repository.gate = () => held.future;
+      repository.failure = const NetworkUnreachableError('offline');
+      final pending = notifier.loadMore();
+
+      repository
+        ..gate = null
+        ..failure = null
+        ..media = mediaRange(500, 3);
+      await notifier.reload();
+
+      held.complete();
+      await pending;
+
+      final state = scope.container.read(libraryMediaProvider).value!;
+      expect(state.loadMoreFailed, isFalse);
+      expect(state.media, hasLength(3));
+    },
+  );
 
   test('reload starts the timeline over from the first page', () async {
     final repository = FakeMediaLibraryRepository(media: mediaRange(1, 250));

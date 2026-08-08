@@ -146,9 +146,16 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
   /// The family argument: which album this notifier pages.
   final AlbumId albumId;
 
+  /// Bumped by every (re)build, so a page request that was already in
+  /// flight when the album restarted — a sign-in to another account or
+  /// server — is discarded instead of overwriting the fresh state with
+  /// media captured before the `await`.
+  int _generation = 0;
+
   @override
   Future<AlbumDetailState?> build() async {
     ref.watch(sessionIdentityProvider);
+    _generation++;
     final detail = await ref
         .read(getAlbumUseCaseProvider)
         .execute(albumId, mediaPage: 1, mediaPageSize: albumMediaPageSize);
@@ -174,6 +181,7 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
     // all states where there is nothing to append to.
     final current = state.value;
     if (current == null || current.loadingMore || !current.hasMore) return;
+    final generation = _generation;
     state = AsyncValue.data(
       current.copyWith(loadingMore: true, loadMoreFailed: false),
     );
@@ -189,11 +197,13 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
             mediaPageSize: albumMediaPageSize,
           );
     } on Object {
+      if (generation != _generation) return;
       state = AsyncValue.data(
         current.copyWith(loadingMore: false, loadMoreFailed: true),
       );
       return;
     }
+    if (generation != _generation) return;
     if (detail == null) {
       // The album vanished between pages; the screen shows not-found.
       state = const AsyncValue<AlbumDetailState?>.data(null);

@@ -28,9 +28,19 @@ class MediaTab extends ConsumerWidget {
         onRetry: () =>
             unawaited(ref.read(libraryMediaProvider.notifier).reload()),
       ),
+      // The empty state carries its own reload: the provider outlives the
+      // tab, so a library that was empty on first read would otherwise stay
+      // empty on screen after the first upload — with no gesture to correct
+      // it, since the pull-to-refresh lives in the timeline below.
       AsyncData<LibraryMediaState>(value: final value)
           when value.media.isEmpty =>
-        AppEmptyView(message: l10n.photosEmpty, icon: Icons.photo_outlined),
+        AppEmptyView(
+          message: l10n.photosEmpty,
+          icon: Icons.photo_outlined,
+          actionLabel: l10n.commonRetry,
+          action: () =>
+              unawaited(ref.read(libraryMediaProvider.notifier).reload()),
+        ),
       AsyncData<LibraryMediaState>(value: final value) => _Timeline(
         state: value,
       ),
@@ -51,7 +61,7 @@ class _Timeline extends ConsumerWidget {
       onRefresh: ref.read(libraryMediaProvider.notifier).reload,
       child: CustomScrollView(
         slivers: [
-          for (final group in groups) ...[
+          for (final (index, group) in groups.indexed) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -76,9 +86,21 @@ class _Timeline extends ConsumerWidget {
                   mainAxisSpacing: AppSpacing.xs,
                   crossAxisSpacing: AppSpacing.xs,
                 ),
-                itemCount: group.media.length,
-                itemBuilder: (context, index) {
-                  final item = group.media[index];
+                // The load-more cell rides along as one extra slot of the
+                // last day's grid rather than as a sliver of its own. A
+                // sliver's first child is built as soon as the scroll view
+                // is laid out, however far below the fold it sits, so a
+                // separate tail would fetch page 2 immediately and each
+                // rebuild would chain the next until the whole library had
+                // been downloaded. Here the cell has a high index inside a
+                // long grid, so the lazy delegate only builds it once the
+                // reader is actually near the end.
+                itemCount: group.media.length + _tailSlots(index, groups),
+                itemBuilder: (context, itemIndex) {
+                  if (itemIndex >= group.media.length) {
+                    return _LoadMoreTile(state: state);
+                  }
+                  final item = group.media[itemIndex];
                   return InkWell(
                     onTap: () => unawaited(showMediaViewer(context, item)),
                     child: MediaTile(item: item),
@@ -87,11 +109,15 @@ class _Timeline extends ConsumerWidget {
               ),
             ),
           ],
-          SliverToBoxAdapter(child: _Tail(state: state)),
         ],
       ),
     );
   }
+
+  /// One extra slot on the last day's grid while pages remain, none
+  /// otherwise.
+  int _tailSlots(int index, List<MediaCaptureDay> groups) =>
+      index == groups.length - 1 && state.hasMore ? 1 : 0;
 
   /// The capture day as the reader's locale writes it. [day] is already the
   /// local calendar day — see [groupMediaByCaptureDay].
@@ -139,29 +165,29 @@ List<MediaCaptureDay> groupMediaByCaptureDay(List<MediaItem> media) {
   return groups;
 }
 
-/// The strip under the last section: a spinner while the next page loads, a
-/// retry after a failure, nothing once the library is fully read.
+/// The extra cell after the last photo while pages remain: a spinner while
+/// the next page loads, a retry affordance after a failure.
 ///
-/// Building it is also the load trigger — it only comes into existence when
-/// the reader has scrolled past everything loaded so far.
-class _Tail extends ConsumerWidget {
-  const _Tail({required this.state});
+/// Building it is also the load trigger — the lazy grid delegate only
+/// reaches this index once the reader has scrolled to the end of what is
+/// loaded.
+class _LoadMoreTile extends ConsumerWidget {
+  const _LoadMoreTile({required this.state});
 
   final LibraryMediaState state;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (!state.hasMore) return const SizedBox(height: AppSpacing.lg);
-    final l10n = AppLocalizations.of(context);
     if (state.loadMoreFailed) {
-      return Padding(
-        padding: const EdgeInsets.all(AppSpacing.pageMargin),
-        child: Center(
-          child: TextButton.icon(
-            onPressed: () =>
-                unawaited(ref.read(libraryMediaProvider.notifier).loadMore()),
-            icon: const Icon(Icons.refresh),
-            label: Text(l10n.photosLoadMoreRetry),
+      final l10n = AppLocalizations.of(context);
+      return InkWell(
+        onTap: () =>
+            unawaited(ref.read(libraryMediaProvider.notifier).loadMore()),
+        child: Tooltip(
+          message: l10n.photosLoadMoreRetry,
+          child: Icon(
+            Icons.refresh,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       );
@@ -172,14 +198,11 @@ class _Tail extends ConsumerWidget {
         () => ref.read(libraryMediaProvider.notifier).loadMore(),
       ),
     );
-    return const Padding(
-      padding: EdgeInsets.all(AppSpacing.pageMargin),
-      child: Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
+    return const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
       ),
     );
   }

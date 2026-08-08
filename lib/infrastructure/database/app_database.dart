@@ -15,10 +15,7 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 4;
-
-  /// Table holding the bookmarks sample feature.
-  static const String bookmarksTable = 'bookmarks';
+  static const int schemaVersion = 6;
 
   /// Table remembering which device photos were already uploaded.
   static const String uploadedPhotosTable = 'uploaded_photos';
@@ -28,6 +25,9 @@ final class AppDatabase {
 
   /// Table holding cross-isolate leases, e.g. the auto-upload sync lease.
   static const String syncLeasesTable = 'sync_leases';
+
+  /// Table holding backup-result notifications for the in-app list.
+  static const String backupNotificationsTable = 'backup_notifications';
 
   /// Opens the database, creating or migrating the schema as needed.
   ///
@@ -52,17 +52,10 @@ final class AppDatabase {
   }
 
   static Future<void> _create(Database db, int version) async {
-    await db.execute('''
-CREATE TABLE $bookmarksTable (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  title TEXT NOT NULL,
-  url TEXT NOT NULL,
-  created_at TEXT NOT NULL
-)
-''');
     await db.execute(_createUploadedPhotos);
     await db.execute(_createMediaThumbnails);
     await db.execute(_createSyncLeases);
+    await db.execute(_createBackupNotifications);
   }
 
   /// `local_id` is the platform's asset identifier; `account_key` names the
@@ -109,6 +102,20 @@ CREATE TABLE $syncLeasesTable (
 )
 ''';
 
+  /// One row per backup pass that attempted at least one upload. `read`
+  /// flips to 1 when the notification list is opened; the header badge is a
+  /// cheap COUNT over the zeros. Written by both isolates.
+  static const String _createBackupNotifications =
+      '''
+CREATE TABLE $backupNotificationsTable (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uploaded_count INTEGER NOT NULL,
+  failed_count INTEGER NOT NULL,
+  occurred_at TEXT NOT NULL,
+  read INTEGER NOT NULL DEFAULT 0
+)
+''';
+
   /// Applies the migrations between two schema versions.
   ///
   /// Written as a fall-through ladder — `if (from < 2) { … }`, then
@@ -123,6 +130,15 @@ CREATE TABLE $syncLeasesTable (
     }
     if (from < 4) {
       await db.execute(_createSyncLeases);
+    }
+    if (from < 5) {
+      // v5 removed the template's bookmarks sample feature; schemas 1–4
+      // created its table in `_create`, so an upgrading device drops it
+      // here. IF EXISTS keeps the step idempotent.
+      await db.execute('DROP TABLE IF EXISTS bookmarks');
+    }
+    if (from < 6) {
+      await db.execute(_createBackupNotifications);
     }
   }
 }

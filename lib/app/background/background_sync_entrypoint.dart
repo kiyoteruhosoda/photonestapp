@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/infrastructure/infrastructure_module.dart';
@@ -36,6 +37,7 @@ void backgroundSyncDispatcher() {
           infrastructure.uploadHistory,
           logger,
         ),
+        RecordBackupResultUseCase(infrastructure.backupNotifications, logger),
         logger,
         leaseHolder: 'background',
       );

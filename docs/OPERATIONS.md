@@ -249,7 +249,7 @@ setUpAll(() {
 App Links / カスタムスキームの設定・確認手順は `docs/DEEP_LINKS.md` にあります。
 
 切り分けの起点はログです。ルーターに届いたリンクは必ず
-`[Router] → /bookmarks/1` の形で残ります。
+`[Router] → /albums/1` の形で残ります。
 
 - ログが出ない → リンクがアプリに届いていない（intent filter か検証の問題）
 - ログは出るが画面が出ない → ルートが一致していない（`AppRoutes` を確認）

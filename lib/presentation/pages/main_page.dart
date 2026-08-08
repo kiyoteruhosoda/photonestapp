@@ -8,6 +8,7 @@ import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
 import 'package:flutterbase/presentation/pages/upload/upload_tab.dart';
+import 'package:flutterbase/presentation/providers/notification_providers.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:flutterbase/presentation/providers/settings_providers.dart';
 import 'package:flutterbase/presentation/theme/theme.dart';
@@ -65,10 +66,28 @@ class _MainPageState extends ConsumerState<MainPage> {
             ),
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined),
-              onPressed: () {},
-              tooltip: l10n.commonNotifications,
+            Consumer(
+              builder: (context, ref, _) {
+                // The badge is decoration — while the count loads (or
+                // failed to load), the plain bell is the right render.
+                final unread = switch (ref.watch(
+                  unreadNotificationCountProvider,
+                )) {
+                  AsyncData<int>(:final value) => value,
+                  _ => 0,
+                };
+                return IconButton(
+                  icon: unread > 0
+                      ? Badge.count(
+                          count: unread,
+                          child: const Icon(Icons.notifications_outlined),
+                        )
+                      : const Icon(Icons.notifications_outlined),
+                  onPressed: () =>
+                      unawaited(context.push<void>(AppRoutes.notifications)),
+                  tooltip: l10n.commonNotifications,
+                );
+              },
             ),
           ],
         ),
@@ -111,11 +130,6 @@ class _MainPageState extends ConsumerState<MainPage> {
                 const AppDrawerItem.divider(),
               ],
               bottomItems: [
-                AppDrawerItem(
-                  label: l10n.drawerBookmarks,
-                  icon: Icons.bookmark_outline,
-                  onTap: () => _leaveDrawerFor(context, AppRoutes.bookmarks),
-                ),
                 AppDrawerItem(
                   label: l10n.drawerDeepLink,
                   icon: Icons.link_outlined,
@@ -367,12 +381,6 @@ class _SettingsContent extends ConsumerWidget {
             ],
           ),
         const SizedBox(height: AppSpacing.lg),
-        AppListCard(
-          title: l10n.settingsBookmarks,
-          leading: const Icon(Icons.bookmark_outline),
-          onTap: () => unawaited(context.push<void>(AppRoutes.bookmarks)),
-        ),
-        const SizedBox(height: AppSpacing.sm),
         AppListCard(
           title: l10n.settingsDeepLink,
           leading: const Icon(Icons.link_outlined),

@@ -3,6 +3,41 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-08 — バックアップ結果の通知（通知一覧）
+
+- 旧 Progress #17。自動アップロードの各パスが結果（成功件数・失敗件数）を
+  `backup_notifications` テーブル（schema v6）に記録し、ヘッダーの通知ボタン
+  （ADR-0005 で予約済みだった no-op）から通知一覧 `/notifications` を開ける
+  ようにした。未読件数はベルにバッジ表示され（同一プロセス内の書き込みは
+  変更ストリーム経由で即時反映）、一覧を開くと**読み込んだ分だけ**既読になる
+  （表示中に届いた結果は未読のまま残る）。
+  記録は `SyncNewPhotosUseCase` 内で行うため、フォアグラウンド・
+  バックグラウンド（WorkManager）どちらのパスも同じ痕跡を残す。
+  通知の保存失敗はログに残して握りつぶす（アップロード自体は成功しており、
+  通知行のためにパスを失敗させない）。
+
+## 2026-08-08 — テンプレート残渣の整理とページング修正
+
+- 旧 Progress #16。flutterbase テンプレート由来のブックマーク機能一式
+  （画面・フォーム・sqflite リポジトリ・ユースケース 5 本・ドロワー項目・
+  `/bookmarks` ディープリンク・l10n キー）を削除した。schema v5 で
+  `bookmarks` テーブルをアップグレード時に DROP する。ディープリンクの
+  例・ドキュメントはアルバムルート（`/albums/:id`）に置き換え、統合テストは
+  アルバムタブとドロワー遷移を対象に書き換えた。外部リンク起動の
+  `ExternalLinkLauncher` ポートと `url_launcher` 実装は汎用境界として残す。
+- 旧 Progress #15。未使用の `AuthRepository.refresh` と
+  `ApiAuthRepository.refresh` を削除した。実際のリフレッシュは
+  `PhotoNestApiClient._refreshSession`（ローテーションされたトークン対を
+  永続化する側）が唯一の実装になった。
+- 旧 Progress #19。サーバーが `mediaTotal` を返さない場合の
+  ページング打ち切りを修正した。`AlbumDetail.mediaTotal` は欠落時に
+  ページ長へフォールバックせず null（不明）となり、不明な間は「続きあり」
+  として扱って短いページの到着でページングを終える。
+- 旧 Progress #18。`CLAUDE.md` のプロジェクト情報プレースホルダーを記入し、
+  README をテンプレート「flutterbase」の説明から PhotoNest クライアント
+  （PhotoNest サーバーの写真閲覧・バックアップ用 Flutter アプリ）の説明に
+  書き換えた。
+
 ## 2026-08-08 — 動画対応（列挙・アップロード・再生）
 
 - 旧 Progress #9。`PhotoManagerPhotoLibraryGateway` を `RequestType.common` に

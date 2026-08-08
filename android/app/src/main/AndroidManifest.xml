@@ -60,7 +60,7 @@
                  Unverified: any app may register the same scheme, so this
                  is for local testing and for entry points you control —
                  never for a link a stranger can send. Links must use the
-                 empty-authority form (flutterbase:///bookmarks/1), because
+                 empty-authority form (flutterbase:///albums/1), because
                  Flutter's Android embedding builds the in-app route from
                  the URI path and drops the authority. -->
             <intent-filter>
@@ -95,8 +95,8 @@
         </intent>
         <!-- url_launcher needs to see which apps can handle a web URL before
              canLaunchUrl() will answer truthfully on API 30+. Both schemes
-             are declared because BookmarkDraft accepts both: with only
-             https here, an http-only handler stays invisible and
+             are declared so external links of either kind stay visible:
+             with only https here, an http-only handler stays invisible and
              canLaunchUrl reports a URL as unopenable that the platform
              could in fact open. -->
         <intent>

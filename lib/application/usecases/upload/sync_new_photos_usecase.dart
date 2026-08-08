@@ -1,5 +1,6 @@
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
+import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
@@ -59,6 +60,7 @@ final class SyncNewPhotosUseCase {
     this._history,
     this._syncLease,
     this._uploadPhotos,
+    this._recordBackupResult,
     this._logger, {
     required this.leaseHolder,
     this.pageSize = 100,
@@ -70,6 +72,7 @@ final class SyncNewPhotosUseCase {
   final UploadHistoryRepository _history;
   final SyncLeaseRepository _syncLease;
   final UploadPhotosUseCase _uploadPhotos;
+  final RecordBackupResultUseCase _recordBackupResult;
   final AppLogger _logger;
 
   /// Who this pass runs as when taking the lease — `foreground` for the
@@ -139,6 +142,12 @@ final class SyncNewPhotosUseCase {
 
     _logger.info('[AutoUpload] found ${pending.length} new photo(s)');
     final result = await _uploadPhotos.execute(pending);
+    // Recorded from inside the pass so both isolates — foreground app and
+    // background WorkManager engine — leave the same trace in the list.
+    await _recordBackupResult.execute(
+      uploadedCount: result.uploaded.length,
+      failedCount: result.failed.length,
+    );
     return SyncReport(result: result);
   }
 }

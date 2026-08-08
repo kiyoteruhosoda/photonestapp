@@ -1,43 +1,55 @@
-# flutterbase
+# PhotoNest
 
-Flutter アプリケーションを素早く立ち上げるためのテンプレートプロジェクトです。
+PhotoNest サーバーのモバイルクライアント（Flutter アプリ）です。セルフホストした
+PhotoNest サーバーにログインし、アルバムの閲覧と端末写真のバックアップを行います。
 
-このリポジトリは、アプリ本体の雛形だけでなく、AI エージェントや開発者が作業するときのルールも含みます。`CLAUDE.md` はコンテキストを圧迫しない最小テンプレートとして維持し、詳細な考え方・運用方針・作業手順はこの README と `.claude/skills/` に分けます。
+主な機能:
+
+* サーバー URL・メールアドレス・パスワードでのログイン（トークンは端末の
+  セキュアストレージに保存し、期限切れ時は自動リフレッシュ）
+* アルバム一覧・アルバム詳細のグリッド表示（メディアはページングで読み込み、
+  サムネイルはローカル DB にキャッシュ）
+* 写真・動画の閲覧（動画はサーバーが発行する署名付き URL でストリーミング）
+* 端末写真の手動アップロードと、バックグラウンドでの自動アップロード
+  （WorkManager による定期同期）
+* ディープリンク（App Links / カスタムスキーム）、i18n（日本語・英語）、
+  ライト / ダークテーマ
+
+このリポジトリは、アプリ本体だけでなく、AI エージェントや開発者が作業するときのルールも含みます。`CLAUDE.md` はコンテキストを圧迫しない最小の指示として維持し、詳細な考え方・運用方針・作業手順はこの README と `.claude/skills/` に分けます。
 
 ## Getting Started
 
-このテンプレートを自分のアプリ用に fork / clone して使う場合は、まず以下を読んでください。
-
-```text
-docs/CUSTOMISATION.md
+```bash
+flutter pub get
+flutter run          # 起動するとログイン画面が表示される
+./scripts/ci.sh      # CI と同じ品質ゲート（--fast で APK ビルドを省略）
 ```
 
-`docs/CUSTOMISATION.md` は、パッケージ名変更、アプリ名、Android label、launcher icon、debug keystore、検証手順など、fork 時に必要な具体的作業のガイドです。
+接続先の PhotoNest サーバーはログイン画面で指定します。既定値や App Links の
+ホストは `lib/shared/app_config.dart` にあります。
 
-ディープリンク（App Links）を使う場合は、ホスト名の差し替えと `assetlinks.json` の配信が必要です。手順は `docs/DEEP_LINKS.md` にあります。
+アプリ identity（applicationId、アプリ名、アイコン、署名）を変更する場合は
+`docs/CUSTOMISATION.md` を、ディープリンクのホスト差し替えと `assetlinks.json`
+の配信は `docs/DEEP_LINKS.md` を参照してください。
 
-## Starter Stack
+## Stack
 
-テンプレートが採用している package と、それぞれの担当レイヤーです。すべて `lib/` のサンプル実装（ブックマーク機能）で実際に使われています。採否の理由は `docs/adr/0002-starter-stack.md`、置き場所の一覧は `docs/ARCHITECTURE.md` にあります。
+採用している主な package と担当レイヤーです。採否の理由は
+`docs/adr/0002-starter-stack.md`、置き場所の一覧は `docs/ARCHITECTURE.md` にあります。
 
 | package | 用途 | レイヤー |
 |---|---|---|
 | `go_router` | ルーティングとディープリンク受け口 | 合成ルート（`lib/app/`） |
 | `flutter_riverpod` | 状態管理（コード生成なし） | Presentation |
 | `get_it` | サービスロケータ | 合成ルート |
-| `sqflite` | ローカル DB | Infrastructure |
-| `path` | DB ファイルパスの組み立て | Infrastructure |
+| `http` | PhotoNest API クライアント | Infrastructure |
+| `sqflite` | ローカル DB（サムネイルキャッシュ・アップロード履歴等） | Infrastructure |
+| `flutter_secure_storage` | セッション（トークン）の保存 | Infrastructure |
+| `photo_manager` | 端末フォトライブラリへのアクセス | Infrastructure |
+| `workmanager` | バックグラウンド同期 | Infrastructure |
 | `url_launcher` | 外部リンク起動（ポートの背後） | Infrastructure |
 
 `equatable` と `riverpod_annotation` / `riverpod_generator` は採用していません。値の等価性は手書きの `==` / `hashCode`、Riverpod の provider も手書きです。コード生成を挟まないぶん、clone してすぐ動きます。
-
-## Purpose
-
-* 再利用しやすい Flutter プロジェクト構造を提供する
-* 初期セットアップ・設定・検証手順を標準化する
-* DDD / OOP / SOLID / DI を意識した実装の出発点を提供する
-* AI エージェントが読むトップレベル指示を小さく保ち、詳細は Skill と docs に分離する
-* 何もしなくても最小起動できるテンプレートを維持する
 
 ## Guidance Layout
 
@@ -49,7 +61,6 @@ docs/CUSTOMISATION.md
 | `.claude/rules/` | 常時適用する短い原則 | アーキテクチャ、コーディング、Git、UI の基本ルール |
 | `.claude/skills/` | 作業種別ごとの手順 | 機能追加、設定、ログ、テスト、PR などの工程 |
 | `docs/` | プロジェクト文書 | 設計、運用、進捗、変更履歴、ADR、詳細な経緯 |
-| `docs/CUSTOMISATION.md` | fork ガイド | テンプレート利用者が変更すべき app identity / Android / icon / signing |
 | `README.md` | 人間向けの全体説明 | 方針の背景、設計思想、文書の読み方 |
 
 `CLAUDE.md` を短くした理由は、AI エージェントのコンテキスト消費を抑えるためです。一方で、人間が読む説明まで削ると意図が失われるため、この README に背景をまとめています。
@@ -58,7 +69,7 @@ docs/CUSTOMISATION.md
 
 ### 1. 最小起動を壊さない
 
-テンプレートは、初期状態または最小設定で起動できることを重視します。
+初期状態または最小設定で起動できることを重視します。
 
 * 何もしなくてもログイン画面または初期画面が表示される
 * 開発者が最初に読むべき設定が分散しすぎていない
@@ -116,18 +127,9 @@ Domain は UI、DB、HTTP、JSON、フレームワークの詳細に依存しな
 * 本番向けの必須設定は起動時に fail-fast で検出する
 * 設定の追加・上書きルールは `.claude/skills/configuration.md` に従う
 
-### 5. Compose / scripts による運用容易性
+### 5. scripts による運用容易性
 
 ローカル開発・検証・配布の流れは、できるだけスクリプト化します。
-
-目指す状態:
-
-* 開発環境で build できる
-* コンテナイメージや配布物を作れる
-* Compose などで必要コンポーネントをまとめて起動できる
-* reset の引数でデータ初期化の有無を選べる
-* migration が必要な場合は、方針に従って明示または自動で実行される
-* 重要な運用コマンドは `docs/OPERATIONS.md` に集約される
 
 配布物のビルドは 2 本のスクリプトが担います。
 
@@ -178,6 +180,7 @@ Domain は UI、DB、HTTP、JSON、フレームワークの詳細に依存しな
 | `docs/ARCHITECTURE.md` | 設計ガイド | レイヤー構成、命名、設計パターン、採用 package の置き場所 | 個別の操作手順 |
 | `docs/OPERATIONS.md` | 手順書 | 起動、build、reset、migration、配布コマンド | なぜそうしたかの長い経緯 |
 | `docs/DEEP_LINKS.md` | 手順書 | App Links / カスタムスキームの設定と確認 | 設計判断の経緯 |
+| `docs/CUSTOMISATION.md` | 手順書 | アプリ identity（applicationId / アイコン / 署名）の変更 | 設計判断の経緯 |
 | `docs/Progress.md` | 進捗 | 未着手、進行中、要判断のタスク | 完了済みタスクの保管 |
 | `docs/CHANGELOG.md` | 変更履歴 | 完了した重要変更の短い要約 | 詳細な調査ログ |
 | `docs/adr/` | 設計判断 | ADR、採用・却下理由 | 日々の進捗 |
@@ -310,9 +313,3 @@ Domain は UI、DB、HTTP、JSON、フレームワークの詳細に依存しな
 * 設定値をあちこちで直接読む
 * 文字列メソッド名などによる過度な動的呼び出し
 * 例外を握りつぶしてログも出さない
-
-## Fork Customisation
-
-アプリ名、package、Android namespace / applicationId、launcher icon、debug keystore、README の表示名など、fork 時に変えるべき項目は `docs/CUSTOMISATION.md` にまとめています。
-
-`CLAUDE.md` や `.claude/skills/` はエージェント作業のためのルールです。アプリの identity 変更は、必ず `docs/CUSTOMISATION.md` を優先してください。

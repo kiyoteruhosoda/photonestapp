@@ -12,11 +12,6 @@ import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/add_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/get_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/list_bookmarks_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/open_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/remove_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/get_debug_settings_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
@@ -24,6 +19,11 @@ import 'package:flutterbase/application/usecases/language/get_language_preferenc
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
@@ -37,7 +37,7 @@ import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
-import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
+import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
@@ -79,7 +79,9 @@ Future<void> setupServiceLocator() async {
       infrastructure.languagePreference,
     )
     ..registerSingleton<AppInfoRepository>(infrastructure.appInfo)
-    ..registerSingleton<BookmarkRepository>(infrastructure.bookmarks)
+    ..registerSingleton<BackupNotificationRepository>(
+      infrastructure.backupNotifications,
+    )
     ..registerSingleton<ExternalLinkLauncher>(infrastructure.externalLinks)
     ..registerSingleton<AuthRepository>(infrastructure.auth)
     ..registerSingleton<SessionRepository>(infrastructure.sessions)
@@ -131,21 +133,6 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerFactory<SetLogLevelUseCase>(
     () => SetLogLevelUseCase(sl<DebugSettingsRepository>(), sl<AppLogger>()),
-  );
-  sl.registerFactory<ListBookmarksUseCase>(
-    () => ListBookmarksUseCase(sl<BookmarkRepository>()),
-  );
-  sl.registerFactory<GetBookmarkUseCase>(
-    () => GetBookmarkUseCase(sl<BookmarkRepository>()),
-  );
-  sl.registerFactory<AddBookmarkUseCase>(
-    () => AddBookmarkUseCase(sl<BookmarkRepository>(), sl<AppLogger>()),
-  );
-  sl.registerFactory<RemoveBookmarkUseCase>(
-    () => RemoveBookmarkUseCase(sl<BookmarkRepository>(), sl<AppLogger>()),
-  );
-  sl.registerFactory<OpenBookmarkUseCase>(
-    () => OpenBookmarkUseCase(sl<ExternalLinkLauncher>(), sl<AppLogger>()),
   );
   sl.registerFactory<LoginUseCase>(
     () => LoginUseCase(
@@ -212,9 +199,28 @@ Future<void> setupServiceLocator() async {
       sl<UploadHistoryRepository>(),
       sl<SyncLeaseRepository>(),
       sl<UploadPhotosUseCase>(),
+      sl<RecordBackupResultUseCase>(),
       sl<AppLogger>(),
       leaseHolder: 'foreground',
     ),
+  );
+  sl.registerFactory<RecordBackupResultUseCase>(
+    () => RecordBackupResultUseCase(
+      sl<BackupNotificationRepository>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<ListBackupNotificationsUseCase>(
+    () => ListBackupNotificationsUseCase(sl<BackupNotificationRepository>()),
+  );
+  sl.registerFactory<GetUnreadNotificationCountUseCase>(
+    () => GetUnreadNotificationCountUseCase(sl<BackupNotificationRepository>()),
+  );
+  sl.registerFactory<MarkNotificationsReadUseCase>(
+    () => MarkNotificationsReadUseCase(sl<BackupNotificationRepository>()),
+  );
+  sl.registerFactory<WatchBackupNotificationsUseCase>(
+    () => WatchBackupNotificationsUseCase(sl<BackupNotificationRepository>()),
   );
   sl.registerFactory<GetAutoUploadEnabledUseCase>(
     () => GetAutoUploadEnabledUseCase(sl<AutoUploadSettingsRepository>()),

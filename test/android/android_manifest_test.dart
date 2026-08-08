@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/bookmark.dart';
 import 'package:flutterbase/shared/app_config.dart';
 
 /// Guards the half of the deep-link contract that lives outside Dart.
@@ -87,23 +86,23 @@ void main() {
       expect(manifest, contains('android:exported="true"'));
     });
 
-    test('every scheme a bookmark may use is visible to canLaunchUrl', () {
+    test('every web scheme an external link may use is visible to '
+        'canLaunchUrl', () {
       // The <queries> block gates package visibility on API 30+. A scheme
-      // the domain accepts but that is missing here makes canLaunchUrl
-      // report an openable URL as unopenable.
+      // missing here makes canLaunchUrl report an openable URL as
+      // unopenable — url_launcher sits behind the ExternalLinkLauncher
+      // port and must be able to see handlers for both web schemes.
       final queries = RegExp(
         r'<queries>.*?</queries>',
         dotAll: true,
       ).firstMatch(manifest);
       expect(queries, isNotNull, reason: 'no <queries> element found');
 
-      for (final scheme in allowedBookmarkSchemes) {
+      for (final scheme in const ['http', 'https']) {
         expect(
           queries!.group(0),
           contains('android:scheme="$scheme"'),
-          reason:
-              '"$scheme" is in allowedBookmarkSchemes, so <queries> has to '
-              'declare it too.',
+          reason: '<queries> has to declare "$scheme".',
         );
       }
     });

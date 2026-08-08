@@ -143,8 +143,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get drawerLogs => 'ログ';
   @override
-  String get drawerBookmarks => 'ブックマーク';
-  @override
   String get drawerDeepLink => 'ディープリンク';
 
   // ─── Home tab ─────────────────────────────────────────────────────────
@@ -206,8 +204,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsDebug => 'デバッグ情報';
   @override
   String get settingsLogs => 'ログ';
-  @override
-  String get settingsBookmarks => 'ブックマーク';
   @override
   String get settingsDeepLink => 'ディープリンク';
 
@@ -361,57 +357,17 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get logLevelError => 'Error';
 
-  // ─── Bookmarks (sample feature) ──────────────────────────────────────
+  // ─── Notifications ───────────────────────────────────────────────────
   @override
-  String get bookmarksTitle => 'ブックマーク';
+  String get notificationsTitle => '通知';
   @override
-  String get bookmarksEmpty => 'ブックマークがありません';
+  String get notificationsEmpty => '通知はまだありません';
   @override
-  String get bookmarksEmptyHint => '保存したリンクは端末内の SQLite に保存されます。';
+  String get notificationsEmptyHint => 'バックアップの結果がここに表示されます。';
   @override
-  String get bookmarksAdd => 'ブックマークを追加';
+  String get notificationBackupCompleted => 'バックアップが完了しました';
   @override
-  String get bookmarksAddTitle => '新しいブックマーク';
-  @override
-  String get bookmarksTitleLabel => 'タイトル';
-  @override
-  String get bookmarksTitleHint => 'Flutter ドキュメント';
-  @override
-  String get bookmarksUrlLabel => 'URL';
-  @override
-  String get bookmarksUrlHint => 'https://docs.flutter.dev';
-  @override
-  String get bookmarksSave => '保存';
-  @override
-  String get bookmarksCancel => 'キャンセル';
-  @override
-  String get bookmarksInvalidInput => 'タイトルと http/https の URL を入力してください。';
-  @override
-  String get bookmarksSaved => 'ブックマークを保存しました';
-  @override
-  String get bookmarksRemoved => 'ブックマークを削除しました';
-  @override
-  String get bookmarkDetailTitle => 'ブックマーク';
-  @override
-  String get bookmarkNotFound => 'ブックマークが見つかりません';
-  @override
-  String get bookmarkNotFoundHint => '削除されたか、別の端末のリンクを開いた可能性があります。';
-  @override
-  String get bookmarkOpen => 'リンクを開く';
-  @override
-  String get bookmarkOpenFailed => 'このリンクを開けるアプリがありません';
-  @override
-  String get bookmarkRemove => '削除';
-  @override
-  String get bookmarkRemoveConfirmTitle => 'ブックマークの削除';
-  @override
-  String get bookmarkRemoveConfirmBody => 'このブックマークを端末から削除しますか？';
-  @override
-  String get bookmarkUrlLabel => 'URL';
-  @override
-  String get bookmarkCreatedAtLabel => '保存日時';
-  @override
-  String get bookmarkDeepLinkLabel => 'ディープリンク';
+  String get notificationBackupHadFailures => 'バックアップでエラーが発生しました';
 
   // ─── Deep links (App Links) ──────────────────────────────────────────
   @override

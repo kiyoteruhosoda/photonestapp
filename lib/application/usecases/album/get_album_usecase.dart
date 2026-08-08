@@ -4,7 +4,8 @@ import 'package:flutterbase/domain/value_objects/album_id.dart';
 
 /// Loads one album with one page of its media, or null when it does not
 /// exist. The screen keeps asking for the next [mediaPage] until it has
-/// accumulated `mediaTotal` items.
+/// accumulated `mediaTotal` items — or, when the server reports no total,
+/// until a page comes back short.
 final class GetAlbumUseCase {
   const GetAlbumUseCase(this._albums);
 

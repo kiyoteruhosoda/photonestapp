@@ -29,8 +29,7 @@ App Links は「どれか 1 つが欠けても静かに失敗する」仕組み�
 | ルート | 画面 | App Link |
 |---|---|---|
 | `/` | メイン | `https://<host>/` |
-| `/bookmarks` | ブックマーク一覧 | `https://<host>/bookmarks` |
-| `/bookmarks/:id` | ブックマーク詳細 | `https://<host>/bookmarks/42` |
+| `/albums/:id` | アルバム詳細 | `https://<host>/albums/42` |
 | `/link` | ディープリンク診断 | `https://<host>/link?ref=email` |
 | `/about` `/debug` `/logs` | システム画面 | 同上 |
 
@@ -41,9 +40,9 @@ App Links は「どれか 1 つが欠けても静かに失敗する」仕組み�
 
 ### カスタムスキームは 3 スラッシュ
 
-`flutterbase:///bookmarks/1` のように、**authority を空**にしてください。
+`flutterbase:///albums/1` のように、**authority を空**にしてください。
 Android の Flutter embedding は受け取った URI の *path* からアプリ内ルートを
-組み立て、authority を捨てます。`flutterbase://bookmarks/1` と書くと
+組み立て、authority を捨てます。`flutterbase://albums/1` と書くと
 ルートは `/1` になり、どのルートにも一致しません。
 `AppConfig.customLink()` はこの形を生成します。
 
@@ -55,8 +54,8 @@ Android の Flutter embedding は受け取った URI の *path* からアプリ�
 外から来た URL は壊れていることがあります。テンプレートはすべて
 画面上の状態として扱い、例外にしません。
 
-- `/bookmarks/abc` → `BookmarkId.tryParse` が null → 詳細画面の not-found 表示
-- `/bookmarks/999`（削除済み）→ リポジトリが null → 同上
+- `/albums/abc` → `AlbumId.tryParse` が null → 詳細画面の not-found 表示
+- `/albums/999`（存在しない）→ リポジトリが null → 同上
 - `/no-such-screen` → `errorBuilder` → `NotFoundPage`
 
 いずれの場合もホーム画面が下に積まれているため、戻る操作が行き止まりになりません。
@@ -111,7 +110,7 @@ https://<appLinkHost>/.well-known/assetlinks.json
 # App Link（検証済みなら実機のブラウザからも同じ挙動）
 adb shell am start -a android.intent.action.VIEW \
   -c android.intent.category.BROWSABLE \
-  -d "https://flutterbase.example.com/bookmarks/1"
+  -d "https://flutterbase.example.com/albums/1"
 
 # カスタムスキーム（検証不要）
 adb shell am start -a android.intent.action.VIEW \
@@ -122,7 +121,7 @@ adb shell am start -a android.intent.action.VIEW \
 同じコマンドはアプリ内の `/link` 画面にも表示され、コピーできます。
 
 ルーターに届いたリンクは必ず 1 行ログに残ります
-（`[Router] → /bookmarks/1`）。ログ画面（デバッグモード時のみ表示）から
+（`[Router] → /albums/1`）。ログ画面（デバッグモード時のみ表示）から
 確認できます。「リンクがアプリに届いているのか、それともルートが
 一致していないのか」を切り分けるのに使ってください。
 

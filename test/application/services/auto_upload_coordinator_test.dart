@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
+import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 
@@ -16,6 +17,7 @@ void main() {
   late FakeSessionRepository sessions;
   late FakeBackgroundSyncScheduler backgroundSync;
   late FakeSyncLeaseRepository syncLease;
+  late FakeBackupNotificationRepository notifications;
   late RecordingAppLogger logger;
 
   setUp(() {
@@ -29,6 +31,7 @@ void main() {
     sessions = FakeSessionRepository(testAuthSession);
     backgroundSync = FakeBackgroundSyncScheduler();
     syncLease = FakeSyncLeaseRepository();
+    notifications = FakeBackupNotificationRepository();
     logger = RecordingAppLogger();
   });
 
@@ -42,6 +45,7 @@ void main() {
         history,
         syncLease,
         UploadPhotosUseCase(library, uploads, history, logger),
+        RecordBackupResultUseCase(notifications, logger),
         logger,
         leaseHolder: 'foreground',
       ),

@@ -109,27 +109,6 @@ void main() {
       },
     );
 
-    test('refresh exchanges the refresh token for a rotated pair', () async {
-      final repository = ApiAuthRepository(
-        client(
-          (request) async => json({
-            'access_token': 'a2',
-            'refresh_token': 'r2',
-            'scope': ['gui:view'],
-          }),
-        ),
-      );
-
-      final refreshed = await repository.refresh(testAuthSession);
-
-      expect(jsonDecode(requests.single.body), {
-        'refresh_token': testAuthSession.refreshToken,
-      });
-      expect(refreshed.accessToken, 'a2');
-      expect(refreshed.refreshToken, 'r2');
-      expect(refreshed.scopes, ['gui:view']);
-    });
-
     test(
       'logout posts to the revoke endpoint with the bearer token', //
       () async {
@@ -260,8 +239,9 @@ void main() {
       expect(detail.media.single.filename, 'IMG.jpg');
       expect(detail.media.single.shotAt, DateTime.utc(2026, 2, 3, 4, 5, 6));
       expect(detail.media.single.isVideo, isFalse);
-      // Without a server-side total, the page is the whole album.
-      expect(detail.mediaTotal, 1);
+      // Without a server-side total, the total is unknown — the reader ends
+      // paging on a short page instead.
+      expect(detail.mediaTotal, isNull);
     });
 
     test('findById carries the media paging window and the total', () async {

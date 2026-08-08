@@ -2,13 +2,12 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
-import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/entities/album_media_item.dart';
 import 'package:flutterbase/domain/entities/app_info.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/entities/bookmark.dart';
+import 'package:flutterbase/domain/entities/backup_notification.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
@@ -17,7 +16,7 @@ import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
-import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
+import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
@@ -31,7 +30,6 @@ import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/app_language.dart';
 import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
-import 'package:flutterbase/domain/value_objects/bookmark_id.dart';
 import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:flutterbase/domain/value_objects/login_credentials.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
@@ -144,85 +142,101 @@ final class FakeAppInfoRepository implements AppInfoRepository {
   }
 }
 
-/// A fixed instant, so a test never has to reason about the wall clock.
-final DateTime testBookmarkCreatedAt = DateTime.utc(2026, 8, 3, 12, 30);
+/// A fixed instant for notification fixtures, so tests never reason about
+/// the wall clock.
+final DateTime testNotificationOccurredAt = DateTime.utc(2026, 8, 8, 9, 30);
 
-/// Builds a stored bookmark without going through a repository.
-Bookmark testBookmark({
+/// Builds a stored notification without going through a repository.
+BackupNotification testBackupNotification({
   int id = 1,
-  String title = 'Flutter',
-  String url = 'https://docs.flutter.dev',
-  DateTime? createdAt,
+  int uploadedCount = 3,
+  int failedCount = 0,
+  DateTime? occurredAt,
+  bool isRead = false,
 }) {
-  return Bookmark(
-    id: BookmarkId(id),
-    title: title,
-    url: Uri.parse(url),
-    createdAt: createdAt ?? testBookmarkCreatedAt,
+  return BackupNotification(
+    id: id,
+    uploadedCount: uploadedCount,
+    failedCount: failedCount,
+    occurredAt: occurredAt ?? testNotificationOccurredAt,
+    isRead: isRead,
   );
 }
 
-/// In-memory [BookmarkRepository].
+/// In-memory [BackupNotificationRepository].
 ///
-/// Assigns ids the way SQLite does — monotonically, never reusing one — so a
-/// test that deletes and re-adds sees the same id behaviour as production.
-final class FakeBookmarkRepository implements BookmarkRepository {
-  FakeBookmarkRepository([List<Bookmark>? initial]) {
-    for (final bookmark in initial ?? const <Bookmark>[]) {
-      _stored[bookmark.id] = bookmark;
-      if (bookmark.id.value >= _nextId) _nextId = bookmark.id.value + 1;
+/// Assigns ids the way SQLite does — monotonically, never reusing one.
+final class FakeBackupNotificationRepository
+    implements BackupNotificationRepository {
+  FakeBackupNotificationRepository([List<BackupNotification>? initial]) {
+    for (final notification in initial ?? const <BackupNotification>[]) {
+      _stored[notification.id] = notification;
+      if (notification.id >= _nextId) _nextId = notification.id + 1;
     }
   }
 
-  final Map<BookmarkId, Bookmark> _stored = <BookmarkId, Bookmark>{};
+  final Map<int, BackupNotification> _stored = <int, BackupNotification>{};
   int _nextId = 1;
-
-  /// Ids passed to [remove], in call order.
-  final List<BookmarkId> removed = <BookmarkId>[];
-
-  /// Drafts passed to [add], in call order.
-  final List<BookmarkDraft> added = <BookmarkDraft>[];
+  final StreamController<void> _changes = StreamController<void>.broadcast();
 
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
-  /// Creation timestamp handed to the next [add].
-  DateTime createdAt = testBookmarkCreatedAt;
+  /// The id batches [markRead] was asked to mark, in call order.
+  final List<List<int>> markReadCalls = <List<int>>[];
 
-  List<Bookmark> get stored => _stored.values.toList();
+  List<BackupNotification> get stored => _stored.values.toList();
 
   @override
-  Future<List<Bookmark>> findAll() async {
+  Stream<void> get changes => _changes.stream;
+
+  @override
+  Future<List<BackupNotification>> findAll() async {
     _failIfAsked();
-    final all = _stored.values.toList()
-      ..sort((a, b) => b.id.value.compareTo(a.id.value));
+    final all = _stored.values.toList()..sort((a, b) => b.id.compareTo(a.id));
     return all;
   }
 
   @override
-  Future<Bookmark?> findById(BookmarkId id) async {
+  Future<BackupNotification> add({
+    required int uploadedCount,
+    required int failedCount,
+    required DateTime occurredAt,
+  }) async {
     _failIfAsked();
-    return _stored[id];
-  }
-
-  @override
-  Future<Bookmark> add(BookmarkDraft draft) async {
-    _failIfAsked();
-    added.add(draft);
-    final bookmark = Bookmark.fromDraft(
-      id: BookmarkId(_nextId++),
-      draft: draft,
-      createdAt: createdAt,
+    final notification = BackupNotification(
+      id: _nextId++,
+      uploadedCount: uploadedCount,
+      failedCount: failedCount,
+      occurredAt: occurredAt,
     );
-    _stored[bookmark.id] = bookmark;
-    return bookmark;
+    _stored[notification.id] = notification;
+    _changes.add(null);
+    return notification;
   }
 
   @override
-  Future<void> remove(BookmarkId id) async {
+  Future<int> unreadCount() async {
     _failIfAsked();
-    removed.add(id);
-    _stored.remove(id);
+    return _stored.values.where((n) => !n.isRead).length;
+  }
+
+  @override
+  Future<void> markRead(List<int> ids) async {
+    _failIfAsked();
+    markReadCalls.add(List.of(ids));
+    for (final id in ids) {
+      final n = _stored[id];
+      if (n == null) continue;
+      _stored[id] = BackupNotification(
+        id: n.id,
+        uploadedCount: n.uploadedCount,
+        failedCount: n.failedCount,
+        occurredAt: n.occurredAt,
+        isRead: true,
+      );
+    }
+    _changes.add(null);
   }
 
   void _failIfAsked() {
@@ -307,8 +321,8 @@ AlbumMediaItem testAlbumMediaItem({
 final class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({AuthSession? session}) : sessionToReturn = session;
 
-  /// Session handed back by [login] / [refresh]; defaults to a session built
-  /// from the submitted credentials.
+  /// Session handed back by [login]; defaults to a session built from the
+  /// submitted credentials.
   AuthSession? sessionToReturn;
 
   /// When set, every method throws this instead of answering.
@@ -332,12 +346,6 @@ final class FakeAuthRepository implements AuthRepository {
           email: credentials.email,
           scopes: const ['gui:view'],
         );
-  }
-
-  @override
-  Future<AuthSession> refresh(AuthSession session) async {
-    _failIfAsked();
-    return sessionToReturn ?? session;
   }
 
   @override
@@ -414,6 +422,10 @@ final class FakeAlbumRepository implements AlbumRepository {
   List<Album> albums;
   Map<AlbumId, AlbumDetail> details;
 
+  /// When false, [findById] omits `mediaTotal` — models a server that does
+  /// not report the album's total media count.
+  bool reportsMediaTotal = true;
+
   /// When set, every method throws this instead of answering.
   AppError? failure;
 
@@ -445,7 +457,7 @@ final class FakeAlbumRepository implements AlbumRepository {
     return AlbumDetail(
       album: detail.album,
       media: page,
-      mediaTotal: detail.media.length,
+      mediaTotal: reportsMediaTotal ? detail.media.length : null,
     );
   }
 
@@ -716,20 +728,4 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
 
   @override
   Stream<void> get libraryChanges => changes.stream;
-}
-
-/// Records the URLs handed to the platform instead of launching them.
-final class RecordingExternalLinkLauncher implements ExternalLinkLauncher {
-  RecordingExternalLinkLauncher({this.result = true});
-
-  /// What [open] reports back — false models "no app can handle this".
-  bool result;
-
-  final List<Uri> opened = <Uri>[];
-
-  @override
-  Future<bool> open(Uri url) async {
-    opened.add(url);
-    return result;
-  }
 }

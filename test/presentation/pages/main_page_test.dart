@@ -120,8 +120,6 @@ void main() {
     testWidgets('renders a notifications action', (tester) async {
       await pumpInScope(tester, const MainPage());
       expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.notifications_outlined));
-      await tester.pumpAndSettle();
     });
   });
 
@@ -276,14 +274,51 @@ void main() {
       expect(scope.location, '/debug');
     });
 
-    testWidgets('Bookmarks in the drawer navigates to /bookmarks', (
+    testWidgets('the bell button navigates to /notifications', (tester) async {
+      final scope = await pumpInScope(tester, const MainPage());
+      await tester.tap(find.byIcon(Icons.notifications_outlined));
+      await tester.pumpAndSettle();
+      expect(scope.location, '/notifications');
+    });
+
+    testWidgets('the bell shows a badge while notifications are unread', (
+      tester,
+    ) async {
+      final scope = TestScope(
+        notificationRepository: FakeBackupNotificationRepository([
+          testBackupNotification(id: 1),
+          testBackupNotification(id: 2),
+        ]),
+      );
+      await pumpInScope(tester, const MainPage(), scope: scope);
+      expect(find.byType(Badge), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+    });
+
+    testWidgets('the bell stays plain when everything was seen', (
+      tester,
+    ) async {
+      await pumpInScope(tester, const MainPage());
+      expect(find.byType(Badge), findsNothing);
+    });
+
+    testWidgets('the badge appears when a sync pass records a result', (
       tester,
     ) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await openDrawer(tester);
-      await tester.tap(inDrawer(l10n.drawerBookmarks));
+      expect(find.byType(Badge), findsNothing);
+
+      // What RecordBackupResultUseCase does after a foreground pass — the
+      // change stream is what carries it to the bell.
+      await scope.notificationRepository.add(
+        uploadedCount: 2,
+        failedCount: 0,
+        occurredAt: testNotificationOccurredAt,
+      );
       await tester.pumpAndSettle();
-      expect(scope.location, '/bookmarks');
+
+      expect(find.byType(Badge), findsOneWidget);
+      expect(find.text('1'), findsOneWidget);
     });
 
     testWidgets('Deep Links in the drawer navigates to /link', (tester) async {
@@ -415,13 +450,6 @@ void main() {
       await selectTab(tester, 2);
       await scrollAndTap(tester, l10n.settingsDebug);
       expect(scope.location, '/debug');
-    });
-
-    testWidgets('the Bookmarks row navigates to /bookmarks', (tester) async {
-      final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
-      await scrollAndTap(tester, l10n.settingsBookmarks);
-      expect(scope.location, '/bookmarks');
     });
 
     testWidgets('the Deep Links row navigates to /link', (tester) async {

@@ -2,13 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/domain/value_objects/bookmark_id.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/pages/albums/album_detail_page.dart';
 import 'package:flutterbase/presentation/pages/auth/login_page.dart';
-import 'package:flutterbase/presentation/pages/bookmarks/bookmark_detail_page.dart';
-import 'package:flutterbase/presentation/pages/bookmarks/bookmarks_page.dart';
 import 'package:flutterbase/presentation/pages/main_page.dart';
+import 'package:flutterbase/presentation/pages/notifications/notifications_page.dart';
 import 'package:flutterbase/presentation/pages/system/about_page.dart';
 import 'package:flutterbase/presentation/pages/system/debug_page.dart';
 import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
@@ -99,6 +97,10 @@ class AppRouter {
           // to instead of a dead-end stack of one.
           routes: <RouteBase>[
             GoRoute(
+              // The deep-link target. `tryParse` returns null for anything
+              // that is not a positive integer and the page renders its
+              // not-found state: a link from outside the app is input, not
+              // a promise.
               path: _relative(AppRoutes.albumDetail),
               builder: (context, state) => AlbumDetailPage(
                 id: AlbumId.tryParse(
@@ -123,22 +125,8 @@ class AppRouter {
               builder: (context, state) => DeepLinkPage(uri: state.uri),
             ),
             GoRoute(
-              path: _relative(AppRoutes.bookmarks),
-              builder: (context, state) => const BookmarksPage(),
-              routes: <RouteBase>[
-                GoRoute(
-                  // The deep-link target. `tryParse` returns null for
-                  // anything that is not a positive integer and the page
-                  // renders its not-found state: a link from outside the app
-                  // is input, not a promise.
-                  path: ':${AppRoutes.bookmarkIdParam}',
-                  builder: (context, state) => BookmarkDetailPage(
-                    id: BookmarkId.tryParse(
-                      state.pathParameters[AppRoutes.bookmarkIdParam],
-                    ),
-                  ),
-                ),
-              ],
+              path: _relative(AppRoutes.notifications),
+              builder: (context, state) => const NotificationsPage(),
             ),
           ],
         ),

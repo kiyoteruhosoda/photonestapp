@@ -12,11 +12,6 @@ import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
 import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/add_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/get_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/list_bookmarks_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/open_bookmark_usecase.dart';
-import 'package:flutterbase/application/usecases/bookmark/remove_bookmark_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/get_debug_settings_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.dart';
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
@@ -24,6 +19,10 @@ import 'package:flutterbase/application/usecases/language/get_language_preferenc
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
@@ -34,7 +33,7 @@ import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.da
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_info_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
-import 'package:flutterbase/presentation/providers/bookmark_providers.dart';
+import 'package:flutterbase/presentation/providers/notification_providers.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:flutterbase/presentation/providers/settings_providers.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
@@ -50,13 +49,6 @@ import 'package:flutterbase/presentation/providers/upload_providers.dart';
 List<Override> buildProviderOverrides() {
   return <Override>[
     appLoggerProvider.overrideWithValue(sl<AppLogger>()),
-    listBookmarksUseCaseProvider.overrideWithValue(sl<ListBookmarksUseCase>()),
-    getBookmarkUseCaseProvider.overrideWithValue(sl<GetBookmarkUseCase>()),
-    addBookmarkUseCaseProvider.overrideWithValue(sl<AddBookmarkUseCase>()),
-    removeBookmarkUseCaseProvider.overrideWithValue(
-      sl<RemoveBookmarkUseCase>(),
-    ),
-    openBookmarkUseCaseProvider.overrideWithValue(sl<OpenBookmarkUseCase>()),
     listAlbumsUseCaseProvider.overrideWithValue(sl<ListAlbumsUseCase>()),
     getAlbumUseCaseProvider.overrideWithValue(sl<GetAlbumUseCase>()),
     getMediaThumbnailUseCaseProvider.overrideWithValue(
@@ -64,6 +56,18 @@ List<Override> buildProviderOverrides() {
     ),
     getMediaPlaybackUseCaseProvider.overrideWithValue(
       sl<GetMediaPlaybackUseCase>(),
+    ),
+    listBackupNotificationsUseCaseProvider.overrideWithValue(
+      sl<ListBackupNotificationsUseCase>(),
+    ),
+    getUnreadNotificationCountUseCaseProvider.overrideWithValue(
+      sl<GetUnreadNotificationCountUseCase>(),
+    ),
+    markNotificationsReadUseCaseProvider.overrideWithValue(
+      sl<MarkNotificationsReadUseCase>(),
+    ),
+    watchBackupNotificationsUseCaseProvider.overrideWithValue(
+      sl<WatchBackupNotificationsUseCase>(),
     ),
     listUploadCandidatesUseCaseProvider.overrideWithValue(
       sl<ListUploadCandidatesUseCase>(),

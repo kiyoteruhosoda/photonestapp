@@ -68,6 +68,7 @@ class TestScope {
     FakeSessionRepository? sessionRepository,
     FakeApiEndpointRepository? apiEndpointRepository,
     FakeAlbumRepository? albumRepository,
+    FakeAlbumSnapshotRepository? albumSnapshotRepository,
     FakeMediaThumbnailRepository? mediaThumbnailRepository,
     FakeMediaThumbnailCacheRepository? mediaThumbnailCacheRepository,
     FakeMediaPlaybackRepository? mediaPlaybackRepository,
@@ -95,6 +96,8 @@ class TestScope {
        apiEndpointRepository =
            apiEndpointRepository ?? FakeApiEndpointRepository(),
        albumRepository = albumRepository ?? FakeAlbumRepository(),
+       albumSnapshotRepository =
+           albumSnapshotRepository ?? FakeAlbumSnapshotRepository(),
        mediaThumbnailRepository =
            mediaThumbnailRepository ?? FakeMediaThumbnailRepository(),
        mediaThumbnailCacheRepository =
@@ -119,6 +122,7 @@ class TestScope {
   final FakeSessionRepository sessionRepository;
   final FakeApiEndpointRepository apiEndpointRepository;
   final FakeAlbumRepository albumRepository;
+  final FakeAlbumSnapshotRepository albumSnapshotRepository;
   final FakeMediaThumbnailRepository mediaThumbnailRepository;
   final FakeMediaThumbnailCacheRepository mediaThumbnailCacheRepository;
   final FakeMediaPlaybackRepository mediaPlaybackRepository;
@@ -192,10 +196,10 @@ class TestScope {
         WatchBackupNotificationsUseCase(notificationRepository),
       ),
       listAlbumsUseCaseProvider.overrideWithValue(
-        ListAlbumsUseCase(albumRepository),
+        ListAlbumsUseCase(albumRepository, albumSnapshotRepository, logger),
       ),
       getAlbumUseCaseProvider.overrideWithValue(
-        GetAlbumUseCase(albumRepository),
+        GetAlbumUseCase(albumRepository, albumSnapshotRepository, logger),
       ),
       getMediaThumbnailUseCaseProvider.overrideWithValue(
         GetMediaThumbnailUseCase(

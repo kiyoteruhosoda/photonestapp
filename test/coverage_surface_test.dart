@@ -63,6 +63,7 @@ import 'package:flutterbase/domain/entities/log_entry.dart';
 import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
+import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
@@ -103,6 +104,7 @@ import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_debug_settings_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/sqflite_album_snapshot_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_backup_notification_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_sync_lease_repository.dart';

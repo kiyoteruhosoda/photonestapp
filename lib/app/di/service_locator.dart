@@ -33,6 +33,7 @@ import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
+import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
@@ -87,6 +88,7 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<SessionRepository>(infrastructure.sessions)
     ..registerSingleton<ApiEndpointRepository>(infrastructure.apiEndpoints)
     ..registerSingleton<AlbumRepository>(infrastructure.albums)
+    ..registerSingleton<AlbumSnapshotRepository>(infrastructure.albumSnapshots)
     ..registerSingleton<MediaThumbnailRepository>(
       infrastructure.mediaThumbnails,
     )
@@ -159,10 +161,18 @@ Future<void> setupServiceLocator() async {
     () => GetApiEndpointUseCase(sl<ApiEndpointRepository>()),
   );
   sl.registerFactory<ListAlbumsUseCase>(
-    () => ListAlbumsUseCase(sl<AlbumRepository>()),
+    () => ListAlbumsUseCase(
+      sl<AlbumRepository>(),
+      sl<AlbumSnapshotRepository>(),
+      sl<AppLogger>(),
+    ),
   );
   sl.registerFactory<GetAlbumUseCase>(
-    () => GetAlbumUseCase(sl<AlbumRepository>()),
+    () => GetAlbumUseCase(
+      sl<AlbumRepository>(),
+      sl<AlbumSnapshotRepository>(),
+      sl<AppLogger>(),
+    ),
   );
   sl.registerFactory<GetMediaThumbnailUseCase>(
     () => GetMediaThumbnailUseCase(

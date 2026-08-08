@@ -15,7 +15,7 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 6;
+  static const int schemaVersion = 7;
 
   /// Table remembering which device photos were already uploaded.
   static const String uploadedPhotosTable = 'uploaded_photos';
@@ -28,6 +28,10 @@ final class AppDatabase {
 
   /// Table holding backup-result notifications for the in-app list.
   static const String backupNotificationsTable = 'backup_notifications';
+
+  /// Table snapshotting album metadata (list and detail pages) for offline
+  /// fallback rendering.
+  static const String albumSnapshotsTable = 'album_snapshots';
 
   /// Opens the database, creating or migrating the schema as needed.
   ///
@@ -56,6 +60,7 @@ final class AppDatabase {
     await db.execute(_createMediaThumbnails);
     await db.execute(_createSyncLeases);
     await db.execute(_createBackupNotifications);
+    await db.execute(_createAlbumSnapshots);
   }
 
   /// `local_id` is the platform's asset identifier; `account_key` names the
@@ -116,6 +121,22 @@ CREATE TABLE $backupNotificationsTable (
 )
 ''';
 
+  /// One row per remembered server answer about albums: the album list, or
+  /// one page of one album's detail — `snapshot_key` says which. `payload`
+  /// is the JSON the repository serialises; `stored_at` records when the
+  /// answer was fetched. Keyed by server + account like the thumbnail
+  /// cache, because album and media ids are only unique per server.
+  static const String _createAlbumSnapshots =
+      '''
+CREATE TABLE $albumSnapshotsTable (
+  account_key TEXT NOT NULL,
+  snapshot_key TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  stored_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, snapshot_key)
+)
+''';
+
   /// Applies the migrations between two schema versions.
   ///
   /// Written as a fall-through ladder — `if (from < 2) { … }`, then
@@ -139,6 +160,9 @@ CREATE TABLE $backupNotificationsTable (
     }
     if (from < 6) {
       await db.execute(_createBackupNotifications);
+    }
+    if (from < 7) {
+      await db.execute(_createAlbumSnapshots);
     }
   }
 }

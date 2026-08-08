@@ -37,6 +37,7 @@ void main() {
         AppDatabase.mediaThumbnailsTable,
         AppDatabase.syncLeasesTable,
         AppDatabase.backupNotificationsTable,
+        AppDatabase.albumSnapshotsTable,
       ]),
     );
   });
@@ -230,6 +231,94 @@ CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
         'occurred_at',
         'read',
       ]),
+    );
+  });
+
+  test('creates the album_snapshots table for offline metadata', () async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(${AppDatabase.albumSnapshotsTable})',
+    );
+    expect(
+      columns.map((row) => row['name']),
+      containsAll(<String>[
+        'account_key',
+        'snapshot_key',
+        'payload',
+        'stored_at',
+      ]),
+    );
+  });
+
+  test('upgrading a v6 database adds the album_snapshots table', () async {
+    // Build a database exactly as schema v6 left it — every current table
+    // except album_snapshots — then let AppDatabase migrate it. This is the
+    // on-device path for installs that predate the offline album snapshot.
+    final path = '${await databaseFactory.getDatabasesPath()}/migrate-v6.db';
+    await databaseFactory.deleteDatabase(path);
+
+    final v6 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 6,
+        onCreate: (db, version) async {
+          await db.execute('''
+CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  uploaded_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
+)
+''');
+          await db.execute('''
+CREATE TABLE ${AppDatabase.mediaThumbnailsTable} (
+  account_key TEXT NOT NULL,
+  media_id INTEGER NOT NULL,
+  size INTEGER NOT NULL,
+  bytes BLOB NOT NULL,
+  byte_count INTEGER NOT NULL,
+  fetched_at TEXT NOT NULL,
+  last_used_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, media_id, size)
+)
+''');
+          await db.execute('''
+CREATE TABLE ${AppDatabase.syncLeasesTable} (
+  name TEXT NOT NULL PRIMARY KEY,
+  holder TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+)
+''');
+          await db.execute('''
+CREATE TABLE ${AppDatabase.backupNotificationsTable} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  uploaded_count INTEGER NOT NULL,
+  failed_count INTEGER NOT NULL,
+  occurred_at TEXT NOT NULL,
+  read INTEGER NOT NULL DEFAULT 0
+)
+''');
+        },
+      ),
+    );
+    await v6.close();
+
+    final migrated = await AppDatabase.open(path: path);
+    addTearDown(() async {
+      await migrated.close();
+      await databaseFactory.deleteDatabase(path);
+    });
+
+    expect(await migrated.getVersion(), AppDatabase.schemaVersion);
+    final tables = await migrated.query(
+      'sqlite_master',
+      columns: <String>['name'],
+      where: 'type = ?',
+      whereArgs: <Object?>['table'],
+    );
+    expect(
+      tables.map((row) => row['name']),
+      contains(AppDatabase.albumSnapshotsTable),
     );
   });
 

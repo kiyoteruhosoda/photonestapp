@@ -72,6 +72,32 @@ void main() {
     expect(find.text(l10n.commonRetry), findsOneWidget);
   });
 
+  testWidgets('offline, the saved snapshot still renders the grid from '
+      'cached thumbnails', (tester) async {
+    // The cold-start regression from PR #6: server unreachable, but this
+    // album's first page was snapshotted and its thumbnails cached on an
+    // earlier run — the grid must render from local data alone.
+    final snapshots = FakeAlbumSnapshotRepository();
+    snapshots.savedDetails[(3, 1, albumMediaPageSize)] = detail();
+    final cache = FakeMediaThumbnailCacheRepository();
+    cache.entries[(1, 256)] = testPngBytes;
+    cache.entries[(2, 256)] = testPngBytes;
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository()
+        ..failure = const NetworkUnreachableError('offline'),
+      albumSnapshotRepository: snapshots,
+      mediaThumbnailRepository: FakeMediaThumbnailRepository()
+        ..failure = const NetworkUnreachableError('offline'),
+      mediaThumbnailCacheRepository: cache,
+    );
+    await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
+
+    expect(find.text('Holiday'), findsOneWidget);
+    expect(find.byType(ThumbnailImage), findsNWidgets(2));
+    // The pixels came from the persistent cache, not the network.
+    expect(scope.mediaThumbnailRepository.fetched, isEmpty);
+  });
+
   testWidgets('tapping a tile opens the full-screen preview and taps close', (
     tester,
   ) async {

@@ -101,10 +101,11 @@ bool canPopFromMainPage(WidgetTester tester) {
 
 void main() {
   group('MainPage — chrome', () {
-    testWidgets('opens on the Albums tab', (tester) async {
+    testWidgets('opens on the Photos tab', (tester) async {
       await pumpInScope(tester, const MainPage());
-      // The default scope has no albums, so the tab shows its empty state.
-      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
+      // The default scope has an empty library, so the tab shows its empty
+      // state.
+      expect(find.textContaining(l10n.photosEmpty), findsOneWidget);
     });
 
     testWidgets('shows the app name in the header', (tester) async {
@@ -112,9 +113,9 @@ void main() {
       expect(find.text(l10n.appName), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('offers three navigation destinations', (tester) async {
+    testWidgets('offers four navigation destinations', (tester) async {
       await pumpInScope(tester, const MainPage());
-      expect(find.byType(NavigationDestination), findsNWidgets(3));
+      expect(find.byType(NavigationDestination), findsNWidgets(4));
     });
 
     testWidgets('renders a notifications action', (tester) async {
@@ -126,7 +127,7 @@ void main() {
   group('MainPage — tabs', () {
     testWidgets('Upload tab shows the auto-upload switch', (tester) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 1);
+      await selectTab(tester, 2);
       expect(find.text(l10n.uploadAutoTitle), findsOneWidget);
       expect(find.byType(SwitchListTile), findsAtLeastNWidgets(1));
     });
@@ -135,19 +136,19 @@ void main() {
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       expect(inBody(l10n.settingsTheme), findsOneWidget);
       expect(inBody(l10n.settingsLanguage), findsOneWidget);
     });
 
-    testWidgets('returns to Albums when the Albums tab is selected again', (
+    testWidgets('returns to Photos when the Photos tab is selected again', (
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       expect(inBody(l10n.settingsTitle), findsOneWidget);
       await selectTab(tester, 0);
-      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
+      expect(find.textContaining(l10n.photosEmpty), findsOneWidget);
     });
 
     testWidgets('the Albums tab lists the stored albums', (tester) async {
@@ -160,6 +161,7 @@ void main() {
         ),
       );
       await pumpInScope(tester, const MainPage(), scope: scope);
+      await selectTab(tester, 1);
       expect(find.text('Summer trip'), findsOneWidget);
       expect(find.text('Family'), findsOneWidget);
     });
@@ -170,13 +172,13 @@ void main() {
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       expect(inBody(l10n.settingsTitle), findsOneWidget);
       expect(canPopFromMainPage(tester), isFalse);
 
       await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
-      expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
+      expect(find.textContaining(l10n.photosEmpty), findsOneWidget);
     });
 
     testWidgets('a back gesture on Home is allowed to pop', (tester) async {
@@ -192,6 +194,7 @@ void main() {
       await pumpInScope(tester, const MainPage());
       await openDrawer(tester);
       expect(inDrawer(AppConfig.appTagline), findsOneWidget);
+      expect(inDrawer(l10n.navPhotos), findsOneWidget);
       expect(inDrawer(l10n.navAlbums), findsOneWidget);
       expect(inDrawer(l10n.navUpload), findsOneWidget);
       expect(inDrawer(l10n.drawerAbout), findsOneWidget);
@@ -243,7 +246,7 @@ void main() {
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 1);
+      await selectTab(tester, 2);
       await openDrawer(tester);
       await tester.tap(inDrawer(l10n.navAlbums));
       await tester.pumpAndSettle();
@@ -343,7 +346,7 @@ void main() {
   group('MainPage — settings', () {
     testWidgets('switching theme persists the choice', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
 
       await scrollAndTap(tester, l10n.settingsThemeDark);
 
@@ -353,7 +356,7 @@ void main() {
 
     testWidgets('every theme option is reachable', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
 
       await scrollAndTap(tester, l10n.settingsThemeDark);
       await scrollAndTapFinder(
@@ -370,7 +373,7 @@ void main() {
 
     testWidgets('switching language persists the choice', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
 
       await scrollAndTap(tester, l10n.settingsLanguageJapanese);
 
@@ -379,7 +382,7 @@ void main() {
 
     testWidgets('every language option is reachable', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
 
       await scrollAndTap(tester, l10n.settingsLanguageJapanese);
       await scrollAndTap(tester, l10n.settingsLanguageEnglish);
@@ -397,7 +400,7 @@ void main() {
       tester,
     ) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       await scrollTo(tester, find.text(l10n.settingsDeveloper));
       expect(find.text(l10n.settingsDeveloper), findsOneWidget);
       expect(find.text(l10n.settingsDebugMode), findsOneWidget);
@@ -408,7 +411,7 @@ void main() {
       tester,
     ) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
 
       await scrollAndTapFinder(tester, find.byType(SwitchListTile));
 
@@ -419,7 +422,7 @@ void main() {
 
     testWidgets('choosing a log level persists it', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
 
       await scrollAndTapFinder(tester, find.byType(DropdownButton<LogLevel>));
       await tester.tap(find.text(l10n.logLevelError).last);
@@ -433,35 +436,35 @@ void main() {
 
     testWidgets('the About row navigates to /about', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       await scrollAndTap(tester, l10n.settingsAbout);
       expect(scope.location, '/about');
     });
 
     testWidgets('the Logs row navigates to /logs', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       await scrollAndTap(tester, l10n.settingsLogs);
       expect(scope.location, '/logs');
     });
 
     testWidgets('the Debug row navigates to /debug', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       await scrollAndTap(tester, l10n.settingsDebug);
       expect(scope.location, '/debug');
     });
 
     testWidgets('the Deep Links row navigates to /link', (tester) async {
       final scope = await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       await scrollAndTap(tester, l10n.settingsDeepLink);
       expect(scope.location, '/link');
     });
 
     testWidgets('the Licenses row opens the license page', (tester) async {
       await pumpInScope(tester, const MainPage());
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       await scrollAndTap(tester, l10n.settingsLicenses);
       expect(find.byType(LicensePage), findsOneWidget);
     });
@@ -473,7 +476,7 @@ void main() {
         debugSettingsRepository: FakeDebugSettingsRepository(debugMode: false),
       );
       await pumpInScope(tester, const MainPage(), scope: scope);
-      await selectTab(tester, 2);
+      await selectTab(tester, 3);
       expect(find.text(l10n.settingsDeveloper), findsNothing);
       expect(find.text(l10n.settingsLogs), findsNothing);
       expect(find.text(l10n.settingsDebug), findsNothing);

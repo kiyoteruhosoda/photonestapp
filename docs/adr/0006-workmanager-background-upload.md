@@ -23,8 +23,10 @@ Android での選択肢は次の 3 つだった。
 
 **1. WorkManager の 15 分周期タスクを採用する。**
 
-- 制約は `networkType: connected` と `requiresBatteryNotLow: true`。
-  オフラインでの空振りと低電池時の実行を OS 側で抑止する。
+- 制約は `networkType` と `requiresBatteryNotLow: true`。オフラインでの
+  空振りと低電池時の実行を OS 側で抑止する。`networkType` は当初
+  `connected` 固定だったが、設定「Wi-Fi 接続時のみ」（既定 ON）の導入で
+  `unmetered` / `connected` を切り替えるようになった（CHANGELOG 参照）。
 - Application に `BackgroundSyncScheduler` ポートを置き、
   `WorkmanagerBackgroundSyncScheduler`（Infrastructure）が実装する。
   スケジュールの登録・解除は自動アップロードの ON/OFF
@@ -51,4 +53,5 @@ Android での選択肢は次の 3 つだった。
   パスはスキップ（`SyncSkipReason.anotherPassRunning`）となり、次の契機で
   再実行される。
 - iOS を追加する場合は `registerPeriodicTask` の BGTaskScheduler 対応
-  （Info.plist の identifier 宣言）が別途必要になる。
+  （Info.plist の identifier 宣言）が別途必要になる。なお iOS 版は
+  作らない判断になった（ADR-0008）ので、この項は保留である。

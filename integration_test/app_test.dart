@@ -9,6 +9,7 @@ import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
 import 'package:flutterbase/presentation/pages/auth/login_page.dart';
+import 'package:flutterbase/presentation/pages/media/media_tab.dart';
 import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -76,7 +77,7 @@ void main() {
       expect(find.text(integrationSession.email), findsOneWidget);
     });
 
-    testWidgets('the albums tab renders against the real dependency graph', (
+    testWidgets('the media tabs render against the real dependency graph', (
       tester,
     ) async {
       await sl<SessionRepository>().save(integrationSession);
@@ -84,11 +85,16 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
 
-      // The home tab is the album list. No PhotoNest server is reachable in
-      // this run, so the tab settles into its error state — reaching it
-      // still means the router resolved, the DI graph produced the use
-      // case, and the API client answered with a typed failure instead of
-      // crashing.
+      // The home tab is the library timeline. No PhotoNest server is
+      // reachable in this run, so the tab settles into its error state —
+      // reaching it still means the router resolved, the DI graph produced
+      // the use case, and the API client answered with a typed failure
+      // instead of crashing.
+      expect(find.byType(MediaTab), findsOneWidget);
+
+      // The same for the album list, one tab over.
+      await tester.tap(find.byIcon(Icons.photo_album_outlined).first);
+      await tester.pumpAndSettle();
       expect(find.byType(AlbumsTab), findsOneWidget);
     });
 

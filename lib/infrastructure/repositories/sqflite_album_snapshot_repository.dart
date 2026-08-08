@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
@@ -251,7 +251,7 @@ final class SqfliteAlbumSnapshotRepository implements AlbumSnapshotRepository {
     );
   }
 
-  static Map<String, Object?> _mediaItemToJson(AlbumMediaItem item) {
+  static Map<String, Object?> _mediaItemToJson(MediaItem item) {
     return {
       'id': item.id.value,
       'filename': item.filename,
@@ -260,9 +260,9 @@ final class SqfliteAlbumSnapshotRepository implements AlbumSnapshotRepository {
     };
   }
 
-  static AlbumMediaItem _mediaItemFromJson(Map<String, dynamic> json) {
+  static MediaItem _mediaItemFromJson(Map<String, dynamic> json) {
     final shotAt = json['shotAt'] as String?;
-    return AlbumMediaItem(
+    return MediaItem(
       id: MediaId(json['id'] as int),
       filename: json['filename'] as String,
       shotAt: shotAt == null ? null : DateTime.parse(shotAt).toUtc(),

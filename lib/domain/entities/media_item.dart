@@ -1,8 +1,13 @@
 import 'package:flutterbase/domain/value_objects/media_id.dart';
 
-/// One media item inside an album, as the album detail endpoint reports it.
-final class AlbumMediaItem {
-  const AlbumMediaItem({
+/// One photo or video held by the server, as its listing endpoints report
+/// it.
+///
+/// The same shape serves the album detail grid and the whole-library
+/// timeline: both list media, and neither needs more than this to render a
+/// tile and open a viewer.
+final class MediaItem {
+  const MediaItem({
     required this.id,
     required this.filename,
     this.shotAt,
@@ -21,11 +26,11 @@ final class AlbumMediaItem {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) || (other is AlbumMediaItem && other.id == id);
+      identical(this, other) || (other is MediaItem && other.id == id);
 
   @override
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'AlbumMediaItem(${id.value}, $filename)';
+  String toString() => 'MediaItem(${id.value}, $filename)';
 }

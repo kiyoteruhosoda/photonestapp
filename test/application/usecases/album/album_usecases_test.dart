@@ -134,7 +134,7 @@ void main() {
     test('returns the album with its media and snapshots the page', () async {
       final detail = AlbumDetail(
         album: testAlbum(id: 3),
-        media: [testAlbumMediaItem()],
+        media: [testMediaItem()],
       );
       repository.details = {AlbumId(3): detail};
 
@@ -148,7 +148,7 @@ void main() {
       repository.details = {
         AlbumId(3): AlbumDetail(
           album: testAlbum(id: 3),
-          media: [for (var id = 1; id <= 3; id++) testAlbumMediaItem(id: id)],
+          media: [for (var id = 1; id <= 3; id++) testMediaItem(id: id)],
         ),
       };
 
@@ -165,7 +165,7 @@ void main() {
     test('falls back to the snapshot when the server is unreachable', () async {
       final detail = AlbumDetail(
         album: testAlbum(id: 3),
-        media: [testAlbumMediaItem()],
+        media: [testMediaItem()],
         mediaTotal: 1,
       );
       snapshots.savedDetails[(3, 1, 100)] = detail;
@@ -178,7 +178,7 @@ void main() {
     test('only the snapshotted page can answer offline', () async {
       snapshots.savedDetails[(3, 1, 100)] = AlbumDetail(
         album: testAlbum(id: 3),
-        media: [testAlbumMediaItem()],
+        media: [testMediaItem()],
       );
       repository.failure = const NetworkUnreachableError('offline');
 
@@ -223,7 +223,7 @@ void main() {
       repository.details = {
         AlbumId(3): AlbumDetail(
           album: testAlbum(id: 3),
-          media: [testAlbumMediaItem()],
+          media: [testMediaItem()],
         ),
       };
       // Same server, different account — the endpoint alone is not the

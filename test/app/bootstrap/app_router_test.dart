@@ -96,7 +96,7 @@ void main() {
         details: {
           AlbumId(7): AlbumDetail(
             album: testAlbum(id: 7, title: 'Deep linked', coverMediaId: null),
-            media: [testAlbumMediaItem()],
+            media: [testMediaItem()],
           ),
         },
       ),

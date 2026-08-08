@@ -11,6 +11,7 @@ import 'package:flutterbase/domain/value_objects/media_id.dart';
 import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:flutterbase/infrastructure/repositories/api_album_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_media_library_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
@@ -298,6 +299,91 @@ void main() {
         repository.findById(AlbumId(9)),
         throwsA(isA<InfrastructureError>()),
       );
+    });
+  });
+
+  group('ApiMediaLibraryRepository', () {
+    test('reads a page of the library newest first', () async {
+      final repository = ApiMediaLibraryRepository(
+        client(
+          (request) async => json({
+            'items': [
+              {
+                'id': 5,
+                'filename': 'a.jpg',
+                'shot_at': '2026-08-05T09:30:00Z',
+                'is_video': 0,
+              },
+              {
+                'id': 6,
+                'filename': 'clip.mp4',
+                'shot_at': '2026-08-04T18:00:00Z',
+                'is_video': 1,
+              },
+            ],
+            'page': 2,
+            'pageSize': 50,
+            'hasNext': true,
+          }),
+        ),
+      );
+
+      final page = await repository.findPage(page: 2, pageSize: 50);
+
+      expect(requests.single.url.path, '/api/media');
+      expect(requests.single.url.queryParameters, {
+        'page': '2',
+        'pageSize': '50',
+        'order': 'desc',
+      });
+      expect(page.hasNext, isTrue);
+      expect(page.items.map((item) => item.id.value), [5, 6]);
+      // The endpoint answers in snake_case with 0/1 flags, unlike
+      // /api/albums — a photo must not come back as a video.
+      expect(page.items.first.isVideo, isFalse);
+      expect(page.items.last.isVideo, isTrue);
+      expect(page.items.first.shotAt, DateTime.utc(2026, 8, 5, 9, 30));
+      expect(page.items.first.shotAt!.isUtc, isTrue);
+    });
+
+    test('accepts real booleans, so a stricter server still parses', () async {
+      final repository = ApiMediaLibraryRepository(
+        client(
+          (request) async => json({
+            'items': [
+              {'id': 5, 'filename': 'clip.mp4', 'is_video': true},
+            ],
+            'hasNext': false,
+          }),
+        ),
+      );
+
+      final page = await repository.findPage();
+
+      expect(page.items.single.isVideo, isTrue);
+      expect(page.hasNext, isFalse);
+    });
+
+    test('media without a capture instant keeps a null shotAt', () async {
+      final repository = ApiMediaLibraryRepository(
+        client(
+          (request) async => json({
+            'items': [
+              {'id': 5, 'filename': 'scan.jpg', 'shot_at': null},
+            ],
+            'hasNext': false,
+          }),
+        ),
+      );
+
+      expect((await repository.findPage()).items.single.shotAt, isNull);
+    });
+
+    test('a response without items is a failure, not an empty library', () {
+      final repository = ApiMediaLibraryRepository(
+        client((request) async => json({'page': 1})),
+      );
+      expect(repository.findPage, throwsA(isA<InfrastructureError>()));
     });
   });
 

@@ -7,6 +7,7 @@ import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
 import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
+import 'package:flutterbase/presentation/pages/media/media_tab.dart';
 import 'package:flutterbase/presentation/pages/upload/upload_tab.dart';
 import 'package:flutterbase/presentation/providers/notification_providers.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
@@ -31,6 +32,11 @@ class _MainPageState extends ConsumerState<MainPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final tabs = <_TabItem>[
+      _TabItem(
+        label: l10n.navPhotos,
+        icon: Icons.photo_library_outlined,
+        selectedIcon: Icons.photo_library,
+      ),
       _TabItem(
         label: l10n.navAlbums,
         icon: Icons.photo_album_outlined,
@@ -101,8 +107,8 @@ class _MainPageState extends ConsumerState<MainPage> {
               headerSubtitle: AppConfig.appTagline,
               items: [
                 AppDrawerItem(
-                  label: l10n.navAlbums,
-                  icon: Icons.photo_album_outlined,
+                  label: l10n.navPhotos,
+                  icon: Icons.photo_library_outlined,
                   isSelected: _selectedIndex == 0,
                   onTap: () {
                     setState(() => _selectedIndex = 0);
@@ -110,8 +116,8 @@ class _MainPageState extends ConsumerState<MainPage> {
                   },
                 ),
                 AppDrawerItem(
-                  label: l10n.navUpload,
-                  icon: Icons.cloud_upload_outlined,
+                  label: l10n.navAlbums,
+                  icon: Icons.photo_album_outlined,
                   isSelected: _selectedIndex == 1,
                   onTap: () {
                     setState(() => _selectedIndex = 1);
@@ -119,11 +125,20 @@ class _MainPageState extends ConsumerState<MainPage> {
                   },
                 ),
                 AppDrawerItem(
-                  label: l10n.navSettings,
-                  icon: Icons.settings_outlined,
+                  label: l10n.navUpload,
+                  icon: Icons.cloud_upload_outlined,
                   isSelected: _selectedIndex == 2,
                   onTap: () {
                     setState(() => _selectedIndex = 2);
+                    Navigator.of(context).pop();
+                  },
+                ),
+                AppDrawerItem(
+                  label: l10n.navSettings,
+                  icon: Icons.settings_outlined,
+                  isSelected: _selectedIndex == 3,
+                  onTap: () {
+                    setState(() => _selectedIndex = 3);
                     Navigator.of(context).pop();
                   },
                 ),
@@ -185,10 +200,11 @@ class _MainPageState extends ConsumerState<MainPage> {
 
   Widget _buildTabContent() {
     return switch (_selectedIndex) {
-      0 => const AlbumsTab(),
-      1 => const UploadTab(),
-      2 => const _SettingsContent(),
-      _ => const AlbumsTab(),
+      0 => const MediaTab(),
+      1 => const AlbumsTab(),
+      2 => const UploadTab(),
+      3 => const _SettingsContent(),
+      _ => const MediaTab(),
     };
   }
 

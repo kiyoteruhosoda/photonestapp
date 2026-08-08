@@ -16,6 +16,8 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get navAlbums => 'アルバム';
   @override
+  String get navPhotos => '写真';
+  @override
   String get navUpload => 'アップロード';
 
   // ─── Login ────────────────────────────────────────────────────────────
@@ -60,6 +62,15 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get albumLoadMoreRetry => '続きを読み込めませんでした。タップで再試行できます。';
+
+  // ─── Photos (library timeline) ────────────────────────────────────────
+
+  @override
+  String get photosEmpty => 'サーバーにまだ写真がありません。';
+  @override
+  String get photosUndatedSection => '撮影日不明';
+  @override
+  String get photosLoadMoreRetry => '続きを読み込めませんでした。再試行';
 
   @override
   String get mediaVideoLabel => '動画';

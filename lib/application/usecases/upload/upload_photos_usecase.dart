@@ -98,11 +98,18 @@ final class UploadPhotosUseCase {
   /// [onProgress] fires after each photo settles (uploaded or failed) with
   /// the number of settled photos and the batch size. [cancellation] stops
   /// the batch before the next photo once cancelled.
+  ///
+  /// [mayContinue] is awaited before each photo and stops the batch when it
+  /// answers false. It exists for preconditions that can stop holding
+  /// part-way through: a batch of originals can take many minutes, so a
+  /// caller that only checked once before the first photo would keep sending
+  /// long after its condition went away.
   Future<UploadPhotosResult> execute(
     List<LocalPhoto> photos, {
     DateTime? uploadedAt,
     void Function(int completed, int total)? onProgress,
     UploadCancellation? cancellation,
+    Future<bool> Function()? mayContinue,
   }) async {
     final uploaded = <LocalPhoto>[];
     final failed = <PhotoUploadFailure>[];
@@ -114,6 +121,14 @@ final class UploadPhotosUseCase {
         _logger.info(
           '[Upload] batch cancelled after ${uploaded.length + failed.length} '
           'of ${photos.length}',
+        );
+        break;
+      }
+      if (mayContinue != null && !await mayContinue()) {
+        cancelled = true;
+        _logger.info(
+          '[Upload] batch stopped after ${uploaded.length + failed.length} '
+          'of ${photos.length} — the caller withdrew permission to continue',
         );
         break;
       }

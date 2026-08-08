@@ -2,6 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
+import 'package:flutterbase/application/ports/network_connection_gateway.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
@@ -23,6 +24,7 @@ import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:flutterbase/infrastructure/background/workmanager_background_sync_scheduler.dart';
 import 'package:flutterbase/infrastructure/database/app_database.dart';
+import 'package:flutterbase/infrastructure/device/connectivity_plus_network_connection_gateway.dart';
 import 'package:flutterbase/infrastructure/device/photo_manager_photo_library_gateway.dart';
 import 'package:flutterbase/infrastructure/links/url_launcher_external_link_launcher.dart';
 import 'package:flutterbase/infrastructure/logging/persistent_app_logger.dart';
@@ -77,6 +79,7 @@ final class InfrastructureModule {
     required this.syncLease,
     required this.autoUploadSettings,
     required this.photoLibrary,
+    required this.networkConnection,
     required this.backgroundSync,
   });
 
@@ -163,6 +166,7 @@ final class InfrastructureModule {
         preferences,
       ),
       photoLibrary: PhotoManagerPhotoLibraryGateway(),
+      networkConnection: const ConnectivityPlusNetworkConnectionGateway(),
       backgroundSync: WorkmanagerBackgroundSyncScheduler(
         backgroundSyncDispatcher,
       ),
@@ -189,5 +193,6 @@ final class InfrastructureModule {
   final SyncLeaseRepository syncLease;
   final AutoUploadSettingsRepository autoUploadSettings;
   final PhotoLibraryGateway photoLibrary;
+  final NetworkConnectionGateway networkConnection;
   final BackgroundSyncScheduler backgroundSync;
 }

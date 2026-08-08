@@ -28,6 +28,7 @@ void backgroundSyncDispatcher() {
       final syncNewPhotos = SyncNewPhotosUseCase(
         infrastructure.autoUploadSettings,
         infrastructure.sessions,
+        infrastructure.networkConnection,
         infrastructure.photoLibrary,
         infrastructure.uploadHistory,
         infrastructure.syncLease,

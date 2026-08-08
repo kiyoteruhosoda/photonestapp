@@ -80,6 +80,10 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get uploadAutoDenied => '自動アップロードには写真ライブラリへのアクセス許可が必要です。';
   @override
+  String get uploadAutoUnmeteredTitle => 'Wi-Fi 接続時のみ';
+  @override
+  String get uploadAutoUnmeteredSubtitle => 'モバイル通信では自動アップロードせず、Wi-Fi 接続を待ちます。';
+  @override
   String get uploadPermissionTitle => '写真へのアクセスがありません';
   @override
   String get uploadPermissionBody => '写真をアップロードするには、写真ライブラリへのアクセスを許可してください。';

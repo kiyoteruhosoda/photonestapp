@@ -115,6 +115,7 @@ reserved に残っていても CI が落ちます）。
 | `url_launcher` | Infrastructure | `lib/infrastructure/links/`。`ExternalLinkLauncher` ポートの背後 |
 | `shared_preferences` / `path_provider` / `package_info_plus` | Infrastructure | 既存のアダプター群 |
 | `http` / `http_parser` | Infrastructure | `lib/infrastructure/api/photonest_api_client.dart` と API リポジトリ群。ベース URL 解決・Bearer 付与・401 時のトークン再発行はクライアントに集約 |
+| `connectivity_plus` | Infrastructure | `lib/infrastructure/device/connectivity_plus_network_connection_gateway.dart`。`NetworkConnectionGateway` ポート（Application）の背後。自動アップロードが従量課金回線を避けるための接続種別の取得にだけ使う |
 | `photo_manager` | Infrastructure | `lib/infrastructure/device/photo_manager_photo_library_gateway.dart`。`PhotoLibraryGateway` ポート（Application）の背後 |
 | `workmanager` | Infrastructure | `lib/infrastructure/background/`。`BackgroundSyncScheduler` ポート（Application）の背後。バックグラウンド側のエントリポイントは `lib/app/background/`（第二の合成ルート） |
 | `video_player` | Presentation | `lib/presentation/widgets/ui/video_playback_view.dart`。再生はウィジェットそのもの（テクスチャ描画）なのでポートを切らず Presentation に置く。再生 URL の取得は `MediaPlaybackRepository`（Domain インターフェース + API アダプター）が担う |

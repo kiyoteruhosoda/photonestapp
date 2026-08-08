@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
@@ -53,6 +55,22 @@ setAutoUploadEnabledUseCaseProvider = Provider<SetAutoUploadEnabledUseCase>((
     missingOverrideMessage('setAutoUploadEnabledUseCaseProvider'),
   );
 });
+
+final Provider<GetAutoUploadUnmeteredOnlyUseCase>
+getAutoUploadUnmeteredOnlyUseCaseProvider =
+    Provider<GetAutoUploadUnmeteredOnlyUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('getAutoUploadUnmeteredOnlyUseCaseProvider'),
+      );
+    });
+
+final Provider<SetAutoUploadUnmeteredOnlyUseCase>
+setAutoUploadUnmeteredOnlyUseCaseProvider =
+    Provider<SetAutoUploadUnmeteredOnlyUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('setAutoUploadUnmeteredOnlyUseCaseProvider'),
+      );
+    });
 
 /// The long-lived watcher the composition root starts at boot. The upload
 /// screen pokes it after a manual toggle so new photos sync immediately.
@@ -191,6 +209,33 @@ class AutoUploadEnabledNotifier extends Notifier<bool> {
       await ref.read(autoUploadCoordinatorProvider).triggerSync();
     }
     return effective;
+  }
+}
+
+/// Whether auto-upload waits for an unmetered connection, together with the
+/// command to change it.
+final NotifierProvider<AutoUploadUnmeteredOnlyNotifier, bool>
+autoUploadUnmeteredOnlyProvider =
+    NotifierProvider<AutoUploadUnmeteredOnlyNotifier, bool>(
+      AutoUploadUnmeteredOnlyNotifier.new,
+    );
+
+/// Mirrors the persisted "Wi-Fi only" switch.
+class AutoUploadUnmeteredOnlyNotifier extends Notifier<bool> {
+  @override
+  bool build() => ref.read(getAutoUploadUnmeteredOnlyUseCaseProvider).execute();
+
+  /// Persists the choice, then pokes the coordinator: lifting the
+  /// restriction while on mobile data should start uploading right away
+  /// rather than at the next library change.
+  Future<void> setUnmeteredOnly(bool unmeteredOnly) async {
+    await ref
+        .read(setAutoUploadUnmeteredOnlyUseCaseProvider)
+        .execute(unmeteredOnly);
+    state = unmeteredOnly;
+    if (ref.read(autoUploadEnabledProvider)) {
+      await ref.read(autoUploadCoordinatorProvider).triggerSync();
+    }
   }
 }
 

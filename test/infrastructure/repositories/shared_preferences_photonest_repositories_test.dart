@@ -32,6 +32,21 @@ void main() {
       expect(repository.enabledSince(), isNull);
     });
 
+    test('defaults to unmetered-only, and round-trips the choice', () async {
+      final repository = SharedPreferencesAutoUploadSettingsRepository(
+        await preferences(),
+      );
+      // Nothing saved — including installs that predate the setting — must
+      // read as restricted, never as "upload over mobile data".
+      expect(repository.isUnmeteredOnly(), isTrue);
+
+      await repository.setUnmeteredOnly(false);
+      expect(repository.isUnmeteredOnly(), isFalse);
+
+      await repository.setUnmeteredOnly(true);
+      expect(repository.isUnmeteredOnly(), isTrue);
+    });
+
     test(
       'the first enable stamps "since" once and keeps it forever', //
       () async {

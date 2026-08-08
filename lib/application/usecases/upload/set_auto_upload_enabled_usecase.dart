@@ -32,7 +32,9 @@ final class SetAutoUploadEnabledUseCase {
     }
     await _settings.setEnabled(enabled);
     if (enabled) {
-      await _backgroundSync.ensureScheduled();
+      await _backgroundSync.ensureScheduled(
+        unmeteredOnly: _settings.isUnmeteredOnly(),
+      );
     } else {
       await _backgroundSync.cancel();
     }

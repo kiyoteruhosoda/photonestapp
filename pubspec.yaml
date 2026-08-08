@@ -12,6 +12,9 @@ environment:
 # from is enforced by `tool/check_dependencies.dart` — see
 # `docs/ARCHITECTURE.md` §"Package placement rules".
 dependencies:
+  # Active network transports, so auto-upload can stay off mobile data
+  # (infrastructure).
+  connectivity_plus: ^7.3.1
   flutter:
     sdk: flutter
   flutter_localizations:

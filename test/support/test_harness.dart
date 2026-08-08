@@ -28,9 +28,11 @@ import 'package:flutterbase/application/usecases/notification/watch_backup_notif
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
@@ -76,6 +78,7 @@ class TestScope {
     FakeUploadHistoryRepository? uploadHistoryRepository,
     FakeAutoUploadSettingsRepository? autoUploadSettingsRepository,
     FakePhotoLibraryGateway? photoLibrary,
+    FakeNetworkConnectionGateway? networkConnection,
     AuthSession? initialSession,
   }) : themeRepository = themeRepository ?? FakeThemePreferenceRepository(),
        languageRepository =
@@ -110,7 +113,8 @@ class TestScope {
            uploadHistoryRepository ?? FakeUploadHistoryRepository(),
        autoUploadSettingsRepository =
            autoUploadSettingsRepository ?? FakeAutoUploadSettingsRepository(),
-       photoLibrary = photoLibrary ?? FakePhotoLibraryGateway();
+       photoLibrary = photoLibrary ?? FakePhotoLibraryGateway(),
+       networkConnection = networkConnection ?? FakeNetworkConnectionGateway();
 
   final FakeThemePreferenceRepository themeRepository;
   final FakeLanguagePreferenceRepository languageRepository;
@@ -130,6 +134,7 @@ class TestScope {
   final FakeUploadHistoryRepository uploadHistoryRepository;
   final FakeAutoUploadSettingsRepository autoUploadSettingsRepository;
   final FakePhotoLibraryGateway photoLibrary;
+  final FakeNetworkConnectionGateway networkConnection;
   final FakeBackgroundSyncScheduler backgroundSyncScheduler =
       FakeBackgroundSyncScheduler();
   final FakeSyncLeaseRepository syncLeaseRepository = FakeSyncLeaseRepository();
@@ -241,12 +246,23 @@ class TestScope {
           logger,
         ),
       ),
+      getAutoUploadUnmeteredOnlyUseCaseProvider.overrideWithValue(
+        GetAutoUploadUnmeteredOnlyUseCase(autoUploadSettingsRepository),
+      ),
+      setAutoUploadUnmeteredOnlyUseCaseProvider.overrideWithValue(
+        SetAutoUploadUnmeteredOnlyUseCase(
+          autoUploadSettingsRepository,
+          backgroundSyncScheduler,
+          logger,
+        ),
+      ),
       autoUploadCoordinatorProvider.overrideWithValue(
         AutoUploadCoordinator(
           photoLibrary,
           SyncNewPhotosUseCase(
             autoUploadSettingsRepository,
             sessionRepository,
+            networkConnection,
             photoLibrary,
             uploadHistoryRepository,
             syncLeaseRepository,

@@ -1,4 +1,5 @@
 import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:flutterbase/application/ports/network_connection_gateway.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
@@ -16,6 +17,10 @@ enum SyncSkipReason {
 
   /// Nobody is signed in, so there is nowhere to upload to.
   notSignedIn,
+
+  /// Auto-upload is restricted to unmetered connections and the device is
+  /// on a metered one (or offline).
+  meteredConnection,
 
   /// The user has not granted photo-library access.
   noLibraryAccess,
@@ -56,6 +61,7 @@ final class SyncNewPhotosUseCase {
   const SyncNewPhotosUseCase(
     this._settings,
     this._sessions,
+    this._network,
     this._library,
     this._history,
     this._syncLease,
@@ -68,6 +74,7 @@ final class SyncNewPhotosUseCase {
 
   final AutoUploadSettingsRepository _settings;
   final SessionRepository _sessions;
+  final NetworkConnectionGateway _network;
   final PhotoLibraryGateway _library;
   final UploadHistoryRepository _history;
   final SyncLeaseRepository _syncLease;
@@ -95,6 +102,13 @@ final class SyncNewPhotosUseCase {
     if (_sessions.load() == null) {
       return const SyncReport.skippedBecause(SyncSkipReason.notSignedIn);
     }
+    // Checked before library access so a pass that is going to be skipped
+    // anyway never triggers a permission prompt. The background pass is
+    // already gated by the same rule at the scheduler level; this is what
+    // stops a photo taken with the app open from going out over mobile data.
+    if (!await _mayUploadOverCurrentConnection()) {
+      return const SyncReport.skippedBecause(SyncSkipReason.meteredConnection);
+    }
     if (!await _library.ensureAccess()) {
       _logger.warning('[AutoUpload] photo library access not granted');
       return const SyncReport.skippedBecause(SyncSkipReason.noLibraryAccess);
@@ -115,6 +129,16 @@ final class SyncNewPhotosUseCase {
     } finally {
       await _syncLease.release(leaseHolder);
     }
+  }
+
+  /// Whether the connection the device is on right now is one auto-upload is
+  /// allowed to spend. Both the setting and the connection are re-read on
+  /// every call, so neither is captured at the start of a pass.
+  Future<bool> _mayUploadOverCurrentConnection() async {
+    if (!_settings.isUnmeteredOnly()) return true;
+    if (await _network.isUnmetered()) return true;
+    _logger.info('[AutoUpload] connection is metered — not uploading');
+    return false;
   }
 
   Future<SyncReport> _runPass() async {
@@ -141,7 +165,15 @@ final class SyncNewPhotosUseCase {
     }
 
     _logger.info('[AutoUpload] found ${pending.length} new photo(s)');
-    final result = await _uploadPhotos.execute(pending);
+    // Re-checked before every photo rather than once for the batch: sending
+    // originals can take many minutes, in which time the device can leave
+    // Wi-Fi — or the user can switch the restriction on — and the rest of the
+    // batch would otherwise keep going out over mobile data. Photos left
+    // unattempted stay unrecorded, so the next pass picks them up.
+    final result = await _uploadPhotos.execute(
+      pending,
+      mayContinue: _mayUploadOverCurrentConnection,
+    );
     // Recorded from inside the pass so both isolates — foreground app and
     // background WorkManager engine — leave the same trace in the list.
     await _recordBackupResult.execute(

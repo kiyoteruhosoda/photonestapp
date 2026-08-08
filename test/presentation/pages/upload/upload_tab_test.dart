@@ -188,20 +188,48 @@ void main() {
   ) async {
     final scope = TestScope();
     await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+    final autoSwitch = find.widgetWithText(
+      SwitchListTile,
+      l10n.uploadAutoTitle,
+    );
 
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(autoSwitch);
     await tester.pumpAndSettle();
     expect(scope.autoUploadSettingsRepository.enabled, isTrue);
 
     // Turning it on while access is denied snaps back with an explanation.
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(autoSwitch);
     await tester.pumpAndSettle();
     scope.photoLibrary.accessGranted = false;
-    await tester.tap(find.byType(SwitchListTile));
+    await tester.tap(autoSwitch);
     await tester.pumpAndSettle();
 
     expect(scope.autoUploadSettingsRepository.enabled, isFalse);
     expect(find.text(l10n.uploadAutoDenied), findsOneWidget);
+  });
+
+  testWidgets('the Wi-Fi-only switch is on by default and only editable '
+      'while auto-upload is on', (tester) async {
+    final scope = TestScope();
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+    final unmeteredSwitch = find.widgetWithText(
+      SwitchListTile,
+      l10n.uploadAutoUnmeteredTitle,
+    );
+
+    expect(tester.widget<SwitchListTile>(unmeteredSwitch).value, isTrue);
+    // Auto-upload is off, so the sub-setting cannot be changed yet.
+    expect(tester.widget<SwitchListTile>(unmeteredSwitch).onChanged, isNull);
+
+    await tester.tap(find.widgetWithText(SwitchListTile, l10n.uploadAutoTitle));
+    await tester.pumpAndSettle();
+    await tester.tap(unmeteredSwitch);
+    await tester.pumpAndSettle();
+
+    expect(scope.autoUploadSettingsRepository.unmeteredOnly, isFalse);
+    expect(tester.widget<SwitchListTile>(unmeteredSwitch).value, isFalse);
+    // The background schedule was re-registered without the restriction.
+    expect(scope.backgroundSyncScheduler.scheduledUnmeteredOnly.last, isFalse);
   });
 
   testWidgets('a video candidate carries the play badge', (tester) async {

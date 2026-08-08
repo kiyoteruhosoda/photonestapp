@@ -26,9 +26,11 @@ import 'package:flutterbase/application/usecases/notification/watch_backup_notif
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_info_providers.dart';
@@ -81,6 +83,12 @@ List<Override> buildProviderOverrides() {
     ),
     setAutoUploadEnabledUseCaseProvider.overrideWithValue(
       sl<SetAutoUploadEnabledUseCase>(),
+    ),
+    getAutoUploadUnmeteredOnlyUseCaseProvider.overrideWithValue(
+      sl<GetAutoUploadUnmeteredOnlyUseCase>(),
+    ),
+    setAutoUploadUnmeteredOnlyUseCaseProvider.overrideWithValue(
+      sl<SetAutoUploadUnmeteredOnlyUseCase>(),
     ),
     autoUploadCoordinatorProvider.overrideWithValue(
       sl<AutoUploadCoordinator>(),

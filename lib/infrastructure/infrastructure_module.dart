@@ -14,6 +14,7 @@ import 'package:flutterbase/domain/repositories/backup_notification_repository.d
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_library_repository.dart';
+import 'package:flutterbase/domain/repositories/media_original_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
@@ -32,6 +33,7 @@ import 'package:flutterbase/infrastructure/logging/persistent_app_logger.dart';
 import 'package:flutterbase/infrastructure/repositories/api_album_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_library_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
@@ -76,6 +78,7 @@ final class InfrastructureModule {
     required this.mediaThumbnails,
     required this.mediaThumbnailCache,
     required this.mediaLibrary,
+    required this.mediaOriginals,
     required this.mediaPlayback,
     required this.photoUploads,
     required this.uploadHistory,
@@ -158,6 +161,7 @@ final class InfrastructureModule {
         apiEndpoints,
       ),
       mediaLibrary: ApiMediaLibraryRepository(apiClient),
+      mediaOriginals: ApiMediaOriginalRepository(apiClient),
       mediaPlayback: ApiMediaPlaybackRepository(apiClient),
       photoUploads: ApiPhotoUploadRepository(apiClient),
       uploadHistory: SqfliteUploadHistoryRepository(
@@ -192,6 +196,7 @@ final class InfrastructureModule {
   final MediaThumbnailRepository mediaThumbnails;
   final MediaThumbnailCacheRepository mediaThumbnailCache;
   final MediaLibraryRepository mediaLibrary;
+  final MediaOriginalRepository mediaOriginals;
   final MediaPlaybackRepository mediaPlayback;
   final PhotoUploadRepository photoUploads;
   final UploadHistoryRepository uploadHistory;

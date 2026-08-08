@@ -12,6 +12,7 @@ import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:flutterbase/infrastructure/repositories/api_album_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_library_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
@@ -459,6 +460,60 @@ void main() {
         ),
       );
     });
+  });
+
+  group('ApiMediaOriginalRepository', () {
+    test('resolves the signed path against the signed-in server', () async {
+      final repository = ApiMediaOriginalRepository(
+        client(
+          (request) async => json({
+            'url': '/api/dl/orig123',
+            'expiresAt': '2026-08-08T12:00:00Z',
+          }),
+        ),
+      );
+
+      final source = await repository.originalOf(MediaId(7));
+
+      expect(requests.single.url.path, '/api/media/7/original-url');
+      expect(
+        source.url,
+        Uri.parse('https://photos.example.com/api/dl/orig123'),
+      );
+      expect(source.expiresAt, DateTime.utc(2026, 8, 8, 12));
+    });
+
+    test('a response without a URL is a failure', () {
+      final repository = ApiMediaOriginalRepository(
+        client((request) async => json({'expiresAt': null})),
+      );
+      expect(
+        () => repository.originalOf(MediaId(7)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test(
+      'downloading fetches the signed URL without the bearer token',
+      () async {
+        final repository = ApiMediaOriginalRepository(
+          client((request) async {
+            if (request.url.path.endsWith('/original-url')) {
+              return json({'url': '/api/dl/orig123'});
+            }
+            return http.Response.bytes([4, 5, 6], 200);
+          }),
+        );
+
+        final bytes = await repository.downloadOriginal(MediaId(7));
+
+        expect(bytes, [4, 5, 6]);
+        expect(requests.last.url.path, '/api/dl/orig123');
+        // The signature is the authorisation; sending the session token to
+        // whatever host the link names would only leak it.
+        expect(requests.last.headers.containsKey('Authorization'), isFalse);
+      },
+    );
   });
 
   group('ApiPhotoUploadRepository', () {

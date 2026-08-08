@@ -18,9 +18,11 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -76,6 +78,7 @@ class TestScope {
     FakeMediaThumbnailRepository? mediaThumbnailRepository,
     FakeMediaThumbnailCacheRepository? mediaThumbnailCacheRepository,
     FakeMediaLibraryRepository? mediaLibraryRepository,
+    FakeMediaOriginalRepository? mediaOriginalRepository,
     FakeMediaPlaybackRepository? mediaPlaybackRepository,
     FakePhotoUploadRepository? photoUploadRepository,
     FakeUploadHistoryRepository? uploadHistoryRepository,
@@ -110,6 +113,8 @@ class TestScope {
            mediaThumbnailCacheRepository ?? FakeMediaThumbnailCacheRepository(),
        mediaLibraryRepository =
            mediaLibraryRepository ?? FakeMediaLibraryRepository(),
+       mediaOriginalRepository =
+           mediaOriginalRepository ?? FakeMediaOriginalRepository(),
        mediaPlaybackRepository =
            mediaPlaybackRepository ?? FakeMediaPlaybackRepository(),
        photoUploadRepository =
@@ -135,6 +140,7 @@ class TestScope {
   final FakeMediaThumbnailRepository mediaThumbnailRepository;
   final FakeMediaThumbnailCacheRepository mediaThumbnailCacheRepository;
   final FakeMediaLibraryRepository mediaLibraryRepository;
+  final FakeMediaOriginalRepository mediaOriginalRepository;
   final FakeMediaPlaybackRepository mediaPlaybackRepository;
   final FakePhotoUploadRepository photoUploadRepository;
   final FakeUploadHistoryRepository uploadHistoryRepository;
@@ -236,6 +242,12 @@ class TestScope {
       ),
       listLibraryMediaUseCaseProvider.overrideWithValue(
         ListLibraryMediaUseCase(mediaLibraryRepository, logger),
+      ),
+      getMediaOriginalUseCaseProvider.overrideWithValue(
+        GetMediaOriginalUseCase(mediaOriginalRepository),
+      ),
+      saveMediaOriginalUseCaseProvider.overrideWithValue(
+        SaveMediaOriginalUseCase(mediaOriginalRepository, photoLibrary, logger),
       ),
       listUploadCandidatesUseCaseProvider.overrideWithValue(
         ListUploadCandidatesUseCase(photoLibrary, uploadHistoryRepository),

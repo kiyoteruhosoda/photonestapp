@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
-import 'package:flutterbase/domain/entities/media_playback_source.dart';
+import 'package:flutterbase/domain/entities/signed_media_url.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
 
@@ -10,7 +10,7 @@ void main() {
   group('GetMediaPlaybackUseCase', () {
     test('hands back the repository source for the media', () async {
       final repository = FakeMediaPlaybackRepository();
-      final source = MediaPlaybackSource(
+      final source = SignedMediaUrl(
         url: Uri.parse('https://photos.example.com/api/dl/tok'),
         expiresAt: DateTime.utc(2026, 8, 8, 12),
       );

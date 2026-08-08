@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/media_playback_source.dart';
+import 'package:flutterbase/domain/entities/signed_media_url.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
@@ -16,7 +16,7 @@ final class ApiMediaPlaybackRepository implements MediaPlaybackRepository {
   final PhotoNestApiClient _client;
 
   @override
-  Future<MediaPlaybackSource> sourceOf(MediaId id) async {
+  Future<SignedMediaUrl> sourceOf(MediaId id) async {
     final payload = await _client.postJson(
       '/media/${id.value}/playback-url',
       const <String, dynamic>{},
@@ -26,7 +26,7 @@ final class ApiMediaPlaybackRepository implements MediaPlaybackRepository {
       throw const InfrastructureError('Playback response carried no URL.');
     }
     final expiresAt = payload['expiresAt'];
-    return MediaPlaybackSource(
+    return SignedMediaUrl(
       url: _client.absoluteUrl(url),
       expiresAt: expiresAt is String
           ? DateTime.tryParse(expiresAt)?.toUtc()

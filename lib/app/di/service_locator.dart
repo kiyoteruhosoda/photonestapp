@@ -18,9 +18,11 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -46,6 +48,7 @@ import 'package:flutterbase/domain/repositories/backup_notification_repository.d
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_library_repository.dart';
+import 'package:flutterbase/domain/repositories/media_original_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
@@ -101,6 +104,7 @@ Future<void> setupServiceLocator() async {
       infrastructure.mediaThumbnailCache,
     )
     ..registerSingleton<MediaLibraryRepository>(infrastructure.mediaLibrary)
+    ..registerSingleton<MediaOriginalRepository>(infrastructure.mediaOriginals)
     ..registerSingleton<MediaPlaybackRepository>(infrastructure.mediaPlayback)
     ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
     ..registerSingleton<UploadHistoryRepository>(infrastructure.uploadHistory)
@@ -196,6 +200,16 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerFactory<GetMediaPlaybackUseCase>(
     () => GetMediaPlaybackUseCase(sl<MediaPlaybackRepository>()),
+  );
+  sl.registerFactory<GetMediaOriginalUseCase>(
+    () => GetMediaOriginalUseCase(sl<MediaOriginalRepository>()),
+  );
+  sl.registerFactory<SaveMediaOriginalUseCase>(
+    () => SaveMediaOriginalUseCase(
+      sl<MediaOriginalRepository>(),
+      sl<PhotoLibraryGateway>(),
+      sl<AppLogger>(),
+    ),
   );
   sl.registerFactory<ListLibraryMediaUseCase>(
     () =>

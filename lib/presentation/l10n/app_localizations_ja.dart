@@ -74,6 +74,22 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get mediaVideoLabel => '動画';
+  @override
+  String mediaViewerPosition(int position, int total) => '$position / $total';
+  @override
+  String get mediaShowOriginal => '原本を表示';
+  @override
+  String get mediaOriginalUnavailable => '原本を読み込めませんでした。';
+  @override
+  String get mediaSaveToDevice => '端末に保存';
+  @override
+  String get mediaSaveDone => '端末に保存しました。';
+  @override
+  String get mediaSaveNoAccess => '保存するには写真ライブラリへのアクセス許可が必要です。';
+  @override
+  String get mediaSaveDownloadFailed => '原本をダウンロードできませんでした。';
+  @override
+  String get mediaSaveWriteFailed => '端末に保存できませんでした。';
 
   @override
   String get videoNotReady => '動画はサーバーで準備中です。しばらくしてからもう一度お試しください。';

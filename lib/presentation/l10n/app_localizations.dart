@@ -73,6 +73,14 @@ abstract class AppLocalizations {
 
   // ─── Video playback ───────────────────────────────────────────────────
   String get mediaVideoLabel;
+  String mediaViewerPosition(int position, int total);
+  String get mediaShowOriginal;
+  String get mediaOriginalUnavailable;
+  String get mediaSaveToDevice;
+  String get mediaSaveDone;
+  String get mediaSaveNoAccess;
+  String get mediaSaveDownloadFailed;
+  String get mediaSaveWriteFailed;
   String get videoNotReady;
   String get videoUnavailable;
 

@@ -78,6 +78,20 @@ final class PhotoNestApiClient {
     return response.bodyBytes;
   }
 
+  /// GETs an absolute URL the server itself issued — a signed `/api/dl/…`
+  /// link — and returns the raw body.
+  ///
+  /// Sent unauthenticated on purpose: the signature *is* the authorisation,
+  /// and the URL outlives no session, so attaching a bearer token would only
+  /// leak it to whatever host the link points at.
+  Future<Uint8List> getBytesFrom(Uri url) async {
+    final response = await _sendWithRetry(
+      authenticated: false,
+      build: () => http.Request('GET', url),
+    );
+    return response.bodyBytes;
+  }
+
   /// POSTs one file as `multipart/form-data` and decodes the JSON response.
   ///
   /// [buildFile] is async (and called once per attempt) because a file part

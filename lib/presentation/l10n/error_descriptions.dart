@@ -1,3 +1,4 @@
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';
@@ -32,6 +33,15 @@ String describeUploadFailure(
     PhotoUploadFailureReason.sessionExpired => l10n.commonErrorSessionExpired,
     PhotoUploadFailureReason.unreachable => l10n.commonErrorNetwork,
     PhotoUploadFailureReason.rejected => l10n.uploadFailureRejected,
+  };
+}
+
+/// Maps a failed "save to this device" onto a localised message.
+String describeSaveFailure(SaveMediaFailure failure, AppLocalizations l10n) {
+  return switch (failure) {
+    SaveMediaFailure.noLibraryAccess => l10n.mediaSaveNoAccess,
+    SaveMediaFailure.downloadFailed => l10n.mediaSaveDownloadFailed,
+    SaveMediaFailure.writeFailed => l10n.mediaSaveWriteFailed,
   };
 }
 

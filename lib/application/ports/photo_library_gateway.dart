@@ -45,6 +45,19 @@ abstract interface class PhotoLibraryGateway {
   /// A small preview of the photo, or null when the asset has disappeared.
   Future<Uint8List?> readThumbnail(String localId, {required int size});
 
+  /// Writes [bytes] into the device's photo library as a new asset named
+  /// [fileName], returning false when the platform refused.
+  ///
+  /// Used by the viewer's "save to this device" action, so what comes back
+  /// from the server ends up where the gallery app looks. [isVideo] picks
+  /// the media store the asset is filed under — a video saved as an image
+  /// is not playable from the gallery.
+  Future<bool> saveToLibrary({
+    required String fileName,
+    required Uint8List bytes,
+    required bool isVideo,
+  });
+
   /// Emits whenever the platform reports a change in the photo library.
   ///
   /// The events carry no payload on purpose: the sync use case re-queries

@@ -17,9 +17,11 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
+import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -63,6 +65,12 @@ List<Override> buildProviderOverrides() {
     ),
     listLibraryMediaUseCaseProvider.overrideWithValue(
       sl<ListLibraryMediaUseCase>(),
+    ),
+    getMediaOriginalUseCaseProvider.overrideWithValue(
+      sl<GetMediaOriginalUseCase>(),
+    ),
+    saveMediaOriginalUseCaseProvider.overrideWithValue(
+      sl<SaveMediaOriginalUseCase>(),
     ),
     listBackupNotificationsUseCaseProvider.overrideWithValue(
       sl<ListBackupNotificationsUseCase>(),

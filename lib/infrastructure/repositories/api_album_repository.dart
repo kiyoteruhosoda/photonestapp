@@ -1,5 +1,5 @@
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
@@ -88,8 +88,8 @@ final class ApiAlbumRepository implements AlbumRepository {
     );
   }
 
-  static AlbumMediaItem _mediaItemFrom(Map<String, dynamic> json) {
-    return AlbumMediaItem(
+  static MediaItem _mediaItemFrom(Map<String, dynamic> json) {
+    return MediaItem(
       id: MediaId(json['id'] as int),
       filename: json['filename'] as String? ?? '',
       shotAt: _utcInstant(json['shotAt']),

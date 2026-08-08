@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
 
@@ -27,9 +27,9 @@ void main() {
     });
   });
 
-  group('AlbumMediaItem', () {
-    AlbumMediaItem buildItem({int id = 5, String filename = 'a.jpg'}) {
-      return AlbumMediaItem(
+  group('MediaItem', () {
+    MediaItem buildItem({int id = 5, String filename = 'a.jpg'}) {
+      return MediaItem(
         id: MediaId(id),
         filename: filename,
         shotAt: DateTime.utc(2026),
@@ -43,7 +43,7 @@ void main() {
     });
 
     test('toString names id and filename', () {
-      expect(buildItem().toString(), 'AlbumMediaItem(5, a.jpg)');
+      expect(buildItem().toString(), 'MediaItem(5, a.jpg)');
     });
   });
 
@@ -52,7 +52,7 @@ void main() {
       final a = AlbumDetail(album: build(), media: const []);
       final b = AlbumDetail(
         album: build(),
-        media: [AlbumMediaItem(id: MediaId(1), filename: 'x.jpg')],
+        media: [MediaItem(id: MediaId(1), filename: 'x.jpg')],
       );
       expect(a, b);
       expect(a.hashCode, b.hashCode);
@@ -72,7 +72,7 @@ void main() {
       // page happened to be exactly full.
       final detail = AlbumDetail(
         album: build(),
-        media: [AlbumMediaItem(id: MediaId(1), filename: 'x.jpg')],
+        media: [MediaItem(id: MediaId(1), filename: 'x.jpg')],
       );
       expect(detail.mediaTotal, isNull);
       expect(detail.toString(), 'AlbumDetail(1, 1 of ? media)');
@@ -81,7 +81,7 @@ void main() {
     test('mediaTotal reports the whole album beyond the page', () {
       final detail = AlbumDetail(
         album: build(),
-        media: [AlbumMediaItem(id: MediaId(1), filename: 'x.jpg')],
+        media: [MediaItem(id: MediaId(1), filename: 'x.jpg')],
         mediaTotal: 500,
       );
       expect(detail.mediaTotal, 500);

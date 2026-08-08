@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 
@@ -10,11 +10,11 @@ import '../../support/test_harness.dart';
 void main() {
   final albumId = AlbumId(3);
 
-  List<AlbumMediaItem> mediaRange(int from, int count) => [
-    for (var i = from; i < from + count; i++) testAlbumMediaItem(id: i),
+  List<MediaItem> mediaRange(int from, int count) => [
+    for (var i = from; i < from + count; i++) testMediaItem(id: i),
   ];
 
-  AlbumDetail detailWith(List<AlbumMediaItem> media) =>
+  AlbumDetail detailWith(List<MediaItem> media) =>
       AlbumDetail(album: testAlbum(id: 3), media: media);
 
   test(
@@ -57,7 +57,7 @@ void main() {
     // page 2 overlaps page 1 by one item and deduplication shortens the
     // accumulated list below a page-size multiple.
     repository.details[albumId] = detailWith([
-      testAlbumMediaItem(id: 999),
+      testMediaItem(id: 999),
       ...mediaRange(1, 250),
     ]);
 

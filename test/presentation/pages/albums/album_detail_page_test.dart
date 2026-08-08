@@ -19,7 +19,7 @@ void main() {
         album: testAlbum(id: 3, title: 'Holiday'),
         media: [
           for (var i = 1; i <= mediaCount; i++)
-            testAlbumMediaItem(
+            testMediaItem(
               id: i,
               filename: 'IMG_$i.jpg',
               isVideo: videoIds.contains(i),

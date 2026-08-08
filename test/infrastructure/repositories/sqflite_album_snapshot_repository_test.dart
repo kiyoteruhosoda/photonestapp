@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
@@ -46,12 +46,12 @@ void main() {
 
   AlbumDetail detail({
     int albumId = 3,
-    List<AlbumMediaItem>? media,
+    List<MediaItem>? media,
     int? mediaTotal,
   }) {
     return AlbumDetail(
       album: testAlbum(id: albumId),
-      media: media ?? [testAlbumMediaItem()],
+      media: media ?? [testMediaItem()],
       mediaTotal: mediaTotal,
     );
   }
@@ -196,12 +196,12 @@ void main() {
       await subject.saveDetail(
         detail(
           media: [
-            AlbumMediaItem(
+            MediaItem(
               id: MediaId(10),
               filename: 'a.jpg',
               shotAt: DateTime.utc(2026, 8, 3, 12, 30),
             ),
-            AlbumMediaItem(id: MediaId(11), filename: 'b.mp4', isVideo: true),
+            MediaItem(id: MediaId(11), filename: 'b.mp4', isVideo: true),
           ],
           mediaTotal: 150,
         ),

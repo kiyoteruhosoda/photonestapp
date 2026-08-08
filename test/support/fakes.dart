@@ -5,11 +5,12 @@ import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/network_connection_gateway.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/album_media_item.dart';
 import 'package:flutterbase/domain/entities/app_info.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/entities/backup_notification.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
+import 'package:flutterbase/domain/entities/media_library_page.dart';
 import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
@@ -21,6 +22,7 @@ import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.
 import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/media_library_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
@@ -305,18 +307,57 @@ Album testAlbum({
   );
 }
 
-/// Builds one album media item.
-AlbumMediaItem testAlbumMediaItem({
+/// Builds one server media item.
+MediaItem testMediaItem({
   int id = 10,
   String filename = 'a.jpg',
   bool isVideo = false,
+  DateTime? shotAt,
 }) {
-  return AlbumMediaItem(
+  return MediaItem(
     id: MediaId(id),
     filename: filename,
-    shotAt: testPhotoTakenAt,
+    shotAt: shotAt ?? testPhotoTakenAt,
     isVideo: isVideo,
   );
+}
+
+/// Builds one server media item the server has no capture instant for.
+MediaItem testMediaItemWithoutShotAt({int id = 10, String filename = 'a.jpg'}) {
+  return MediaItem(id: MediaId(id), filename: filename);
+}
+
+/// In-memory [MediaLibraryRepository].
+///
+/// Answers from [media] by slicing it the way the server would, so a test
+/// sets up one list and the paging falls out of it.
+final class FakeMediaLibraryRepository implements MediaLibraryRepository {
+  FakeMediaLibraryRepository({List<MediaItem>? media})
+    : media = media ?? <MediaItem>[];
+
+  List<MediaItem> media;
+
+  /// Pages requested, in order, as (page, pageSize).
+  final List<(int, int)> requestedPages = <(int, int)>[];
+
+  /// When set, every request throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<MediaLibraryPage> findPage({int page = 1, int pageSize = 100}) async {
+    requestedPages.add((page, pageSize));
+    final error = failure;
+    if (error != null) throw error;
+    final start = (page - 1) * pageSize;
+    if (start >= media.length) {
+      return const MediaLibraryPage(items: <MediaItem>[], hasNext: false);
+    }
+    final end = start + pageSize;
+    return MediaLibraryPage(
+      items: media.sublist(start, end < media.length ? end : media.length),
+      hasNext: end < media.length,
+    );
+  }
 }
 
 /// In-memory [AuthRepository].

@@ -40,6 +40,7 @@ abstract class AppLocalizations {
   String get navSearch;
   String get navSettings;
   String get navAlbums;
+  String get navPhotos;
   String get navUpload;
 
   // ─── Login ────────────────────────────────────────────────────────────
@@ -64,6 +65,11 @@ abstract class AppLocalizations {
   String get albumNotFoundHint;
   String get albumEmpty;
   String get albumLoadMoreRetry;
+
+  // ─── Photos (library timeline) ────────────────────────────────────────
+  String get photosEmpty;
+  String get photosUndatedSection;
+  String get photosLoadMoreRetry;
 
   // ─── Video playback ───────────────────────────────────────────────────
   String get mediaVideoLabel;

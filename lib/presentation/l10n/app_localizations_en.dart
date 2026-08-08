@@ -16,6 +16,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get navAlbums => 'Albums';
   @override
+  String get navPhotos => 'Photos';
+  @override
   String get navUpload => 'Upload';
 
   // ─── Login ────────────────────────────────────────────────────────────
@@ -63,6 +65,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get albumLoadMoreRetry => 'Could not load more items. Tap to retry.';
+
+  // ─── Photos (library timeline) ────────────────────────────────────────
+
+  @override
+  String get photosEmpty => 'No photos on the server yet.';
+  @override
+  String get photosUndatedSection => 'No date';
+  @override
+  String get photosLoadMoreRetry => 'Could not load more photos. Retry';
 
   @override
   String get mediaVideoLabel => 'Video';

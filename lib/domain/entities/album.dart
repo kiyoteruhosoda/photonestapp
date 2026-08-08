@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/album_media_item.dart';
+import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/media_id.dart';
 
@@ -58,7 +58,7 @@ final class AlbumDetail {
   final Album album;
 
   /// One page of media in the album's display order.
-  final List<AlbumMediaItem> media;
+  final List<MediaItem> media;
 
   /// How many media items the album holds in total, across all pages, or
   /// null when the server did not say. Readers who need an end-of-paging

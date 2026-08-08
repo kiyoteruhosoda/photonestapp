@@ -20,6 +20,16 @@ void main() {
     ).readAsStringSync();
   });
 
+  group('AndroidManifest — media library permissions', () {
+    test('declares both image and video read permissions', () {
+      // The library lists photos and videos alike (RequestType.common), so
+      // Android 13+ needs both READ_MEDIA_* grants; missing one silently
+      // hides that media type from the picker.
+      expect(manifest, contains('android.permission.READ_MEDIA_IMAGES'));
+      expect(manifest, contains('android.permission.READ_MEDIA_VIDEO'));
+    });
+  });
+
   group('AndroidManifest — deep links', () {
     test('hands incoming links to the Flutter router', () {
       // Without this the intent filters still launch the app, but it always

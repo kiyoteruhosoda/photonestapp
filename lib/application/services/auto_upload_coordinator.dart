@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
 
 /// Keeps the automatic upload running while the app is alive.
 ///
@@ -15,12 +17,16 @@ final class AutoUploadCoordinator {
   AutoUploadCoordinator(
     this._library,
     this._syncNewPhotos,
+    this._settings,
+    this._backgroundSync,
     this._logger, {
     Duration debounce = const Duration(seconds: 5),
   }) : _debounceDuration = debounce;
 
   final PhotoLibraryGateway _library;
   final SyncNewPhotosUseCase _syncNewPhotos;
+  final AutoUploadSettingsRepository _settings;
+  final BackgroundSyncScheduler _backgroundSync;
   final AppLogger _logger;
   final Duration _debounceDuration;
 
@@ -33,6 +39,12 @@ final class AutoUploadCoordinator {
     if (_subscription != null) return;
     _logger.info('[AutoUpload] coordinator started');
     _subscription = _library.libraryChanges.listen(_onLibraryChanged);
+    // Re-asserts the background schedule at every launch: an app update or a
+    // cleared task list must not silently end background syncing the user
+    // switched on. The toggle use case owns changes; this only repairs.
+    if (_settings.isEnabled()) {
+      unawaited(_backgroundSync.ensureScheduled());
+    }
     unawaited(triggerSync());
   }
 

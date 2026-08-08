@@ -58,6 +58,18 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get albumEmpty => 'このアルバムにはまだ写真がありません。';
 
+  @override
+  String get albumLoadMoreRetry => '続きを読み込めませんでした。タップで再試行できます。';
+
+  @override
+  String get mediaVideoLabel => '動画';
+
+  @override
+  String get videoNotReady => '動画はサーバーで準備中です。しばらくしてからもう一度お試しください。';
+
+  @override
+  String get videoUnavailable => 'この動画は再生できません。';
+
   // ─── Upload ───────────────────────────────────────────────────────────
   @override
   String get uploadTitle => 'アップロード';

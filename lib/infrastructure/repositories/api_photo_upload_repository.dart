@@ -40,6 +40,19 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
     'heif': 'heif',
   };
 
+  /// Video types the server accepts, keyed by lower-case file extension.
+  static const Map<String, String> _videoSubtypeByExtension = {
+    'mp4': 'mp4',
+    'm4v': 'x-m4v',
+    'mov': 'quicktime',
+    'avi': 'x-msvideo',
+    'mkv': 'x-matroska',
+    'webm': 'webm',
+    '3gp': '3gpp',
+    'mts': 'mp2t',
+    'm2ts': 'mp2t',
+  };
+
   @override
   Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
     final session = _newSessionId();
@@ -82,14 +95,14 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
   static MediaType _contentTypeFor(String fileName) {
     final dot = fileName.lastIndexOf('.');
     final extension = dot < 0 ? '' : fileName.substring(dot + 1).toLowerCase();
-    final subtype = _imageSubtypeByExtension[extension];
-    if (subtype == null) {
-      throw InfrastructureError(
-        'Unsupported photo type ".$extension" for $fileName.',
-        code: 'unsupported_format',
-      );
-    }
-    return MediaType('image', subtype);
+    final imageSubtype = _imageSubtypeByExtension[extension];
+    if (imageSubtype != null) return MediaType('image', imageSubtype);
+    final videoSubtype = _videoSubtypeByExtension[extension];
+    if (videoSubtype != null) return MediaType('video', videoSubtype);
+    throw InfrastructureError(
+      'Unsupported media type ".$extension" for $fileName.',
+      code: 'unsupported_format',
+    );
   }
 
   /// 32 hex characters, matching the shape the server generates itself.

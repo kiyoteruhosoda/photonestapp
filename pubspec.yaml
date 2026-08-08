@@ -45,6 +45,11 @@ dependencies:
   sqflite: ^2.4.3
   # External links (presentation).
   url_launcher: ^6.3.2
+  # Video playback for server media (presentation — the player is a widget).
+  video_player: ^2.13.0
+  # Periodic background execution for auto-upload while the app is closed
+  # (infrastructure).
+  workmanager: ^0.10.7
 
 dev_dependencies:
   # Powers the AST-based checks in tool/check_architecture.dart.
@@ -66,6 +71,9 @@ dev_dependencies:
   # Runs the SQLite adapter's tests on the host VM, where the Android/iOS
   # sqflite plugin is unavailable.
   sqflite_common_ffi: ^2.4.2
+  # Typed access to VideoPlayerPlatform.instance, so widget tests can install
+  # an in-memory playback platform instead of a real texture.
+  video_player_platform_interface: ^6.9.0
 
 flutter:
   uses-material-design: true

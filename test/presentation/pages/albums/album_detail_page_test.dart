@@ -5,6 +5,7 @@ import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
 import 'package:flutterbase/presentation/pages/albums/album_detail_page.dart';
+import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 
 import '../../../support/fakes.dart';
@@ -13,13 +14,18 @@ import '../../../support/test_harness.dart';
 const l10n = AppLocalizationsEn();
 
 void main() {
-  AlbumDetail detail({int mediaCount = 2}) => AlbumDetail(
-    album: testAlbum(id: 3, title: 'Holiday'),
-    media: [
-      for (var i = 1; i <= mediaCount; i++)
-        testAlbumMediaItem(id: i, filename: 'IMG_$i.jpg'),
-    ],
-  );
+  AlbumDetail detail({int mediaCount = 2, Set<int> videoIds = const {}}) =>
+      AlbumDetail(
+        album: testAlbum(id: 3, title: 'Holiday'),
+        media: [
+          for (var i = 1; i <= mediaCount; i++)
+            testAlbumMediaItem(
+              id: i,
+              filename: 'IMG_$i.jpg',
+              isVideo: videoIds.contains(i),
+            ),
+        ],
+      );
 
   testWidgets('a null id renders the not-found state', (tester) async {
     await pumpInScope(tester, const AlbumDetailPage(id: null));
@@ -89,5 +95,72 @@ void main() {
     await tester.tap(find.byType(InteractiveViewer));
     await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
+  });
+
+  testWidgets('a video tile carries the play badge', (tester) async {
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository(
+        details: {
+          AlbumId(3): detail(mediaCount: 2, videoIds: {2}),
+        },
+      ),
+    );
+    await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
+
+    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+  });
+
+  testWidgets('tapping a video asks for a playback source, and a not-ready '
+      'answer explains itself', (tester) async {
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository(
+        details: {
+          AlbumId(3): detail(mediaCount: 1, videoIds: {1}),
+        },
+      ),
+    );
+    scope.mediaPlaybackRepository.failure = const InfrastructureError(
+      'processing',
+      code: 'not_ready',
+    );
+    await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
+
+    await tester.tap(find.byType(ThumbnailImage).first);
+    await tester.pumpAndSettle();
+
+    expect(scope.mediaPlaybackRepository.requested, hasLength(1));
+    expect(find.text(l10n.videoNotReady), findsOneWidget);
+    // No full-image request was made for the 2048 rendition.
+    expect(
+      scope.mediaThumbnailRepository.fetched.map((entry) => entry.$2),
+      isNot(contains(2048)),
+    );
+  });
+
+  testWidgets('a large album pages in as the grid builds', (tester) async {
+    // 150 items: page one (100) renders first, and building the tail tile
+    // triggers the second page without any user gesture beyond scrolling.
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository(
+        details: {AlbumId(3): detail(mediaCount: 150)},
+      ),
+    );
+    await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
+
+    // Only page one travelled over the wire on the first fetch.
+    expect(scope.albumRepository.mediaPageRequests.first.$2, 1);
+
+    // Scroll to the bottom so the tail tiles (and the trigger) build.
+    await tester.fling(find.byType(GridView), const Offset(0, -50000), 10000);
+    await tester.pumpAndSettle();
+
+    final loaded = scope.container.read(albumDetailProvider(AlbumId(3))).value!;
+    expect(loaded.media.length, 150);
+    expect(loaded.hasMore, isFalse);
+    // Page one, page two — and nothing else.
+    expect(scope.albumRepository.mediaPageRequests.map((r) => r.$2).toSet(), {
+      1,
+      2,
+    });
   });
 }

@@ -108,6 +108,24 @@ final class PhotoNestApiClient {
     return base.replace(path: '$basePath/api$path', queryParameters: query);
   }
 
+  /// The absolute form of a server-relative path the API returned, such as
+  /// the signed `/api/dl/…` playback URLs.
+  ///
+  /// Unlike [_resolve] this adds no `/api` prefix — the server already spelt
+  /// the full path. Signed URLs embed their own authorisation, so callers
+  /// can hand the result to a player or browser without the bearer token.
+  Uri absoluteUrl(String serverPath) {
+    final base = _endpoints.load();
+    if (base == null) {
+      throw const InfrastructureError('No PhotoNest server is configured.');
+    }
+    final basePath = base.path.endsWith('/')
+        ? base.path.substring(0, base.path.length - 1)
+        : base.path;
+    final relative = serverPath.startsWith('/') ? serverPath : '/$serverPath';
+    return base.replace(path: '$basePath$relative');
+  }
+
   /// Sends the request [build] produces; on a 401 refreshes the session and
   /// sends a freshly built copy once more.
   ///

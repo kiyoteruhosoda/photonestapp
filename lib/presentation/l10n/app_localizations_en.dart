@@ -61,6 +61,19 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get albumEmpty => 'This album has no photos yet.';
 
+  @override
+  String get albumLoadMoreRetry => 'Could not load more items. Tap to retry.';
+
+  @override
+  String get mediaVideoLabel => 'Video';
+
+  @override
+  String get videoNotReady =>
+      'The video is still being prepared on the server. Try again later.';
+
+  @override
+  String get videoUnavailable => 'This video cannot be played.';
+
   // ─── Upload ───────────────────────────────────────────────────────────
   @override
   String get uploadTitle => 'Upload';

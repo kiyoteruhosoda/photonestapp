@@ -36,9 +36,12 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
   }) async {
     final paths = await PhotoManager.getAssetPathList(
       onlyAll: true,
-      type: RequestType.image,
+      // Photos and videos alike: the upload pipeline handles both, so the
+      // library view must list both.
+      type: RequestType.common,
       filterOption: FilterOptionGroup(
         imageOption: const FilterOption(needTitle: true),
+        videoOption: const FilterOption(needTitle: true),
         createTimeCond: DateTimeCond(
           min: since?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0),
           max: DateTime.now(),
@@ -87,12 +90,15 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
 
   static LocalPhoto _localPhotoOf(AssetEntity asset) {
     final title = asset.title;
+    final isVideo = asset.type == AssetType.video;
+    // MediaStore usually knows the display name; when it does not, a
+    // synthetic name keeps the upload content-type resolvable.
+    final fallbackName = '${asset.id}.${isVideo ? 'mp4' : 'jpg'}';
     return LocalPhoto(
       localId: asset.id,
-      // MediaStore usually knows the display name; when it does not, a
-      // synthetic JPEG name keeps the upload content-type resolvable.
-      fileName: title == null || title.isEmpty ? '${asset.id}.jpg' : title,
+      fileName: title == null || title.isEmpty ? fallbackName : title,
       takenAt: asset.createDateTime,
+      isVideo: isVideo,
     );
   }
 }

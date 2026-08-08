@@ -130,6 +130,77 @@ CREATE TABLE ${AppDatabase.bookmarksTable} (
     );
   });
 
+  test('creates the media_thumbnails table for the offline cache', () async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(${AppDatabase.mediaThumbnailsTable})',
+    );
+    expect(
+      columns.map((row) => row['name']),
+      containsAll(<String>[
+        'account_key',
+        'media_id',
+        'size',
+        'bytes',
+        'byte_count',
+        'fetched_at',
+        'last_used_at',
+      ]),
+    );
+  });
+
+  test('upgrading a v2 database adds the media_thumbnails table', () async {
+    // Build a database exactly as schema v2 left it, then let AppDatabase
+    // migrate it — the on-device path for installs that predate the
+    // thumbnail cache.
+    final path = '${await databaseFactory.getDatabasesPath()}/migrate-v2.db';
+    await databaseFactory.deleteDatabase(path);
+
+    final v2 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 2,
+        onCreate: (db, version) async {
+          await db.execute('''
+CREATE TABLE ${AppDatabase.bookmarksTable} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)
+''');
+          await db.execute('''
+CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  uploaded_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
+)
+''');
+        },
+      ),
+    );
+    await v2.close();
+
+    final migrated = await AppDatabase.open(path: path);
+    addTearDown(() async {
+      await migrated.close();
+      await databaseFactory.deleteDatabase(path);
+    });
+
+    expect(await migrated.getVersion(), AppDatabase.schemaVersion);
+    final tables = await migrated.query(
+      'sqlite_master',
+      columns: <String>['name'],
+      where: 'type = ?',
+      whereArgs: <Object?>['table'],
+    );
+    expect(
+      tables.map((row) => row['name']),
+      contains(AppDatabase.mediaThumbnailsTable),
+    );
+  });
+
   test('re-opening an existing database does not re-run onCreate', () async {
     // A file-backed database, so the second open sees the first one's schema.
     final path = '${await databaseFactory.getDatabasesPath()}/reopen-test.db';

@@ -335,18 +335,28 @@ void main() {
   });
 
   group('SetAutoUploadEnabledUseCase', () {
+    final backgroundSync = FakeBackgroundSyncScheduler();
+    setUp(() {
+      backgroundSync
+        ..scheduleRequests = 0
+        ..cancelRequests = 0;
+    });
     SetAutoUploadEnabledUseCase usecase() =>
-        SetAutoUploadEnabledUseCase(settings, library, logger);
+        SetAutoUploadEnabledUseCase(settings, library, backgroundSync, logger);
 
     test('enables when the library access is granted', () async {
       expect(await usecase().execute(true), isTrue);
       expect(settings.enabled, isTrue);
+      expect(backgroundSync.scheduleRequests, 1);
+      expect(backgroundSync.cancelRequests, 0);
     });
 
     test('refuses to enable when the user denies photo access', () async {
       library.accessGranted = false;
       expect(await usecase().execute(true), isFalse);
       expect(settings.enabled, isFalse);
+      expect(backgroundSync.scheduleRequests, 0);
+      expect(backgroundSync.cancelRequests, 1);
     });
 
     test('disabling never asks for access', () async {
@@ -354,6 +364,7 @@ void main() {
       expect(await usecase().execute(false), isFalse);
       expect(settings.enabled, isFalse);
       expect(library.accessRequests, 0);
+      expect(backgroundSync.cancelRequests, 1);
     });
   });
 

@@ -14,6 +14,7 @@ void main() {
   late FakePhotoUploadRepository uploads;
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
+  late FakeBackgroundSyncScheduler backgroundSync;
   late RecordingAppLogger logger;
 
   setUp(() {
@@ -25,6 +26,7 @@ void main() {
       since: DateTime.utc(2026, 8, 1),
     );
     sessions = FakeSessionRepository(testAuthSession);
+    backgroundSync = FakeBackgroundSyncScheduler();
     logger = RecordingAppLogger();
   });
 
@@ -39,6 +41,8 @@ void main() {
         UploadPhotosUseCase(library, uploads, history, logger),
         logger,
       ),
+      settings,
+      backgroundSync,
       logger,
       debounce: debounce,
     );
@@ -60,6 +64,23 @@ void main() {
 
     await pumpEventQueue();
     expect(uploads.uploaded, hasLength(1));
+  });
+
+  test('start re-asserts the background schedule while enabled', () async {
+    final subject = coordinator()..start();
+    addTearDown(subject.stop);
+
+    await pumpEventQueue();
+    expect(backgroundSync.scheduleRequests, 1);
+  });
+
+  test('start leaves the background schedule alone while disabled', () async {
+    settings.enabled = false;
+    final subject = coordinator()..start();
+    addTearDown(subject.stop);
+
+    await pumpEventQueue();
+    expect(backgroundSync.scheduleRequests, 0);
   });
 
   test('a library change triggers another pass after the debounce', () async {

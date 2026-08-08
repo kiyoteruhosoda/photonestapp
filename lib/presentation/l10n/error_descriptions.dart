@@ -34,3 +34,17 @@ String describeUploadFailure(
     PhotoUploadFailureReason.rejected => l10n.uploadFailureRejected,
   };
 }
+
+/// Maps a playback-source error onto a localised message for the player
+/// overlay.
+///
+/// `not_ready` gets its own wording: the server is still transcoding, so
+/// "try again later" is truthful where "broken" would not be.
+String describePlaybackError(Object error, AppLocalizations l10n) {
+  return switch (error) {
+    NetworkUnreachableError() => l10n.commonErrorNetwork,
+    AuthenticationError() => l10n.commonErrorSessionExpired,
+    InfrastructureError(code: 'not_ready') => l10n.videoNotReady,
+    _ => l10n.videoUnavailable,
+  };
+}

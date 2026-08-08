@@ -1,5 +1,6 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
@@ -10,18 +11,22 @@ import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.
 import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
+import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
+import 'package:flutterbase/infrastructure/background/workmanager_background_sync_scheduler.dart';
 import 'package:flutterbase/infrastructure/database/app_database.dart';
 import 'package:flutterbase/infrastructure/device/photo_manager_photo_library_gateway.dart';
 import 'package:flutterbase/infrastructure/links/url_launcher_external_link_launcher.dart';
 import 'package:flutterbase/infrastructure/logging/persistent_app_logger.dart';
 import 'package:flutterbase/infrastructure/repositories/api_album_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/package_info_app_info_repository.dart';
@@ -32,6 +37,7 @@ import 'package:flutterbase/infrastructure/repositories/shared_preferences_debug
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_bookmark_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -59,10 +65,13 @@ final class InfrastructureModule {
     required this.apiEndpoints,
     required this.albums,
     required this.mediaThumbnails,
+    required this.mediaThumbnailCache,
+    required this.mediaPlayback,
     required this.photoUploads,
     required this.uploadHistory,
     required this.autoUploadSettings,
     required this.photoLibrary,
+    required this.backgroundSync,
   });
 
   /// Opens every adapter and returns them wired and ready.
@@ -71,7 +80,12 @@ final class InfrastructureModule {
   /// logger starts, so the very first log line is already filtered at the
   /// level the user chose. The database opens after the logger so that a
   /// migration failure is recorded rather than swallowed.
-  static Future<InfrastructureModule> create() async {
+  /// [backgroundSyncDispatcher] is the composition root's background entry
+  /// point, handed to WorkManager so the platform can run a sync pass in a
+  /// headless engine while the app is closed.
+  static Future<InfrastructureModule> create({
+    required void Function() backgroundSyncDispatcher,
+  }) async {
     final preferences = await SharedPreferences.getInstance();
 
     final debugSettings = SharedPreferencesDebugSettingsRepository(preferences);
@@ -121,6 +135,12 @@ final class InfrastructureModule {
       apiEndpoints: apiEndpoints,
       albums: ApiAlbumRepository(apiClient),
       mediaThumbnails: ApiMediaThumbnailRepository(apiClient),
+      mediaThumbnailCache: SqfliteMediaThumbnailCacheRepository(
+        database,
+        sessions,
+        apiEndpoints,
+      ),
+      mediaPlayback: ApiMediaPlaybackRepository(apiClient),
       photoUploads: ApiPhotoUploadRepository(apiClient),
       uploadHistory: SqfliteUploadHistoryRepository(
         database,
@@ -131,6 +151,9 @@ final class InfrastructureModule {
         preferences,
       ),
       photoLibrary: PhotoManagerPhotoLibraryGateway(),
+      backgroundSync: WorkmanagerBackgroundSyncScheduler(
+        backgroundSyncDispatcher,
+      ),
     );
   }
 
@@ -146,8 +169,11 @@ final class InfrastructureModule {
   final ApiEndpointRepository apiEndpoints;
   final AlbumRepository albums;
   final MediaThumbnailRepository mediaThumbnails;
+  final MediaThumbnailCacheRepository mediaThumbnailCache;
+  final MediaPlaybackRepository mediaPlayback;
   final PhotoUploadRepository photoUploads;
   final UploadHistoryRepository uploadHistory;
   final AutoUploadSettingsRepository autoUploadSettings;
   final PhotoLibraryGateway photoLibrary;
+  final BackgroundSyncScheduler backgroundSync;
 }

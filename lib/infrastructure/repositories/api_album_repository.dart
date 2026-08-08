@@ -12,29 +12,45 @@ final class ApiAlbumRepository implements AlbumRepository {
 
   final PhotoNestApiClient _client;
 
-  /// The server's maximum page size. One page of 200 covers a personal
-  /// library's album count; paging can come when someone actually overflows
-  /// it.
+  /// The server's maximum page size for the album list.
   static const int _pageSize = 200;
 
   @override
   Future<List<Album>> findAll() async {
-    final payload = await _client.getJson(
-      '/albums',
-      query: {'page': '1', 'pageSize': '$_pageSize'},
-    );
-    final items = payload['items'];
-    if (items is! List) {
-      throw const InfrastructureError('Album list response had no items.');
+    // Follows the server's paging to the end: 200 per request covers most
+    // libraries in one round-trip, and larger ones keep going instead of
+    // silently truncating at the first page.
+    final albums = <Album>[];
+    for (var page = 1; ; page++) {
+      final payload = await _client.getJson(
+        '/albums',
+        query: {'page': '$page', 'pageSize': '$_pageSize'},
+      );
+      final items = payload['items'];
+      if (items is! List) {
+        throw const InfrastructureError('Album list response had no items.');
+      }
+      albums.addAll(items.whereType<Map<String, dynamic>>().map(_albumFrom));
+      final total = payload['total'];
+      final done =
+          items.length < _pageSize || (total is int && albums.length >= total);
+      if (done) break;
     }
-    return items.whereType<Map<String, dynamic>>().map(_albumFrom).toList();
+    return albums;
   }
 
   @override
-  Future<AlbumDetail?> findById(AlbumId id) async {
+  Future<AlbumDetail?> findById(
+    AlbumId id, {
+    int mediaPage = 1,
+    int mediaPageSize = 100,
+  }) async {
     final Map<String, dynamic> payload;
     try {
-      payload = await _client.getJson('/albums/${id.value}');
+      payload = await _client.getJson(
+        '/albums/${id.value}',
+        query: {'page': '$mediaPage', 'pageSize': '$mediaPageSize'},
+      );
     } on InfrastructureError catch (error) {
       // The server names a missing album `not_found`. Absence is an answer
       // here, not a failure.
@@ -50,7 +66,14 @@ final class ApiAlbumRepository implements AlbumRepository {
         .whereType<Map<String, dynamic>>()
         .map(_mediaItemFrom)
         .toList();
-    return AlbumDetail(album: _albumFrom(album), media: media);
+    // A server without media paging ignores the query and sends everything;
+    // its "total" is then simply the page it sent.
+    final total = album['mediaTotal'];
+    return AlbumDetail(
+      album: _albumFrom(album),
+      media: media,
+      mediaTotal: total is int ? total : null,
+    );
   }
 
   static Album _albumFrom(Map<String, dynamic> json) {
@@ -70,6 +93,7 @@ final class ApiAlbumRepository implements AlbumRepository {
       id: MediaId(json['id'] as int),
       filename: json['filename'] as String? ?? '',
       shotAt: _utcInstant(json['shotAt']),
+      isVideo: json['isVideo'] == true,
     );
   }
 

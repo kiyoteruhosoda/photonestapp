@@ -10,6 +10,7 @@ import 'package:flutterbase/domain/value_objects/media_id.dart';
 import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:flutterbase/infrastructure/repositories/api_album_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_auth_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:http/http.dart' as http;
@@ -186,6 +187,32 @@ void main() {
       expect(albums[1].mediaCount, 0);
     });
 
+    test('findAll follows the paging to the end of the list', () async {
+      final repository = ApiAlbumRepository(
+        client((request) async {
+          final page = int.parse(request.url.queryParameters['page']!);
+          // Two full pages then a short one, so the loop has to keep going
+          // exactly until the server runs dry.
+          final count = page < 3 ? 200 : 1;
+          return json({
+            'items': [
+              for (var i = 0; i < count; i++)
+                {'id': (page - 1) * 200 + i + 1, 'title': 'A'},
+            ],
+            'total': 401,
+            'page': page,
+            'pageSize': 200,
+          });
+        }),
+      );
+
+      final albums = await repository.findAll();
+
+      expect(albums, hasLength(401));
+      expect(requests, hasLength(3));
+      expect(albums.last.id, AlbumId(401));
+    });
+
     test('findAll rejects a response without items', () async {
       final repository = ApiAlbumRepository(
         client((request) async => json({'unexpected': true})),
@@ -222,11 +249,49 @@ void main() {
       final detail = await repository.findById(AlbumId(3));
 
       expect(requests.single.url.path, '/api/albums/3');
+      expect(requests.single.url.queryParameters, {
+        'page': '1',
+        'pageSize': '100',
+      });
       expect(detail, isNotNull);
       expect(detail!.album.title, 'Detail');
       expect(detail.media.single.id, MediaId(5));
       expect(detail.media.single.filename, 'IMG.jpg');
       expect(detail.media.single.shotAt, DateTime.utc(2026, 2, 3, 4, 5, 6));
+      expect(detail.media.single.isVideo, isFalse);
+      // Without a server-side total, the page is the whole album.
+      expect(detail.mediaTotal, 1);
+    });
+
+    test('findById carries the media paging window and the total', () async {
+      final repository = ApiAlbumRepository(
+        client(
+          (request) async => json({
+            'album': {
+              'id': 3,
+              'title': 'Big',
+              'mediaCount': 250,
+              'mediaTotal': 250,
+              'media': [
+                {'id': 7, 'filename': 'clip.mp4', 'isVideo': true},
+              ],
+            },
+          }),
+        ),
+      );
+
+      final detail = await repository.findById(
+        AlbumId(3),
+        mediaPage: 3,
+        mediaPageSize: 50,
+      );
+
+      expect(requests.single.url.queryParameters, {
+        'page': '3',
+        'pageSize': '50',
+      });
+      expect(detail!.mediaTotal, 250);
+      expect(detail.media.single.isVideo, isTrue);
     });
 
     test('findById answers null for the server not_found code', () async {
@@ -275,6 +340,56 @@ void main() {
       expect(
         () => repository.fetch(MediaId(5), size: 300),
         throwsA(isA<InfrastructureError>()),
+      );
+    });
+  });
+
+  group('ApiMediaPlaybackRepository', () {
+    test('resolves the signed path against the signed-in server', () async {
+      final repository = ApiMediaPlaybackRepository(
+        client(
+          (request) async => json({
+            'url': '/api/dl/tok123',
+            'expiresAt': '2026-08-08T12:00:00Z',
+          }),
+        ),
+      );
+
+      final source = await repository.sourceOf(MediaId(7));
+
+      expect(requests.single.url.path, '/api/media/7/playback-url');
+      expect(requests.single.method, 'POST');
+      expect(source.url, Uri.parse('https://photos.example.com/api/dl/tok123'));
+      expect(source.expiresAt, DateTime.utc(2026, 8, 8, 12));
+    });
+
+    test('a response without a URL is an error', () async {
+      final repository = ApiMediaPlaybackRepository(
+        client((request) async => json({'expiresAt': null})),
+      );
+      await expectLater(
+        repository.sourceOf(MediaId(7)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test('the transcoding-in-progress code surfaces unchanged', () async {
+      final repository = ApiMediaPlaybackRepository(
+        client(
+          (request) async => json({
+            'detail': {'error': 'not_ready', 'message': 'Still processing.'},
+          }, status: 409),
+        ),
+      );
+      await expectLater(
+        repository.sourceOf(MediaId(7)),
+        throwsA(
+          isA<InfrastructureError>().having(
+            (error) => error.code,
+            'code',
+            'not_ready',
+          ),
+        ),
       );
     });
   });
@@ -363,6 +478,30 @@ void main() {
       );
     });
 
+    test('a video upload carries a video content type', () async {
+      final repository = ApiPhotoUploadRepository(
+        client((request) async {
+          if (request.url.path.endsWith('/upload/prepare')) {
+            return json({'tempFileId': 't1'});
+          }
+          return json({
+            'uploaded': [
+              {'status': 'success'},
+            ],
+          });
+        }),
+        random: Random(1),
+      );
+
+      await repository.upload(
+        testLocalPhoto(fileName: 'clip.mp4', isVideo: true),
+        Uint8List.fromList([1, 2]),
+      );
+
+      final prepare = requests.first;
+      expect(prepare.body, contains('content-type: video/mp4'));
+    });
+
     test(
       'an unsupported extension is refused before any network call', //
       () async {
@@ -371,7 +510,7 @@ void main() {
         );
         await expectLater(
           repository.upload(
-            testLocalPhoto(fileName: 'clip.mp4'),
+            testLocalPhoto(fileName: 'notes.txt'),
             Uint8List.fromList([1]),
           ),
           throwsA(

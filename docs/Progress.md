@@ -82,6 +82,9 @@ README も汎用テンプレート「flutterbase」の説明のまま。PhotoNes
 候補の考え方: 所有ドメインの逆順 + アプリ名（例: 所有ドメインが
 `example.com` なら `com.example.photonest`）。
 
+2026-08-08 プロダクトオーナー確認: 所有ドメイン未定のため保留継続。
+ドメイン決定が判断の前提（#1 と同時に決める）。
+
 ### 1. App Link のホストを実ドメインに差し替える
 
 テンプレートの既定値は `flutterbase.example.com` で、実在しません。
@@ -102,3 +105,5 @@ fork 後に必要な作業は 3 つで、いずれも `docs/DEEP_LINKS.md` に�
 着手できない。ドメインが決まれば上記 1〜3 は `docs/DEEP_LINKS.md` の手順どおりで
 工数小。#6 の `applicationId` 決定と同時に決めるのが望ましい
 （`assetlinks.json` は `package_name` に実 ID を含むため）。
+
+2026-08-08 プロダクトオーナー確認: 所有ドメイン未定のため保留継続。

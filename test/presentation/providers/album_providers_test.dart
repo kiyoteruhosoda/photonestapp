@@ -122,20 +122,17 @@ void main() {
     },
   );
 
-  test(
-    'without an advertised total, a short first page ends paging',
-    () async {
-      final repository = FakeAlbumRepository(
-        details: {albumId: detailWith(mediaRange(1, 30))},
-      )..reportsMediaTotal = false;
-      final scope = TestScope(albumRepository: repository);
-      await scope.container.read(albumDetailProvider(albumId).future);
+  test('without an advertised total, a short first page ends paging', () async {
+    final repository = FakeAlbumRepository(
+      details: {albumId: detailWith(mediaRange(1, 30))},
+    )..reportsMediaTotal = false;
+    final scope = TestScope(albumRepository: repository);
+    await scope.container.read(albumDetailProvider(albumId).future);
 
-      final state = scope.container.read(albumDetailProvider(albumId)).value!;
-      expect(state.media.length, 30);
-      expect(state.hasMore, isFalse);
-    },
-  );
+    final state = scope.container.read(albumDetailProvider(albumId)).value!;
+    expect(state.media.length, 30);
+    expect(state.hasMore, isFalse);
+  });
 
   test(
     'a short page ends paging even when the advertised total is stale',

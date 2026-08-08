@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -40,20 +41,65 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
     'heif': 'heif',
   };
 
+  /// Video types the server accepts, keyed by lower-case file extension.
+  static const Map<String, String> _videoSubtypeByExtension = {
+    'mp4': 'mp4',
+    'm4v': 'x-m4v',
+    'mov': 'quicktime',
+    'avi': 'x-msvideo',
+    'mkv': 'x-matroska',
+    'webm': 'webm',
+    '3gp': '3gpp',
+    'mts': 'mp2t',
+    'm2ts': 'mp2t',
+  };
+
   @override
-  Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+  Future<void> upload(LocalPhoto photo, Uint8List bytes) {
+    return _uploadWith(
+      photo,
+      () async => http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: photo.fileName,
+        contentType: _contentTypeFor(photo.fileName),
+      ),
+    );
+  }
+
+  @override
+  Future<void> uploadFromPath(LocalPhoto photo, String path) {
+    // `fromPath` streams from disk chunk by chunk, so a multi-gigabyte
+    // video costs a buffer, not its whole size, in memory.
+    return _uploadWith(photo, () async {
+      try {
+        return await http.MultipartFile.fromPath(
+          'file',
+          path,
+          filename: photo.fileName,
+          contentType: _contentTypeFor(photo.fileName),
+        );
+      } on FileSystemException catch (error) {
+        throw InfrastructureError(
+          'The file for ${photo.fileName} is gone from $path.',
+          code: 'missing_file',
+          cause: error,
+        );
+      }
+    });
+  }
+
+  Future<void> _uploadWith(
+    LocalPhoto photo,
+    Future<http.MultipartFile> Function() buildFile,
+  ) async {
     final session = _newSessionId();
     final headers = {_sessionHeader: session};
 
     final prepared = await _client.postMultipart(
       '/upload/prepare',
       headers: headers,
-      buildFile: () => http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: photo.fileName,
-        contentType: _contentTypeFor(photo.fileName),
-      ),
+      buildFile: buildFile,
     );
     final tempFileId = prepared['tempFileId'] as String?;
     if (tempFileId == null) {
@@ -82,14 +128,14 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
   static MediaType _contentTypeFor(String fileName) {
     final dot = fileName.lastIndexOf('.');
     final extension = dot < 0 ? '' : fileName.substring(dot + 1).toLowerCase();
-    final subtype = _imageSubtypeByExtension[extension];
-    if (subtype == null) {
-      throw InfrastructureError(
-        'Unsupported photo type ".$extension" for $fileName.',
-        code: 'unsupported_format',
-      );
-    }
-    return MediaType('image', subtype);
+    final imageSubtype = _imageSubtypeByExtension[extension];
+    if (imageSubtype != null) return MediaType('image', imageSubtype);
+    final videoSubtype = _videoSubtypeByExtension[extension];
+    if (videoSubtype != null) return MediaType('video', videoSubtype);
+    throw InfrastructureError(
+      'Unsupported media type ".$extension" for $fileName.',
+      code: 'unsupported_format',
+    );
   }
 
   /// 32 hex characters, matching the shape the server generates itself.

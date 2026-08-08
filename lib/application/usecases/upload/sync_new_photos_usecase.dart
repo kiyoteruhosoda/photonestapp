@@ -4,6 +4,7 @@ import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.da
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 
 /// Why a sync pass ended, so the caller can tell "nothing to do" apart from
@@ -17,6 +18,10 @@ enum SyncSkipReason {
 
   /// The user has not granted photo-library access.
   noLibraryAccess,
+
+  /// Another isolate — the background engine or the foreground app — holds
+  /// the sync lease and is running a pass right now.
+  anotherPassRunning,
 }
 
 /// Outcome of one automatic sync pass.
@@ -42,15 +47,20 @@ final class SyncReport {
 ///
 /// Runs opportunistically — at startup, when the photo library changes, and
 /// when the user toggles the feature — so every precondition is re-checked
-/// on each pass instead of being assumed.
+/// on each pass instead of being assumed. The whole pass (history read →
+/// uploads → history writes) runs under the device-wide sync lease, so the
+/// foreground app and the background WorkManager engine never upload the
+/// same photo concurrently.
 final class SyncNewPhotosUseCase {
   const SyncNewPhotosUseCase(
     this._settings,
     this._sessions,
     this._library,
     this._history,
+    this._syncLease,
     this._uploadPhotos,
     this._logger, {
+    required this.leaseHolder,
     this.pageSize = 100,
   });
 
@@ -58,8 +68,18 @@ final class SyncNewPhotosUseCase {
   final SessionRepository _sessions;
   final PhotoLibraryGateway _library;
   final UploadHistoryRepository _history;
+  final SyncLeaseRepository _syncLease;
   final UploadPhotosUseCase _uploadPhotos;
   final AppLogger _logger;
+
+  /// Who this pass runs as when taking the lease — `foreground` for the
+  /// app, `background` for the WorkManager engine.
+  final String leaseHolder;
+
+  /// How long a pass may hold the lease before a crashed holder stops
+  /// blocking everyone else. Long enough for a large batch on a slow
+  /// connection; the lease is released the moment the pass ends anyway.
+  static const Duration leaseDuration = Duration(minutes: 30);
 
   /// Window size per library query. Injectable so tests can exercise the
   /// paging without building hundreds of photos.
@@ -77,6 +97,24 @@ final class SyncNewPhotosUseCase {
       return const SyncReport.skippedBecause(SyncSkipReason.noLibraryAccess);
     }
 
+    final now = DateTime.now().toUtc();
+    final acquired = await _syncLease.tryAcquire(
+      leaseHolder,
+      until: now.add(leaseDuration),
+      now: now,
+    );
+    if (!acquired) {
+      _logger.info('[AutoUpload] sync lease busy — skipping this pass');
+      return const SyncReport.skippedBecause(SyncSkipReason.anotherPassRunning);
+    }
+    try {
+      return await _runPass();
+    } finally {
+      await _syncLease.release(leaseHolder);
+    }
+  }
+
+  Future<SyncReport> _runPass() async {
     final since = _settings.enabledSince();
     final uploaded = await _history.uploadedLocalIds();
     // Page through the whole window after `since`: the library answers

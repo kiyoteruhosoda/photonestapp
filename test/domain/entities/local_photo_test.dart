@@ -44,4 +44,15 @@ void main() {
       expect(photo.toString(), contains('a.jpg'));
     });
   });
+
+  test('LocalPhoto is a still photo unless said otherwise', () {
+    LocalPhoto build({bool? isVideo}) => LocalPhoto(
+      localId: 'asset-1',
+      fileName: 'clip.mp4',
+      takenAt: DateTime.utc(2026),
+      isVideo: isVideo ?? false,
+    );
+    expect(build().isVideo, isFalse);
+    expect(build(isVideo: true).isVideo, isTrue);
+  });
 }

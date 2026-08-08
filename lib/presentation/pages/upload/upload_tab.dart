@@ -282,6 +282,27 @@ class _UploadTabState extends ConsumerState<UploadTab> {
         fit: StackFit.expand,
         children: [
           ThumbnailImage(bytes: ref.watch(localThumbnailProvider(localId))),
+          if (candidate.photo.isVideo)
+            Align(
+              alignment: Alignment.bottomLeft,
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.xs),
+                child: Semantics(
+                  label: l10n.mediaVideoLabel,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.play_arrow_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           if (candidate.alreadyUploaded)
             ColoredBox(
               color: colorScheme.surface.withValues(alpha: 0.6),

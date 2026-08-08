@@ -58,9 +58,26 @@ void main() {
       expect(a.hashCode, b.hashCode);
     });
 
-    test('toString names the album and the media count', () {
+    test('toString names the album and the paging position', () {
       final detail = AlbumDetail(album: build(), media: const []);
-      expect(detail.toString(), 'AlbumDetail(1, 0 media)');
+      expect(detail.toString(), 'AlbumDetail(1, 0 of 0 media)');
+    });
+
+    test('mediaTotal defaults to the page length for unpaged responses', () {
+      final detail = AlbumDetail(
+        album: build(),
+        media: [AlbumMediaItem(id: MediaId(1), filename: 'x.jpg')],
+      );
+      expect(detail.mediaTotal, 1);
+    });
+
+    test('mediaTotal reports the whole album beyond the page', () {
+      final detail = AlbumDetail(
+        album: build(),
+        media: [AlbumMediaItem(id: MediaId(1), filename: 'x.jpg')],
+        mediaTotal: 500,
+      );
+      expect(detail.mediaTotal, 500);
     });
   });
 }

@@ -3,6 +3,52 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-08 — 動画対応（列挙・アップロード・再生）
+
+- 旧 Progress #9。`PhotoManagerPhotoLibraryGateway` を `RequestType.common` に
+  変更し、端末の動画も列挙対象にした（`LocalPhoto.isVideo` を追加、
+  `READ_MEDIA_VIDEO` 権限を宣言）。アップロードの Content-Type マップに
+  動画拡張子（mp4/mov/mkv/webm ほか）を追加。
+- アップロードはプラットフォームがファイルパスを公開できる場合
+  `MultipartFile.fromPath` でディスクからストリーミングし、長時間の動画でも
+  ファイル全体をヒープに載せない（パスが無いアセットのみ従来のバイト列
+  読み込みにフォールバック）。
+- サーバー動画の再生を追加。`MediaPlaybackRepository`（`POST
+  /api/media/{id}/playback-url` の署名付き URL をエンドポイントへ解決）と
+  `video_player` ベースの `VideoPlaybackView` で、アルバム詳細から
+  フルスクリーン再生できる。トランスコード中（409 `not_ready`）は
+  「準備中」の翻訳済み文言を表示する。
+- アルバム詳細のメディアに再生バッジを表示（サーバーが `isVideo` を返す。
+  photonest 側の同日変更とセット）。
+
+## 2026-08-08 — サムネイルのオフラインキャッシュとページング
+
+- 旧 Progress #10。サーバーサムネイルを SQLite（schema v3 の
+  `media_thumbnails` テーブル）へ永続化した。`GetMediaThumbnailUseCase` が
+  キャッシュ優先で読み、ヒットすればネットワーク無しで描画される
+  （オフライン・再起動後も表示可能）。サーバー + アカウント単位でスコープし、
+  LRU で 128 MiB を上限に自動削除する（ADR 0007）。
+- アルバム一覧はサーバーのページングを最後まで辿り、200 件超でも全件表示。
+- アルバム詳細はメディアを 100 件ずつページ読み（`albumDetailProvider` が
+  `AsyncNotifier` family になり、グリッド末尾で次ページを自動取得。失敗時は
+  末尾タイルから再試行）。サーバー側 `GET /api/albums/{id}` の
+  `page`/`pageSize` 対応とセット。
+
+## 2026-08-08 — アプリを閉じている間の自動アップロード（WorkManager）
+
+- 旧 Progress #4。`workmanager` の 15 分周期タスクで、アプリ終了中も
+  新しい写真・動画を自動アップロードする（ADR 0006）。制約は
+  「ネットワーク接続あり」「バッテリー残量低下時は実行しない」。
+- Application に `BackgroundSyncScheduler` ポートを新設し、自動アップロードの
+  ON/OFF と同期してスケジュールを登録・解除する。起動時にも設定が ON なら
+  登録し直す（アプリ更新でスケジュールが消えた場合の自己修復）。
+- フォアグラウンドとバックグラウンドの同期パスは共有 SQLite の同期リース
+  （schema v4 の `sync_leases`）で相互排他し、別アイソレート同時実行による
+  同一写真の二重アップロードを防ぐ（ADR 0006）。
+- バックグラウンド側のエントリポイントは `lib/app/background/`（合成ルート）。
+  既存の `SyncNewPhotosUseCase` をそのまま実行するため、アップロード履歴に
+  よる冪等性・前提条件の再検査はフォアグラウンドと同一。
+
 ## 2026-08-07 — `integration_test` を認証ガード後の実態に合わせて修正し CI へ組み込み
 
 - 旧 Progress #12。「起動直後に `NavigationBar` がある」前提だった

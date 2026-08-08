@@ -137,8 +137,9 @@ final class UploadPhotosUseCase {
     List<LocalPhoto> uploaded,
     List<PhotoUploadFailure> failed,
   ) async {
-    final bytes = await _library.readOriginalBytes(photo.localId);
-    if (bytes == null) {
+    try {
+      await _sendOriginal(photo);
+    } on _AssetVanished {
       failed.add(
         PhotoUploadFailure(
           photo: photo,
@@ -147,9 +148,6 @@ final class UploadPhotosUseCase {
         ),
       );
       return;
-    }
-    try {
-      await _uploads.upload(photo, bytes);
     } on AppError catch (error) {
       _logger.warning('[Upload] ${photo.fileName} failed: ${error.message}');
       failed.add(
@@ -163,7 +161,27 @@ final class UploadPhotosUseCase {
     }
     await _history.markUploaded(photo, uploadedAt ?? DateTime.now().toUtc());
     uploaded.add(photo);
-    _logger.info('[Upload] sent ${photo.fileName} (${bytes.length} bytes)');
+    _logger.info('[Upload] sent ${photo.fileName}');
+  }
+
+  /// Streams the original from its file when the platform exposes one —
+  /// what keeps a long video out of the app heap — and falls back to an
+  /// in-memory read otherwise. Throws [_AssetVanished] when the asset is
+  /// gone from the library either way.
+  Future<void> _sendOriginal(LocalPhoto photo) async {
+    final path = await _library.originalFilePath(photo.localId);
+    if (path != null) {
+      try {
+        await _uploads.uploadFromPath(photo, path);
+        return;
+      } on InfrastructureError catch (error) {
+        if (error.code != 'missing_file') rethrow;
+        throw const _AssetVanished();
+      }
+    }
+    final bytes = await _library.readOriginalBytes(photo.localId);
+    if (bytes == null) throw const _AssetVanished();
+    await _uploads.upload(photo, bytes);
   }
 
   static PhotoUploadFailureReason _reasonFor(AppError error) {
@@ -175,4 +193,9 @@ final class UploadPhotosUseCase {
       _ => PhotoUploadFailureReason.rejected,
     };
   }
+}
+
+/// Internal signal that the asset disappeared between listing and upload.
+final class _AssetVanished implements Exception {
+  const _AssetVanished();
 }

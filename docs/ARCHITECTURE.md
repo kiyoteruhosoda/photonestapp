@@ -116,6 +116,8 @@ reserved に残っていても CI が落ちます）。
 | `shared_preferences` / `path_provider` / `package_info_plus` | Infrastructure | 既存のアダプター群 |
 | `http` / `http_parser` | Infrastructure | `lib/infrastructure/api/photonest_api_client.dart` と API リポジトリ群。ベース URL 解決・Bearer 付与・401 時のトークン再発行はクライアントに集約 |
 | `photo_manager` | Infrastructure | `lib/infrastructure/device/photo_manager_photo_library_gateway.dart`。`PhotoLibraryGateway` ポート（Application）の背後 |
+| `workmanager` | Infrastructure | `lib/infrastructure/background/`。`BackgroundSyncScheduler` ポート（Application）の背後。バックグラウンド側のエントリポイントは `lib/app/background/`（第二の合成ルート） |
+| `video_player` | Presentation | `lib/presentation/widgets/ui/video_playback_view.dart`。再生はウィジェットそのもの（テクスチャ描画）なのでポートを切らず Presentation に置く。再生 URL の取得は `MediaPlaybackRepository`（Domain インターフェース + API アダプター）が担う |
 
 `equatable` と `riverpod_annotation`（および `riverpod_generator`）は
 採用していません。値の等価性は手書きの `==` / `hashCode`、Riverpod の

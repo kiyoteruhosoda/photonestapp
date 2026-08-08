@@ -1,4 +1,6 @@
+import 'package:flutterbase/app/background/background_sync_entrypoint.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
@@ -20,6 +22,7 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
@@ -37,9 +40,12 @@ import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.
 import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
+import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/infrastructure_module.dart';
@@ -59,7 +65,9 @@ Future<void> setupServiceLocator() async {
   // The module hands back Domain interfaces and Application ports only, so
   // no storage technology is named here.
 
-  final infrastructure = await InfrastructureModule.create();
+  final infrastructure = await InfrastructureModule.create(
+    backgroundSyncDispatcher: backgroundSyncDispatcher,
+  );
 
   sl
     ..registerSingleton<AppLogger>(infrastructure.appLogger)
@@ -80,12 +88,18 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<MediaThumbnailRepository>(
       infrastructure.mediaThumbnails,
     )
+    ..registerSingleton<MediaThumbnailCacheRepository>(
+      infrastructure.mediaThumbnailCache,
+    )
+    ..registerSingleton<MediaPlaybackRepository>(infrastructure.mediaPlayback)
     ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
     ..registerSingleton<UploadHistoryRepository>(infrastructure.uploadHistory)
+    ..registerSingleton<SyncLeaseRepository>(infrastructure.syncLease)
     ..registerSingleton<AutoUploadSettingsRepository>(
       infrastructure.autoUploadSettings,
     )
-    ..registerSingleton<PhotoLibraryGateway>(infrastructure.photoLibrary);
+    ..registerSingleton<PhotoLibraryGateway>(infrastructure.photoLibrary)
+    ..registerSingleton<BackgroundSyncScheduler>(infrastructure.backgroundSync);
 
   sl<AppLogger>().info(
     '[DI] Infrastructure ready '
@@ -164,7 +178,14 @@ Future<void> setupServiceLocator() async {
     () => GetAlbumUseCase(sl<AlbumRepository>()),
   );
   sl.registerFactory<GetMediaThumbnailUseCase>(
-    () => GetMediaThumbnailUseCase(sl<MediaThumbnailRepository>()),
+    () => GetMediaThumbnailUseCase(
+      sl<MediaThumbnailRepository>(),
+      sl<MediaThumbnailCacheRepository>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<GetMediaPlaybackUseCase>(
+    () => GetMediaPlaybackUseCase(sl<MediaPlaybackRepository>()),
   );
   sl.registerFactory<ListUploadCandidatesUseCase>(
     () => ListUploadCandidatesUseCase(
@@ -189,8 +210,10 @@ Future<void> setupServiceLocator() async {
       sl<SessionRepository>(),
       sl<PhotoLibraryGateway>(),
       sl<UploadHistoryRepository>(),
+      sl<SyncLeaseRepository>(),
       sl<UploadPhotosUseCase>(),
       sl<AppLogger>(),
+      leaseHolder: 'foreground',
     ),
   );
   sl.registerFactory<GetAutoUploadEnabledUseCase>(
@@ -200,6 +223,7 @@ Future<void> setupServiceLocator() async {
     () => SetAutoUploadEnabledUseCase(
       sl<AutoUploadSettingsRepository>(),
       sl<PhotoLibraryGateway>(),
+      sl<BackgroundSyncScheduler>(),
       sl<AppLogger>(),
     ),
   );
@@ -212,6 +236,8 @@ Future<void> setupServiceLocator() async {
     AutoUploadCoordinator(
       sl<PhotoLibraryGateway>(),
       sl<SyncNewPhotosUseCase>(),
+      sl<AutoUploadSettingsRepository>(),
+      sl<BackgroundSyncScheduler>(),
       sl<AppLogger>(),
     ),
   );

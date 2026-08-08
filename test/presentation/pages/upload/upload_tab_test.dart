@@ -203,4 +203,19 @@ void main() {
     expect(scope.autoUploadSettingsRepository.enabled, isFalse);
     expect(find.text(l10n.uploadAutoDenied), findsOneWidget);
   });
+
+  testWidgets('a video candidate carries the play badge', (tester) async {
+    final photoLibrary = FakePhotoLibraryGateway(
+      photos: [
+        testLocalPhoto(localId: 'p1'),
+        testLocalPhoto(localId: 'v1', fileName: 'clip.mp4', isVideo: true),
+      ],
+    );
+    photoLibrary.thumbnailsById['p1'] = testPngBytes;
+    photoLibrary.thumbnailsById['v1'] = testPngBytes;
+    final scope = TestScope(photoLibrary: photoLibrary);
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+
+    expect(find.byIcon(Icons.play_arrow_rounded), findsOneWidget);
+  });
 }

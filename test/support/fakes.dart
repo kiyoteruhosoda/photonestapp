@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:typed_data';
 
+import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/album.dart';
@@ -9,6 +10,7 @@ import 'package:flutterbase/domain/entities/app_info.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
 import 'package:flutterbase/domain/entities/bookmark.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
@@ -18,9 +20,12 @@ import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.
 import 'package:flutterbase/domain/repositories/bookmark_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
+import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
+import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
@@ -258,11 +263,13 @@ LocalPhoto testLocalPhoto({
   String localId = 'asset-1',
   String fileName = 'IMG_0001.jpg',
   DateTime? takenAt,
+  bool isVideo = false,
 }) {
   return LocalPhoto(
     localId: localId,
     fileName: fileName,
     takenAt: takenAt ?? testPhotoTakenAt,
+    isVideo: isVideo,
   );
 }
 
@@ -283,11 +290,16 @@ Album testAlbum({
 }
 
 /// Builds one album media item.
-AlbumMediaItem testAlbumMediaItem({int id = 10, String filename = 'a.jpg'}) {
+AlbumMediaItem testAlbumMediaItem({
+  int id = 10,
+  String filename = 'a.jpg',
+  bool isVideo = false,
+}) {
   return AlbumMediaItem(
     id: MediaId(id),
     filename: filename,
     shotAt: testPhotoTakenAt,
+    isVideo: isVideo,
   );
 }
 
@@ -411,10 +423,30 @@ final class FakeAlbumRepository implements AlbumRepository {
     return albums;
   }
 
+  /// Every (id, mediaPage, mediaPageSize) triple [findById] was asked for.
+  final List<(AlbumId, int, int)> mediaPageRequests = <(AlbumId, int, int)>[];
+
   @override
-  Future<AlbumDetail?> findById(AlbumId id) async {
+  Future<AlbumDetail?> findById(
+    AlbumId id, {
+    int mediaPage = 1,
+    int mediaPageSize = 100,
+  }) async {
     _failIfAsked();
-    return details[id];
+    mediaPageRequests.add((id, mediaPage, mediaPageSize));
+    final detail = details[id];
+    if (detail == null) return null;
+    // Pages the seeded media the way the server would, so notifier tests
+    // exercise real accumulation.
+    final page = detail.media
+        .skip((mediaPage - 1) * mediaPageSize)
+        .take(mediaPageSize)
+        .toList();
+    return AlbumDetail(
+      album: detail.album,
+      media: page,
+      mediaTotal: detail.media.length,
+    );
   }
 
   void _failIfAsked() {
@@ -438,6 +470,104 @@ final class FakeMediaThumbnailRepository implements MediaThumbnailRepository {
   }
 }
 
+/// In-memory [MediaThumbnailCacheRepository].
+final class FakeMediaThumbnailCacheRepository
+    implements MediaThumbnailCacheRepository {
+  /// Stored bytes by (media id, size).
+  final Map<(int, int), Uint8List> entries = <(int, int), Uint8List>{};
+  final List<(MediaId, int)> saved = <(MediaId, int)>[];
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<Uint8List?> find(MediaId id, {required int size}) async {
+    _failIfAsked();
+    return entries[(id.value, size)];
+  }
+
+  @override
+  Future<void> save(
+    MediaId id, {
+    required int size,
+    required Uint8List bytes,
+    required DateTime fetchedAt,
+  }) async {
+    _failIfAsked();
+    entries[(id.value, size)] = bytes;
+    saved.add((id, size));
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// In-memory [MediaPlaybackRepository] issuing a fixed source per media id.
+final class FakeMediaPlaybackRepository implements MediaPlaybackRepository {
+  final Map<int, MediaPlaybackSource> sources = <int, MediaPlaybackSource>{};
+  final List<MediaId> requested = <MediaId>[];
+
+  /// When set, [sourceOf] throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<MediaPlaybackSource> sourceOf(MediaId id) async {
+    requested.add(id);
+    final error = failure;
+    if (error != null) throw error;
+    final source = sources[id.value];
+    if (source == null) {
+      throw const InfrastructureError('No playback.', code: 'not_found');
+    }
+    return source;
+  }
+}
+
+/// In-memory [SyncLeaseRepository].
+final class FakeSyncLeaseRepository implements SyncLeaseRepository {
+  /// When set, [tryAcquire] refuses as though this holder had the lease.
+  String? heldBy;
+
+  final List<String> acquiredBy = <String>[];
+  final List<String> releasedBy = <String>[];
+
+  @override
+  Future<bool> tryAcquire(
+    String holder, {
+    required DateTime until,
+    required DateTime now,
+  }) async {
+    if (heldBy != null && heldBy != holder) return false;
+    heldBy = holder;
+    acquiredBy.add(holder);
+    return true;
+  }
+
+  @override
+  Future<void> release(String holder) async {
+    releasedBy.add(holder);
+    if (heldBy == holder) heldBy = null;
+  }
+}
+
+/// Records scheduling calls instead of talking to WorkManager.
+final class FakeBackgroundSyncScheduler implements BackgroundSyncScheduler {
+  int scheduleRequests = 0;
+  int cancelRequests = 0;
+
+  @override
+  Future<void> ensureScheduled() async {
+    scheduleRequests++;
+  }
+
+  @override
+  Future<void> cancel() async {
+    cancelRequests++;
+  }
+}
+
 /// Records uploads instead of sending them.
 final class FakePhotoUploadRepository implements PhotoUploadRepository {
   final List<(LocalPhoto, Uint8List)> uploaded = <(LocalPhoto, Uint8List)>[];
@@ -451,14 +581,27 @@ final class FakePhotoUploadRepository implements PhotoUploadRepository {
   /// mid-flight to observe its progress or cancel it.
   Future<void> Function(LocalPhoto photo)? gate;
 
+  /// Uploads that came in as file paths, in order.
+  final List<(LocalPhoto, String)> uploadedFromPath = <(LocalPhoto, String)>[];
+
   @override
   Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+    await _admit(photo);
+    uploaded.add((photo, bytes));
+  }
+
+  @override
+  Future<void> uploadFromPath(LocalPhoto photo, String path) async {
+    await _admit(photo);
+    uploadedFromPath.add((photo, path));
+  }
+
+  Future<void> _admit(LocalPhoto photo) async {
     await gate?.call(photo);
     final error = failure;
     if (error != null && (failFor.isEmpty || failFor.contains(photo.localId))) {
       throw error;
     }
-    uploaded.add((photo, bytes));
   }
 }
 
@@ -470,8 +613,16 @@ final class FakeUploadHistoryRepository implements UploadHistoryRepository {
   final Set<String> _uploaded;
   final List<LocalPhoto> marked = <LocalPhoto>[];
 
+  /// When true, [uploadedLocalIds] throws instead of answering.
+  bool failOnRead = false;
+
   @override
-  Future<Set<String>> uploadedLocalIds() async => Set.of(_uploaded);
+  Future<Set<String>> uploadedLocalIds() async {
+    if (failOnRead) {
+      throw const InfrastructureError('history unavailable');
+    }
+    return Set.of(_uploaded);
+  }
 
   @override
   Future<void> markUploaded(LocalPhoto photo, DateTime uploadedAt) async {
@@ -516,6 +667,10 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
 
   /// Bytes per local id; a photo missing here reads back as null.
   final Map<String, Uint8List> bytesById = <String, Uint8List>{};
+
+  /// File path per local id; a photo missing here has no platform file and
+  /// uploads fall back to [bytesById].
+  final Map<String, String> filePathById = <String, String>{};
   final Map<String, Uint8List> thumbnailsById = <String, Uint8List>{};
 
   // Deliberately left open for the fake's lifetime: tests push events into
@@ -550,6 +705,10 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
   @override
   Future<Uint8List?> readOriginalBytes(String localId) async =>
       bytesById[localId];
+
+  @override
+  Future<String?> originalFilePath(String localId) async =>
+      filePathById[localId];
 
   @override
   Future<Uint8List?> readThumbnail(String localId, {required int size}) async =>

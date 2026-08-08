@@ -63,6 +63,12 @@ abstract class AppLocalizations {
   String get albumNotFound;
   String get albumNotFoundHint;
   String get albumEmpty;
+  String get albumLoadMoreRetry;
+
+  // ─── Video playback ───────────────────────────────────────────────────
+  String get mediaVideoLabel;
+  String get videoNotReady;
+  String get videoUnavailable;
 
   // ─── Upload ───────────────────────────────────────────────────────────
   String get uploadTitle;

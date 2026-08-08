@@ -40,15 +40,23 @@ final class Album {
   String toString() => 'Album(${id.value}, $title)';
 }
 
-/// An album together with the media it contains, as returned by the album
-/// detail endpoint.
+/// An album together with one page of the media it contains, as returned by
+/// the album detail endpoint.
+///
+/// Large albums are read page by page; [mediaTotal] is what tells a reader
+/// how much remains beyond [media]. A server that does not page simply
+/// reports everything in one page whose total equals its length.
 final class AlbumDetail {
-  const AlbumDetail({required this.album, required this.media});
+  const AlbumDetail({required this.album, required this.media, int? mediaTotal})
+    : mediaTotal = mediaTotal ?? media.length;
 
   final Album album;
 
-  /// Media in the album's display order.
+  /// One page of media in the album's display order.
   final List<AlbumMediaItem> media;
+
+  /// How many media items the album holds in total, across all pages.
+  final int mediaTotal;
 
   @override
   bool operator ==(Object other) =>
@@ -58,5 +66,6 @@ final class AlbumDetail {
   int get hashCode => album.hashCode;
 
   @override
-  String toString() => 'AlbumDetail(${album.id.value}, ${media.length} media)';
+  String toString() =>
+      'AlbumDetail(${album.id.value}, ${media.length} of $mediaTotal media)';
 }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -78,16 +79,19 @@ final class PhotoNestApiClient {
   }
 
   /// POSTs one file as `multipart/form-data` and decodes the JSON response.
+  ///
+  /// [buildFile] is async (and called once per attempt) because a file part
+  /// streaming from disk has to be reopened for the post-refresh retry.
   Future<Map<String, dynamic>> postMultipart(
     String path, {
-    required http.MultipartFile Function() buildFile,
+    required Future<http.MultipartFile> Function() buildFile,
     Map<String, String>? headers,
   }) async {
     final response = await _sendWithRetry(
       authenticated: true,
-      build: () => http.MultipartRequest('POST', _resolve(path))
+      build: () async => http.MultipartRequest('POST', _resolve(path))
         ..headers.addAll(headers ?? const {})
-        ..files.add(buildFile()),
+        ..files.add(await buildFile()),
     );
     return _decodeJson(response);
   }
@@ -108,20 +112,38 @@ final class PhotoNestApiClient {
     return base.replace(path: '$basePath/api$path', queryParameters: query);
   }
 
+  /// The absolute form of a server-relative path the API returned, such as
+  /// the signed `/api/dl/…` playback URLs.
+  ///
+  /// Unlike [_resolve] this adds no `/api` prefix — the server already spelt
+  /// the full path. Signed URLs embed their own authorisation, so callers
+  /// can hand the result to a player or browser without the bearer token.
+  Uri absoluteUrl(String serverPath) {
+    final base = _endpoints.load();
+    if (base == null) {
+      throw const InfrastructureError('No PhotoNest server is configured.');
+    }
+    final basePath = base.path.endsWith('/')
+        ? base.path.substring(0, base.path.length - 1)
+        : base.path;
+    final relative = serverPath.startsWith('/') ? serverPath : '/$serverPath';
+    return base.replace(path: '$basePath$relative');
+  }
+
   /// Sends the request [build] produces; on a 401 refreshes the session and
   /// sends a freshly built copy once more.
   ///
   /// [build] is a factory because an [http.Request] cannot be sent twice.
   Future<http.Response> _sendWithRetry({
     required bool authenticated,
-    required http.BaseRequest Function() build,
+    required FutureOr<http.BaseRequest> Function() build,
   }) async {
     final usedToken = authenticated ? _sessions.load()?.accessToken : null;
-    var response = await _send(build(), authenticated: authenticated);
+    var response = await _send(await build(), authenticated: authenticated);
     if (authenticated && response.statusCode == 401) {
       _logger.debug('[Api] access token rejected — refreshing session');
       await _refreshSessionUnlessReplaced(usedToken);
-      response = await _send(build(), authenticated: true);
+      response = await _send(await build(), authenticated: true);
     }
     if (response.statusCode >= 400) {
       throw _errorFor(response);

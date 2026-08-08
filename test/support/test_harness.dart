@@ -23,6 +23,7 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
@@ -69,6 +70,8 @@ class TestScope {
     FakeApiEndpointRepository? apiEndpointRepository,
     FakeAlbumRepository? albumRepository,
     FakeMediaThumbnailRepository? mediaThumbnailRepository,
+    FakeMediaThumbnailCacheRepository? mediaThumbnailCacheRepository,
+    FakeMediaPlaybackRepository? mediaPlaybackRepository,
     FakePhotoUploadRepository? photoUploadRepository,
     FakeUploadHistoryRepository? uploadHistoryRepository,
     FakeAutoUploadSettingsRepository? autoUploadSettingsRepository,
@@ -95,6 +98,10 @@ class TestScope {
        albumRepository = albumRepository ?? FakeAlbumRepository(),
        mediaThumbnailRepository =
            mediaThumbnailRepository ?? FakeMediaThumbnailRepository(),
+       mediaThumbnailCacheRepository =
+           mediaThumbnailCacheRepository ?? FakeMediaThumbnailCacheRepository(),
+       mediaPlaybackRepository =
+           mediaPlaybackRepository ?? FakeMediaPlaybackRepository(),
        photoUploadRepository =
            photoUploadRepository ?? FakePhotoUploadRepository(),
        uploadHistoryRepository =
@@ -115,10 +122,15 @@ class TestScope {
   final FakeApiEndpointRepository apiEndpointRepository;
   final FakeAlbumRepository albumRepository;
   final FakeMediaThumbnailRepository mediaThumbnailRepository;
+  final FakeMediaThumbnailCacheRepository mediaThumbnailCacheRepository;
+  final FakeMediaPlaybackRepository mediaPlaybackRepository;
   final FakePhotoUploadRepository photoUploadRepository;
   final FakeUploadHistoryRepository uploadHistoryRepository;
   final FakeAutoUploadSettingsRepository autoUploadSettingsRepository;
   final FakePhotoLibraryGateway photoLibrary;
+  final FakeBackgroundSyncScheduler backgroundSyncScheduler =
+      FakeBackgroundSyncScheduler();
+  final FakeSyncLeaseRepository syncLeaseRepository = FakeSyncLeaseRepository();
 
   /// The Riverpod container every wrapped widget reads from.
   ///
@@ -191,7 +203,14 @@ class TestScope {
         GetAlbumUseCase(albumRepository),
       ),
       getMediaThumbnailUseCaseProvider.overrideWithValue(
-        GetMediaThumbnailUseCase(mediaThumbnailRepository),
+        GetMediaThumbnailUseCase(
+          mediaThumbnailRepository,
+          mediaThumbnailCacheRepository,
+          logger,
+        ),
+      ),
+      getMediaPlaybackUseCaseProvider.overrideWithValue(
+        GetMediaPlaybackUseCase(mediaPlaybackRepository),
       ),
       listUploadCandidatesUseCaseProvider.overrideWithValue(
         ListUploadCandidatesUseCase(photoLibrary, uploadHistoryRepository),
@@ -207,6 +226,7 @@ class TestScope {
         SetAutoUploadEnabledUseCase(
           autoUploadSettingsRepository,
           photoLibrary,
+          backgroundSyncScheduler,
           logger,
         ),
       ),
@@ -218,9 +238,13 @@ class TestScope {
             sessionRepository,
             photoLibrary,
             uploadHistoryRepository,
+            syncLeaseRepository,
             uploadPhotos,
             logger,
+            leaseHolder: 'foreground',
           ),
+          autoUploadSettingsRepository,
+          backgroundSyncScheduler,
           logger,
         ),
       ),

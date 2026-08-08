@@ -22,6 +22,7 @@ import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.da
 import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
@@ -60,6 +61,9 @@ List<Override> buildProviderOverrides() {
     getAlbumUseCaseProvider.overrideWithValue(sl<GetAlbumUseCase>()),
     getMediaThumbnailUseCaseProvider.overrideWithValue(
       sl<GetMediaThumbnailUseCase>(),
+    ),
+    getMediaPlaybackUseCaseProvider.overrideWithValue(
+      sl<GetMediaPlaybackUseCase>(),
     ),
     listUploadCandidatesUseCaseProvider.overrideWithValue(
       sl<ListUploadCandidatesUseCase>(),

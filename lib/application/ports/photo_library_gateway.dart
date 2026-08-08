@@ -28,7 +28,19 @@ abstract interface class PhotoLibraryGateway {
 
   /// The photo's original encoded bytes, or null when the asset has
   /// disappeared from the library.
+  ///
+  /// Materialises the whole file in memory — fine for photos, ruinous for
+  /// videos. Callers prefer [originalFilePath] and fall back to this only
+  /// when the platform cannot expose a file.
   Future<Uint8List?> readOriginalBytes(String localId);
+
+  /// Absolute filesystem path of the original media file, or null when the
+  /// asset has disappeared or the platform cannot expose one.
+  ///
+  /// A path lets uploads stream from disk instead of holding the file in
+  /// memory whole. Spoken as a [String] on purpose: `dart:io` handles are
+  /// an Infrastructure detail.
+  Future<String?> originalFilePath(String localId);
 
   /// A small preview of the photo, or null when the asset has disappeared.
   Future<Uint8List?> readThumbnail(String localId, {required int size});

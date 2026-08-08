@@ -201,6 +201,78 @@ CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
     );
   });
 
+  test('creates the sync_leases table for cross-isolate leases', () async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(${AppDatabase.syncLeasesTable})',
+    );
+    expect(
+      columns.map((row) => row['name']),
+      containsAll(<String>['name', 'holder', 'expires_at']),
+    );
+  });
+
+  test('upgrading a v3 database adds the sync_leases table', () async {
+    final path = '${await databaseFactory.getDatabasesPath()}/migrate-v3.db';
+    await databaseFactory.deleteDatabase(path);
+
+    final v3 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 3,
+        onCreate: (db, version) async {
+          await db.execute('''
+CREATE TABLE ${AppDatabase.bookmarksTable} (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  created_at TEXT NOT NULL
+)
+''');
+          await db.execute('''
+CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  uploaded_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
+)
+''');
+          await db.execute('''
+CREATE TABLE ${AppDatabase.mediaThumbnailsTable} (
+  account_key TEXT NOT NULL,
+  media_id INTEGER NOT NULL,
+  size INTEGER NOT NULL,
+  bytes BLOB NOT NULL,
+  byte_count INTEGER NOT NULL,
+  fetched_at TEXT NOT NULL,
+  last_used_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, media_id, size)
+)
+''');
+        },
+      ),
+    );
+    await v3.close();
+
+    final migrated = await AppDatabase.open(path: path);
+    addTearDown(() async {
+      await migrated.close();
+      await databaseFactory.deleteDatabase(path);
+    });
+
+    expect(await migrated.getVersion(), AppDatabase.schemaVersion);
+    final tables = await migrated.query(
+      'sqlite_master',
+      columns: <String>['name'],
+      where: 'type = ?',
+      whereArgs: <Object?>['table'],
+    );
+    expect(
+      tables.map((row) => row['name']),
+      contains(AppDatabase.syncLeasesTable),
+    );
+  });
+
   test('re-opening an existing database does not re-run onCreate', () async {
     // A file-backed database, so the second open sees the first one's schema.
     final path = '${await databaseFactory.getDatabasesPath()}/reopen-test.db';

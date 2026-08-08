@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -78,16 +79,19 @@ final class PhotoNestApiClient {
   }
 
   /// POSTs one file as `multipart/form-data` and decodes the JSON response.
+  ///
+  /// [buildFile] is async (and called once per attempt) because a file part
+  /// streaming from disk has to be reopened for the post-refresh retry.
   Future<Map<String, dynamic>> postMultipart(
     String path, {
-    required http.MultipartFile Function() buildFile,
+    required Future<http.MultipartFile> Function() buildFile,
     Map<String, String>? headers,
   }) async {
     final response = await _sendWithRetry(
       authenticated: true,
-      build: () => http.MultipartRequest('POST', _resolve(path))
+      build: () async => http.MultipartRequest('POST', _resolve(path))
         ..headers.addAll(headers ?? const {})
-        ..files.add(buildFile()),
+        ..files.add(await buildFile()),
     );
     return _decodeJson(response);
   }
@@ -132,14 +136,14 @@ final class PhotoNestApiClient {
   /// [build] is a factory because an [http.Request] cannot be sent twice.
   Future<http.Response> _sendWithRetry({
     required bool authenticated,
-    required http.BaseRequest Function() build,
+    required FutureOr<http.BaseRequest> Function() build,
   }) async {
     final usedToken = authenticated ? _sessions.load()?.accessToken : null;
-    var response = await _send(build(), authenticated: authenticated);
+    var response = await _send(await build(), authenticated: authenticated);
     if (authenticated && response.statusCode == 401) {
       _logger.debug('[Api] access token rejected — refreshing session');
       await _refreshSessionUnlessReplaced(usedToken);
-      response = await _send(build(), authenticated: true);
+      response = await _send(await build(), authenticated: true);
     }
     if (response.statusCode >= 400) {
       throw _errorFor(response);

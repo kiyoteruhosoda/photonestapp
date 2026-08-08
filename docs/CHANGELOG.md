@@ -9,6 +9,10 @@
   変更し、端末の動画も列挙対象にした（`LocalPhoto.isVideo` を追加、
   `READ_MEDIA_VIDEO` 権限を宣言）。アップロードの Content-Type マップに
   動画拡張子（mp4/mov/mkv/webm ほか）を追加。
+- アップロードはプラットフォームがファイルパスを公開できる場合
+  `MultipartFile.fromPath` でディスクからストリーミングし、長時間の動画でも
+  ファイル全体をヒープに載せない（パスが無いアセットのみ従来のバイト列
+  読み込みにフォールバック）。
 - サーバー動画の再生を追加。`MediaPlaybackRepository`（`POST
   /api/media/{id}/playback-url` の署名付き URL をエンドポイントへ解決）と
   `video_player` ベースの `VideoPlaybackView` で、アルバム詳細から
@@ -38,6 +42,9 @@
 - Application に `BackgroundSyncScheduler` ポートを新設し、自動アップロードの
   ON/OFF と同期してスケジュールを登録・解除する。起動時にも設定が ON なら
   登録し直す（アプリ更新でスケジュールが消えた場合の自己修復）。
+- フォアグラウンドとバックグラウンドの同期パスは共有 SQLite の同期リース
+  （schema v4 の `sync_leases`）で相互排他し、別アイソレート同時実行による
+  同一写真の二重アップロードを防ぐ（ADR 0006）。
 - バックグラウンド側のエントリポイントは `lib/app/background/`（合成ルート）。
   既存の `SyncNewPhotosUseCase` をそのまま実行するため、アップロード履歴に
   よる冪等性・前提条件の再検査はフォアグラウンドと同一。

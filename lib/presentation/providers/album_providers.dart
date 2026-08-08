@@ -87,6 +87,7 @@ final class AlbumDetailState {
     required this.album,
     required this.media,
     required this.mediaTotal,
+    this.pagesLoaded = 1,
     this.loadingMore = false,
     this.loadMoreFailed = false,
   });
@@ -94,10 +95,18 @@ final class AlbumDetailState {
   final Album album;
 
   /// Media accumulated across the pages read so far, in display order.
+  ///
+  /// May be shorter than `pagesLoaded × page size`: overlapping pages (the
+  /// album grew or was reordered mid-paging) are deduplicated on append.
   final List<AlbumMediaItem> media;
 
   /// The album's total media count, across all pages.
   final int mediaTotal;
+
+  /// How many pages have been fetched. The next request is always
+  /// `pagesLoaded + 1` — deriving the page from [media]'s length would
+  /// re-request the same page forever once deduplication shortened it.
+  final int pagesLoaded;
 
   /// True while the next page is being fetched.
   final bool loadingMore;
@@ -112,6 +121,7 @@ final class AlbumDetailState {
   AlbumDetailState copyWith({
     List<AlbumMediaItem>? media,
     int? mediaTotal,
+    int? pagesLoaded,
     bool? loadingMore,
     bool? loadMoreFailed,
   }) {
@@ -119,6 +129,7 @@ final class AlbumDetailState {
       album: album,
       media: media ?? this.media,
       mediaTotal: mediaTotal ?? this.mediaTotal,
+      pagesLoaded: pagesLoaded ?? this.pagesLoaded,
       loadingMore: loadingMore ?? this.loadingMore,
       loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
     );
@@ -176,7 +187,7 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
       current.copyWith(loadingMore: true, loadMoreFailed: false),
     );
 
-    final nextPage = (current.media.length ~/ albumMediaPageSize) + 1;
+    final nextPage = current.pagesLoaded + 1;
     final AlbumDetail? detail;
     try {
       detail = await ref
@@ -201,13 +212,19 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
     // grew between page reads — a duplicate would render the same tile
     // twice.
     final known = current.media.map((AlbumMediaItem item) => item.id).toSet();
+    final media = [
+      ...current.media,
+      ...detail.media.where((item) => !known.contains(item.id)),
+    ];
+    // A short page is the server saying "no more", whatever the advertised
+    // total claims — totals drift while media is deleted mid-paging, and
+    // trusting a stale one would request empty pages forever.
+    final exhausted = detail.media.length < albumMediaPageSize;
     state = AsyncValue.data(
       current.copyWith(
-        media: [
-          ...current.media,
-          ...detail.media.where((item) => !known.contains(item.id)),
-        ],
-        mediaTotal: detail.mediaTotal,
+        media: media,
+        mediaTotal: exhausted ? media.length : detail.mediaTotal,
+        pagesLoaded: nextPage,
         loadingMore: false,
       ),
     );

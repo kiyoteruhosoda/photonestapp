@@ -45,6 +45,7 @@ import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/infrastructure/infrastructure_module.dart';
@@ -93,6 +94,7 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<MediaPlaybackRepository>(infrastructure.mediaPlayback)
     ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
     ..registerSingleton<UploadHistoryRepository>(infrastructure.uploadHistory)
+    ..registerSingleton<SyncLeaseRepository>(infrastructure.syncLease)
     ..registerSingleton<AutoUploadSettingsRepository>(
       infrastructure.autoUploadSettings,
     )
@@ -208,8 +210,10 @@ Future<void> setupServiceLocator() async {
       sl<SessionRepository>(),
       sl<PhotoLibraryGateway>(),
       sl<UploadHistoryRepository>(),
+      sl<SyncLeaseRepository>(),
       sl<UploadPhotosUseCase>(),
       sl<AppLogger>(),
+      leaseHolder: 'foreground',
     ),
   );
   sl.registerFactory<GetAutoUploadEnabledUseCase>(

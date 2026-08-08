@@ -15,6 +15,7 @@ void main() {
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
   late FakeBackgroundSyncScheduler backgroundSync;
+  late FakeSyncLeaseRepository syncLease;
   late RecordingAppLogger logger;
 
   setUp(() {
@@ -27,6 +28,7 @@ void main() {
     );
     sessions = FakeSessionRepository(testAuthSession);
     backgroundSync = FakeBackgroundSyncScheduler();
+    syncLease = FakeSyncLeaseRepository();
     logger = RecordingAppLogger();
   });
 
@@ -38,8 +40,10 @@ void main() {
         sessions,
         library,
         history,
+        syncLease,
         UploadPhotosUseCase(library, uploads, history, logger),
         logger,
+        leaseHolder: 'foreground',
       ),
       settings,
       backgroundSync,

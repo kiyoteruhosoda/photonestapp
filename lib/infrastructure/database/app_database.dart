@@ -15,7 +15,7 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 3;
+  static const int schemaVersion = 4;
 
   /// Table holding the bookmarks sample feature.
   static const String bookmarksTable = 'bookmarks';
@@ -25,6 +25,9 @@ final class AppDatabase {
 
   /// Table caching downloaded server thumbnails for offline rendering.
   static const String mediaThumbnailsTable = 'media_thumbnails';
+
+  /// Table holding cross-isolate leases, e.g. the auto-upload sync lease.
+  static const String syncLeasesTable = 'sync_leases';
 
   /// Opens the database, creating or migrating the schema as needed.
   ///
@@ -59,6 +62,7 @@ CREATE TABLE $bookmarksTable (
 ''');
     await db.execute(_createUploadedPhotos);
     await db.execute(_createMediaThumbnails);
+    await db.execute(_createSyncLeases);
   }
 
   /// `local_id` is the platform's asset identifier; `account_key` names the
@@ -93,6 +97,18 @@ CREATE TABLE $mediaThumbnailsTable (
 )
 ''';
 
+  /// One row per named lease. The foreground app and WorkManager's headless
+  /// engine are separate isolates sharing only this database, so this table
+  /// is what lets exactly one of them run a sync pass at a time.
+  static const String _createSyncLeases =
+      '''
+CREATE TABLE $syncLeasesTable (
+  name TEXT NOT NULL PRIMARY KEY,
+  holder TEXT NOT NULL,
+  expires_at TEXT NOT NULL
+)
+''';
+
   /// Applies the migrations between two schema versions.
   ///
   /// Written as a fall-through ladder — `if (from < 2) { … }`, then
@@ -104,6 +120,9 @@ CREATE TABLE $mediaThumbnailsTable (
     }
     if (from < 3) {
       await db.execute(_createMediaThumbnails);
+    }
+    if (from < 4) {
+      await db.execute(_createSyncLeases);
     }
   }
 }

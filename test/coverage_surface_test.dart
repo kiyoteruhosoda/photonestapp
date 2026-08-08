@@ -75,6 +75,7 @@ import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
@@ -105,6 +106,7 @@ import 'package:flutterbase/infrastructure/repositories/shared_preferences_langu
 import 'package:flutterbase/infrastructure/repositories/shared_preferences_theme_preference_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_bookmark_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/sqflite_sync_lease_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
 import 'package:flutterbase/main.dart';
 import 'package:flutterbase/presentation/l10n/app_localizations.dart';

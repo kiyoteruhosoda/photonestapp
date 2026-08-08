@@ -64,6 +64,13 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
   }
 
   @override
+  Future<String?> originalFilePath(String localId) async {
+    final asset = await AssetEntity.fromId(localId);
+    final file = await asset?.originFile;
+    return file?.path;
+  }
+
+  @override
   Future<Uint8List?> readThumbnail(String localId, {required int size}) async {
     final asset = await AssetEntity.fromId(localId);
     return asset?.thumbnailDataWithSize(ThumbnailSize.square(size));

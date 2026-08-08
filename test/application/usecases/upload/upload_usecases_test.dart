@@ -18,6 +18,7 @@ void main() {
   late FakePhotoUploadRepository uploads;
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
+  late FakeSyncLeaseRepository syncLease;
   late RecordingAppLogger logger;
 
   setUp(() {
@@ -26,6 +27,7 @@ void main() {
     uploads = FakePhotoUploadRepository();
     settings = FakeAutoUploadSettingsRepository();
     sessions = FakeSessionRepository(testAuthSession);
+    syncLease = FakeSyncLeaseRepository();
     logger = RecordingAppLogger();
   });
 
@@ -37,8 +39,10 @@ void main() {
     sessions,
     library,
     history,
+    syncLease,
     uploadUseCase(),
     logger,
+    leaseHolder: 'foreground',
   );
 
   group('ListUploadCandidatesUseCase', () {
@@ -302,8 +306,10 @@ void main() {
         sessions,
         library,
         history,
+        syncLease,
         uploadUseCase(),
         logger,
+        leaseHolder: 'foreground',
         pageSize: 3,
       );
       final report = await paged.execute();
@@ -323,6 +329,84 @@ void main() {
       expect(report.skipped, isNull);
       expect(report.uploadedCount, 0);
       expect(report.result, isNotNull);
+    });
+  });
+
+  group('SyncNewPhotosUseCase — sync lease', () {
+    setUp(() {
+      settings
+        ..enabled = true
+        ..since = DateTime.utc(2026, 8, 1);
+    });
+
+    test('runs under the lease and releases it afterwards', () async {
+      await syncUseCase().execute();
+
+      expect(syncLease.acquiredBy, ['foreground']);
+      expect(syncLease.releasedBy, ['foreground']);
+      expect(syncLease.heldBy, isNull);
+    });
+
+    test('skips the pass while another isolate holds the lease', () async {
+      syncLease.heldBy = 'background';
+      library.photos = [testLocalPhoto()];
+      library.bytesById['asset-1'] = Uint8List.fromList([1]);
+
+      final report = await syncUseCase().execute();
+
+      expect(report.skipped, SyncSkipReason.anotherPassRunning);
+      expect(uploads.uploaded, isEmpty);
+      // The other isolate's lease is left untouched.
+      expect(syncLease.heldBy, 'background');
+    });
+
+    test('releases the lease even when the pass throws', () async {
+      library.photos = [testLocalPhoto()];
+      library.bytesById['asset-1'] = Uint8List.fromList([1]);
+      history.failOnRead = true;
+
+      await expectLater(syncUseCase().execute(), throwsA(anything));
+      expect(syncLease.heldBy, isNull);
+    });
+  });
+
+  group('UploadPhotosUseCase — original sources', () {
+    test('streams from the platform file when one exists', () async {
+      final photo = testLocalPhoto(localId: 'v1', isVideo: true);
+      library.photos = [photo];
+      library.filePathById['v1'] = '/videos/clip.mp4';
+      // Bytes deliberately absent: the path route must not need them.
+
+      final result = await uploadUseCase().execute([photo]);
+
+      expect(result.uploaded, [photo]);
+      expect(uploads.uploadedFromPath.single.$2, '/videos/clip.mp4');
+      expect(uploads.uploaded, isEmpty);
+    });
+
+    test('falls back to in-memory bytes when no file is exposed', () async {
+      final photo = testLocalPhoto(localId: 'p1');
+      library.photos = [photo];
+      library.bytesById['p1'] = Uint8List.fromList([1, 2]);
+
+      final result = await uploadUseCase().execute([photo]);
+
+      expect(result.uploaded, [photo]);
+      expect(uploads.uploaded, hasLength(1));
+      expect(uploads.uploadedFromPath, isEmpty);
+    });
+
+    test('a vanished file counts as missing from the library', () async {
+      final photo = testLocalPhoto(localId: 'v1');
+      library.filePathById['v1'] = '/videos/deleted.mp4';
+      uploads.failure = const InfrastructureError('gone', code: 'missing_file');
+
+      final result = await uploadUseCase().execute([photo]);
+
+      expect(
+        result.failed.single.reason,
+        PhotoUploadFailureReason.missingFromLibrary,
+      );
     });
   });
 

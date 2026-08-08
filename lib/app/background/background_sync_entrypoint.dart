@@ -29,6 +29,7 @@ void backgroundSyncDispatcher() {
         infrastructure.sessions,
         infrastructure.photoLibrary,
         infrastructure.uploadHistory,
+        infrastructure.syncLease,
         UploadPhotosUseCase(
           infrastructure.photoLibrary,
           infrastructure.photoUploads,
@@ -36,6 +37,7 @@ void backgroundSyncDispatcher() {
           logger,
         ),
         logger,
+        leaseHolder: 'background',
       );
       final report = await syncNewPhotos.execute();
       final outcome = report.skipped != null

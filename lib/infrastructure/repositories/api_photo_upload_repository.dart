@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -54,19 +55,51 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
   };
 
   @override
-  Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+  Future<void> upload(LocalPhoto photo, Uint8List bytes) {
+    return _uploadWith(
+      photo,
+      () async => http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: photo.fileName,
+        contentType: _contentTypeFor(photo.fileName),
+      ),
+    );
+  }
+
+  @override
+  Future<void> uploadFromPath(LocalPhoto photo, String path) {
+    // `fromPath` streams from disk chunk by chunk, so a multi-gigabyte
+    // video costs a buffer, not its whole size, in memory.
+    return _uploadWith(photo, () async {
+      try {
+        return await http.MultipartFile.fromPath(
+          'file',
+          path,
+          filename: photo.fileName,
+          contentType: _contentTypeFor(photo.fileName),
+        );
+      } on FileSystemException catch (error) {
+        throw InfrastructureError(
+          'The file for ${photo.fileName} is gone from $path.',
+          code: 'missing_file',
+          cause: error,
+        );
+      }
+    });
+  }
+
+  Future<void> _uploadWith(
+    LocalPhoto photo,
+    Future<http.MultipartFile> Function() buildFile,
+  ) async {
     final session = _newSessionId();
     final headers = {_sessionHeader: session};
 
     final prepared = await _client.postMultipart(
       '/upload/prepare',
       headers: headers,
-      buildFile: () => http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: photo.fileName,
-        contentType: _contentTypeFor(photo.fileName),
-      ),
+      buildFile: buildFile,
     );
     final tempFileId = prepared['tempFileId'] as String?;
     if (tempFileId == null) {

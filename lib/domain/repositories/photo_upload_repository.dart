@@ -12,4 +12,12 @@ abstract interface class PhotoUploadRepository {
   /// invalid and `InfrastructureError` when the upload is rejected or the
   /// server cannot be reached.
   Future<void> upload(LocalPhoto photo, Uint8List bytes);
+
+  /// Uploads the file at [path] as [photo]'s content, streaming it from
+  /// disk so even a long video never sits in memory whole.
+  ///
+  /// Same completion and error contract as [upload]; additionally throws
+  /// `InfrastructureError` with code `missing_file` when the file has
+  /// vanished from [path].
+  Future<void> uploadFromPath(LocalPhoto photo, String path);
 }

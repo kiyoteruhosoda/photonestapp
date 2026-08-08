@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -500,6 +501,57 @@ void main() {
 
       final prepare = requests.first;
       expect(prepare.body, contains('content-type: video/mp4'));
+    });
+
+    test('uploadFromPath streams the file with its content type', () async {
+      final directory = await Directory.systemTemp.createTemp('upload-test');
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/clip.mp4');
+      await file.writeAsBytes([1, 2, 3, 4]);
+
+      final repository = ApiPhotoUploadRepository(
+        client((request) async {
+          if (request.url.path.endsWith('/upload/prepare')) {
+            return json({'tempFileId': 't1'});
+          }
+          return json({
+            'uploaded': [
+              {'status': 'success'},
+            ],
+          });
+        }),
+        random: Random(1),
+      );
+
+      await repository.uploadFromPath(
+        testLocalPhoto(fileName: 'clip.mp4', isVideo: true),
+        file.path,
+      );
+
+      final prepare = requests.first;
+      expect(prepare.body, contains('content-type: video/mp4'));
+      expect(prepare.bodyBytes, containsAllInOrder([1, 2, 3, 4]));
+    });
+
+    test('uploadFromPath maps a vanished file to missing_file', () async {
+      final repository = ApiPhotoUploadRepository(
+        client((request) async => json({'tempFileId': 't1'})),
+      );
+
+      await expectLater(
+        repository.uploadFromPath(
+          testLocalPhoto(fileName: 'clip.mp4', isVideo: true),
+          '/nowhere/does-not-exist.mp4',
+        ),
+        throwsA(
+          isA<InfrastructureError>().having(
+            (error) => error.code,
+            'code',
+            'missing_file',
+          ),
+        ),
+      );
+      expect(requests, isEmpty);
     });
 
     test(

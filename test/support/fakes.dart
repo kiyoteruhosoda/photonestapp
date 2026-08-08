@@ -25,6 +25,7 @@ import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository
 import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
 import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
 import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
@@ -524,6 +525,33 @@ final class FakeMediaPlaybackRepository implements MediaPlaybackRepository {
   }
 }
 
+/// In-memory [SyncLeaseRepository].
+final class FakeSyncLeaseRepository implements SyncLeaseRepository {
+  /// When set, [tryAcquire] refuses as though this holder had the lease.
+  String? heldBy;
+
+  final List<String> acquiredBy = <String>[];
+  final List<String> releasedBy = <String>[];
+
+  @override
+  Future<bool> tryAcquire(
+    String holder, {
+    required DateTime until,
+    required DateTime now,
+  }) async {
+    if (heldBy != null && heldBy != holder) return false;
+    heldBy = holder;
+    acquiredBy.add(holder);
+    return true;
+  }
+
+  @override
+  Future<void> release(String holder) async {
+    releasedBy.add(holder);
+    if (heldBy == holder) heldBy = null;
+  }
+}
+
 /// Records scheduling calls instead of talking to WorkManager.
 final class FakeBackgroundSyncScheduler implements BackgroundSyncScheduler {
   int scheduleRequests = 0;
@@ -553,14 +581,27 @@ final class FakePhotoUploadRepository implements PhotoUploadRepository {
   /// mid-flight to observe its progress or cancel it.
   Future<void> Function(LocalPhoto photo)? gate;
 
+  /// Uploads that came in as file paths, in order.
+  final List<(LocalPhoto, String)> uploadedFromPath = <(LocalPhoto, String)>[];
+
   @override
   Future<void> upload(LocalPhoto photo, Uint8List bytes) async {
+    await _admit(photo);
+    uploaded.add((photo, bytes));
+  }
+
+  @override
+  Future<void> uploadFromPath(LocalPhoto photo, String path) async {
+    await _admit(photo);
+    uploadedFromPath.add((photo, path));
+  }
+
+  Future<void> _admit(LocalPhoto photo) async {
     await gate?.call(photo);
     final error = failure;
     if (error != null && (failFor.isEmpty || failFor.contains(photo.localId))) {
       throw error;
     }
-    uploaded.add((photo, bytes));
   }
 }
 
@@ -572,8 +613,16 @@ final class FakeUploadHistoryRepository implements UploadHistoryRepository {
   final Set<String> _uploaded;
   final List<LocalPhoto> marked = <LocalPhoto>[];
 
+  /// When true, [uploadedLocalIds] throws instead of answering.
+  bool failOnRead = false;
+
   @override
-  Future<Set<String>> uploadedLocalIds() async => Set.of(_uploaded);
+  Future<Set<String>> uploadedLocalIds() async {
+    if (failOnRead) {
+      throw const InfrastructureError('history unavailable');
+    }
+    return Set.of(_uploaded);
+  }
 
   @override
   Future<void> markUploaded(LocalPhoto photo, DateTime uploadedAt) async {
@@ -618,6 +667,10 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
 
   /// Bytes per local id; a photo missing here reads back as null.
   final Map<String, Uint8List> bytesById = <String, Uint8List>{};
+
+  /// File path per local id; a photo missing here has no platform file and
+  /// uploads fall back to [bytesById].
+  final Map<String, String> filePathById = <String, String>{};
   final Map<String, Uint8List> thumbnailsById = <String, Uint8List>{};
 
   // Deliberately left open for the fake's lifetime: tests push events into
@@ -652,6 +705,10 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
   @override
   Future<Uint8List?> readOriginalBytes(String localId) async =>
       bytesById[localId];
+
+  @override
+  Future<String?> originalFilePath(String localId) async =>
+      filePathById[localId];
 
   @override
   Future<Uint8List?> readThumbnail(String localId, {required int size}) async =>

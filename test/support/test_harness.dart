@@ -130,6 +130,7 @@ class TestScope {
   final FakePhotoLibraryGateway photoLibrary;
   final FakeBackgroundSyncScheduler backgroundSyncScheduler =
       FakeBackgroundSyncScheduler();
+  final FakeSyncLeaseRepository syncLeaseRepository = FakeSyncLeaseRepository();
 
   /// The Riverpod container every wrapped widget reads from.
   ///
@@ -237,8 +238,10 @@ class TestScope {
             sessionRepository,
             photoLibrary,
             uploadHistoryRepository,
+            syncLeaseRepository,
             uploadPhotos,
             logger,
+            leaseHolder: 'foreground',
           ),
           autoUploadSettingsRepository,
           backgroundSyncScheduler,

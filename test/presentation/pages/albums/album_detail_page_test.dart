@@ -59,7 +59,10 @@ void main() {
         ..failure = const InfrastructureError('boom'),
     );
     await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
-    expect(find.text('boom'), findsOneWidget);
+    expect(find.text('boom'), findsNothing);
+    // A response the server did send (not a transport failure) stays
+    // generic rather than telling the user to check their connection.
+    expect(find.text(l10n.commonError), findsOneWidget);
     expect(find.text(l10n.commonRetry), findsOneWidget);
   });
 

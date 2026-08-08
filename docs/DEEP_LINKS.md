@@ -88,7 +88,7 @@ https://<appLinkHost>/.well-known/assetlinks.json
 
 2. `docs/deep_links/assetlinks.json` の `package_name` と
    `sha256_cert_fingerprints` を書き換える。
-   `package_name` は `android/app/build.gradle` の `appApplicationId` です。
+   `package_name` は `android/app/build.gradle` の `applicationId` です。
 
 3. ドメインの `https://<host>/.well-known/assetlinks.json` として、
    `Content-Type: application/json` で配信する。リダイレクト不可。
@@ -139,7 +139,7 @@ adb shell am start -a android.intent.action.VIEW \
 Dart 側と Android 側の食い違いは `test/android/android_manifest_test.dart` が
 検出します。`AppConfig.appLinkHost` と `AndroidManifest.xml` の `android:host`、
 カスタムスキーム、`flutter_deeplinking_enabled` の有無、
-`assetlinks.json` の `package_name` と `appApplicationId` の一致を確認します。
+`assetlinks.json` の `package_name` と `applicationId` の一致を確認します。
 ホスト名を変えるときは、この 1 本が落ちるかどうかが更新漏れの目印になります。
 
 ## iOS について

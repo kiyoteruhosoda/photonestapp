@@ -89,6 +89,23 @@ class AppLocalizationsJa extends AppLocalizations {
   String uploadFailed(int count) => '$count 件アップロードできませんでした。';
   @override
   String get uploadUploadedBadge => 'アップロード済み';
+  @override
+  String uploadProgress(int completed, int total) =>
+      '$total 件中 $completed 件をアップロード中…';
+  @override
+  String get uploadCancel => 'キャンセル';
+  @override
+  String get uploadCancelled => 'アップロードを中止しました。';
+  @override
+  String get uploadShowFailures => '詳細';
+  @override
+  String get uploadFailureListTitle => 'アップロードに失敗した写真';
+  @override
+  String get uploadFailureMissing => '端末のライブラリに見つかりません。';
+  @override
+  String get uploadFailureUnsupported => '対応していないファイル形式です。';
+  @override
+  String get uploadFailureRejected => 'サーバーがこの写真を受け付けませんでした。';
 
   // ─── Session / sign out ───────────────────────────────────────────────
   @override
@@ -419,6 +436,12 @@ class AppLocalizationsJa extends AppLocalizations {
   // ─── Common ──────────────────────────────────────────────────────────
   @override
   String get commonRetry => '再試行';
+  @override
+  String get commonClose => '閉じる';
+  @override
+  String get commonErrorNetwork => 'サーバーに接続できませんでした。通信環境を確認して再試行してください。';
+  @override
+  String get commonErrorSessionExpired => 'セッションの有効期限が切れました。もう一度ログインしてください。';
   @override
   String get commonMenu => 'メニュー';
   @override

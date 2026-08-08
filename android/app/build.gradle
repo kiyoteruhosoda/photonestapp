@@ -41,16 +41,17 @@ def hasKeystore = keystoreProperties.getProperty("storeFile") != null
 // See docs/CUSTOMISATION.md §9b.
 def sharedDebugKeystore = rootProject.file("app/debug.keystore")
 
-// Single source of truth for namespace + applicationId + the APK/AAB
-// base filename.  `scripts/rename_app.sh` rewrites the two string
-// constants below, and the archives base name derives from them.
-def appNamespace     = "com.example.flutterbase"
-def appApplicationId = "com.example.flutterbase"
-def appArchivesBase  = (project.findProperty("app.archivesBaseName")
-    ?: appApplicationId.tokenize('.').last())
-
 android {
-    namespace = appNamespace
+    // The application identity.  `scripts/rename_app.sh` rewrites the
+    // quoted literals here and on `applicationId` below.
+    //
+    // Both MUST stay literal strings: flutter_tools resolves the package id
+    // for `flutter run` / `flutter test integration_test` by regex-matching
+    // the quoted value after `namespace` inside this android { } block (the
+    // manifest carries no `package` attribute).  Routing the value through a
+    // Groovy variable makes that lookup fail with "package identifier or
+    // launch activity not found" before Gradle ever runs.
+    namespace = "com.example.flutterbase"
     compileSdk = 36
 
     compileOptions {
@@ -82,7 +83,8 @@ android {
     }
 
     defaultConfig {
-        applicationId = appApplicationId
+        // Keep literal — see the note on `namespace` above.
+        applicationId = "com.example.flutterbase"
         // Android 7.0+. Old-device camera-roll migration is a core use case,
         // so keep this as low as Flutter and photo_manager support. 36 would
         // exclude every device below Android 16 (effectively undistributable).
@@ -125,6 +127,11 @@ android {
 // We drop a per-app copy into every one of those directories so CI
 // uploaders can pick it up regardless of which path they watch.
 project.afterEvaluate {
+    // APK/AAB base filename: overridable via gradle.properties, defaulting
+    // to the last segment of the applicationId set above.
+    def appArchivesBase = (project.findProperty("app.archivesBaseName")
+        ?: android.defaultConfig.applicationId.tokenize('.').last())
+
     android.applicationVariants.all { variant ->
         def variantName   = variant.name                    // e.g. "release"
         def variantCap    = variantName.capitalize()        // e.g. "Release"

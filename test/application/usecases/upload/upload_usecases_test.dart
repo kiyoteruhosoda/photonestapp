@@ -119,6 +119,112 @@ void main() {
         expect(history.marked, [good]);
       },
     );
+
+    test('classifies each failure so the UI can translate it', () async {
+      final vanished = testLocalPhoto(localId: 'gone');
+      final unsupported = testLocalPhoto(localId: 'raw');
+      final expired = testLocalPhoto(localId: 'expired');
+      final refused = testLocalPhoto(localId: 'refused');
+      library.bytesById['raw'] = Uint8List.fromList([1]);
+      library.bytesById['expired'] = Uint8List.fromList([2]);
+      library.bytesById['refused'] = Uint8List.fromList([3]);
+
+      uploads.failure = const InfrastructureError(
+        'Unsupported photo type ".cr2".',
+        code: 'unsupported_format',
+      );
+      uploads.failFor = {'raw'};
+      var result = await uploadUseCase().execute([vanished, unsupported]);
+      expect(
+        result.failed[0].reason,
+        PhotoUploadFailureReason.missingFromLibrary,
+      );
+      expect(
+        result.failed[1].reason,
+        PhotoUploadFailureReason.unsupportedFormat,
+      );
+
+      uploads.failure = const AuthenticationError('The session has expired.');
+      uploads.failFor = {'expired'};
+      result = await uploadUseCase().execute([expired]);
+      expect(
+        result.failed.single.reason,
+        PhotoUploadFailureReason.sessionExpired,
+      );
+
+      uploads.failure = const InfrastructureError('HTTP 500');
+      uploads.failFor = {'refused'};
+      result = await uploadUseCase().execute([refused]);
+      expect(result.failed.single.reason, PhotoUploadFailureReason.rejected);
+
+      final offline = testLocalPhoto(localId: 'offline');
+      library.bytesById['offline'] = Uint8List.fromList([4]);
+      uploads.failure = const NetworkUnreachableError('connection refused');
+      uploads.failFor = {'offline'};
+      result = await uploadUseCase().execute([offline]);
+      expect(result.failed.single.reason, PhotoUploadFailureReason.unreachable);
+    });
+
+    test('reports progress after each settled photo', () async {
+      final photos = [
+        testLocalPhoto(localId: 'a'),
+        testLocalPhoto(localId: 'b'),
+        testLocalPhoto(localId: 'c'),
+      ];
+      library.bytesById['a'] = Uint8List.fromList([1]);
+      library.bytesById['c'] = Uint8List.fromList([3]);
+      // 'b' has no bytes — it fails, and still counts as settled.
+
+      final ticks = <(int, int)>[];
+      await uploadUseCase().execute(
+        photos,
+        onProgress: (completed, total) => ticks.add((completed, total)),
+      );
+
+      expect(ticks, [(1, 3), (2, 3), (3, 3)]);
+    });
+
+    test(
+      'cancellation stops before the next photo, keeping what was sent', //
+      () async {
+        final photos = [
+          testLocalPhoto(localId: 'a'),
+          testLocalPhoto(localId: 'b'),
+          testLocalPhoto(localId: 'c'),
+        ];
+        for (final photo in photos) {
+          library.bytesById[photo.localId] = Uint8List.fromList([1]);
+        }
+
+        final cancellation = UploadCancellation();
+        final result = await uploadUseCase().execute(
+          photos,
+          onProgress: (completed, _) {
+            if (completed == 1) cancellation.cancel();
+          },
+          cancellation: cancellation,
+        );
+
+        expect(result.cancelled, isTrue);
+        expect(result.uploaded.map((photo) => photo.localId), ['a']);
+        expect(result.failed, isEmpty);
+        // The photo already sent stays recorded; the rest were never attempted.
+        expect(history.marked, hasLength(1));
+        expect(uploads.uploaded, hasLength(1));
+      },
+    );
+
+    test('an unused cancellation changes nothing', () async {
+      final photo = testLocalPhoto(localId: 'a');
+      library.bytesById['a'] = Uint8List.fromList([1]);
+
+      final result = await uploadUseCase().execute([
+        photo,
+      ], cancellation: UploadCancellation());
+
+      expect(result.cancelled, isFalse);
+      expect(result.uploaded, [photo]);
+    });
   });
 
   group('SyncNewPhotosUseCase', () {

@@ -3,6 +3,40 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-07 — `integration_test` を認証ガード後の実態に合わせて修正し CI へ組み込み
+
+- 旧 Progress #12。「起動直後に `NavigationBar` がある」前提だった
+  `integration_test/app_test.dart` を、未ログイン起動はログイン画面・
+  セッション保存済み起動はメイン画面、という認証ガード後の挙動に合わせて
+  書き直した（セッションは実キーストアの `SessionRepository` へ直接保存して
+  用意する。サーバーには接続しない）。
+- `quality.yml` に `integration-tests` ジョブを追加し、Android エミュレータ
+  （API 34, KVM）で `flutter test integration_test` を実行する。端末が要るため
+  `scripts/ci.sh` には含めない（`docs/OPERATIONS.md` 参照）。
+
+## 2026-08-07 — アップロードの進捗表示・キャンセル・失敗一覧 UI
+
+- 旧 Progress #11。`UploadPhotosUseCase` に進捗コールバックと協調キャンセル
+  （`UploadCancellation`、写真単位で中断）を追加し、`uploadRunProvider` が
+  実行中バッチの進捗・結果を画面へ流す。
+- アップロードタブは実行中に進捗バー（n/m）とキャンセルボタンを表示し、
+  完了後に失敗があれば要約行から写真ごとの失敗一覧ダイアログを開ける。
+
+## 2026-08-07 — サーバー由来エラー文言の翻訳キー化
+
+- 旧 Progress #8。アルバム一覧・アルバム詳細・アップロード候補の読込エラーと
+  写真ごとのアップロード失敗理由が、開発者向け英語の `AppError.message` を
+  そのまま表示していたのをやめ、`LoginFailure` と同じ「失敗の種類で分類して
+  翻訳キーへ写像する」方式に統一（`presentation/l10n/error_descriptions.dart`、
+  `PhotoUploadFailureReason`）。
+
+## 2026-08-07 — `azure-pipelines.yml` を削除し GitHub Actions へ一本化
+
+- 旧 Progress #7。Azure パイプラインは `ios/` 不在で `Build_iOS` が必ず失敗、
+  配布先の App Center も 2025-03 に廃止済み、release 鍵の配線も未接続で
+  実質全損だったため削除。CI は GitHub Actions
+  （`quality.yml` / `build.yml`）のみとする。
+
 ## 2026-08-07 — 通知ボタンは通知機能の予約済み入り口として残す（ADR-0005）
 
 - 旧 Progress #13（ダミーの通知ボタンを削除するか実装するか）を「予約済みの

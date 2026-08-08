@@ -11,14 +11,10 @@
 
 | 優先 | # | 概要 | 状態 | 影響度 | 重要度 | 難易度 | 工数 |
 |---|---|---|---|---|---|---|---|
-| 2 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | ⬜未着手 | 大 | 大 | 小 | 小 |
-| 3 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | ⬜未着手 | 大 | 中 | 小 | 小 |
-| 4 | 7 | `azure-pipelines.yml` を削除し GitHub Actions（`quality.yml` / `build.yml`）へ一本化する | ⬜未着手 | 中 | 中 | 小 | 小 |
-| 5 | 8 | サーバー由来の英語エラー文言を翻訳キー化する（`LoginFailure` 方式の分類をアルバム／アップロードへ横展開） | ⬜未着手 | 中 | 大 | 中 | 中 |
+| 2 | 6 | `applicationId` をテンプレートの `com.example.flutterbase` から実 ID へ変更する（`com.example.*` は Play Console が拒否） | 🟡要判断 | 大 | 大 | 小 | 小 |
+| 3 | 1 | App Link のホストを実ドメインに差し替え、`assetlinks.json` を配信する | 🟡要判断 | 大 | 中 | 小 | 小 |
 | 6 | 9 | 動画対応（端末動画の列挙・アップロード・再生。現状 `RequestType.image` 固定で完全非対応） | ⬜未着手 | 大 | 大 | 大 | 大 |
 | 7 | 10 | オフラインキャッシュ（サムネイル永続化）とアルバム詳細のページング（現状メモリキャッシュのみ・全件一括取得） | ⬜未着手 | 大 | 中 | 大 | 大 |
-| 8 | 11 | アップロードの進捗表示・キャンセル・失敗一覧 UI | ⬜未着手 | 中 | 中 | 中 | 中 |
-| 9 | 12 | `integration_test` の陳腐化を修正し CI で実行する（認証ガード導入後に前提が破綻、現在どの CI も実行していない） | ⬜未着手 | 中 | 中 | 小 | 小 |
 | 11 | 4 | アプリを閉じている間の自動アップロード（WorkManager 等のバックグラウンド実行） | ⬜未着手 | 中 | 中 | 大 | 大 |
 
 
@@ -29,27 +25,11 @@
 `android/app/build.gradle` が `com.example.flutterbase` のままで、Kotlin パッケージも
 テンプレートのまま。`scripts/rename_app.sh` が用意されているので実 ID で実行する。
 
-### 7. `azure-pipelines.yml` の削除（GitHub Actions へ一本化）
-
-削除して GitHub Actions（`quality.yml` / `build.yml`）へ一本化することに決定済み。
-判断根拠（現状の Azure パイプラインは実質全損）:
-
-- Stage `Build_iOS` は `ios/` ディレクトリが存在しないため必ず失敗し、
-  `Deploy` は両ビルド成功が条件のため永久に到達しない。
-- 配布先の Microsoft App Center は 2025-03 に廃止済み。
-- `DownloadSecureFile@1` は `KEYSTORE_*` を環境変数に載せるだけで、Gradle が読むのは
-  `android/key.properties` のみ（GitHub Actions の `build.yml` はこれを生成している）。
-  そのため secure file を設定していても Azure の release ビルドは常に debug 鍵署名の
-  AAB になる（release 鍵の配線が未接続）。
-- `scripts/ci.sh`（アーキテクチャチェック・カバレッジ閾値）を呼ばず GitHub Actions の
-  品質ゲートと乖離している。
-
-### 8. サーバー由来エラーの翻訳キー化
-
-`albums_tab.dart` / `album_detail_page.dart` / `upload_tab.dart` が
-`error is AppError ? error.message : ...` で英語の開発者向け文言をそのまま表示する。
-ログインだけは `LoginFailure` enum で分類し翻訳キーへ写像しているので、
-同じ設計を横展開する。
+**要判断**: 実 ID はプロダクトオーナーが所有ドメインから決める必要があり、
+コード側では決められない（一度 Play Console に上げた ID は変更不可）。
+決まり次第 `./scripts/rename_app.sh <実ID>` を実行するだけで完了する。
+候補の考え方: 所有ドメインの逆順 + アプリ名（例: 所有ドメインが
+`example.com` なら `com.example.photonest`）。
 
 ### 9. 動画対応
 
@@ -65,13 +45,6 @@
 ブックマークとアップロード履歴しかない。アルバム一覧は `pageSize: 200` の 1 ページ
 固定、詳細は `album['media']` を全件一括デコードしており、大規模アルバムで
 時間・メモリともに破綻する。
-
-### 12. `integration_test` の修正
-
-`integration_test/app_test.dart` は「起動直後に `NavigationBar` がある」前提だが、
-認証ガード導入後の初回起動は `/login` へリダイレクトされるため成立しない。
-`scripts/ci.sh` も Azure も `flutter test integration_test` を実行していないため
-破綻に誰も気づかない。実態に合わせて修正し、CI に組み込む。
 
 ### 4. バックグラウンド自動アップロード
 
@@ -94,3 +67,9 @@ fork 後に必要な作業は 3 つで、いずれも `docs/DEEP_LINKS.md` に�
    `https://<host>/.well-known/assetlinks.json` として配信する。
 
 テンプレート側で決められるのはここまでなので、作業自体は fork 側に残します。
+
+**要判断**: 実際に配信に使うドメイン（PhotoNest サーバーを公開しているホスト等）と、
+`assetlinks.json` に入れる署名フィンガープリント（release 鍵）が決まらないと
+着手できない。ドメインが決まれば上記 1〜3 は `docs/DEEP_LINKS.md` の手順どおりで
+工数小。#6 の `applicationId` 決定と同時に決めるのが望ましい
+（`assetlinks.json` は `package_name` に実 ID を含むため）。

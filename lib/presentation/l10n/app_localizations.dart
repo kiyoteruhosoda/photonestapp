@@ -80,6 +80,14 @@ abstract class AppLocalizations {
   String uploadDone(int count);
   String uploadFailed(int count);
   String get uploadUploadedBadge;
+  String uploadProgress(int completed, int total);
+  String get uploadCancel;
+  String get uploadCancelled;
+  String get uploadShowFailures;
+  String get uploadFailureListTitle;
+  String get uploadFailureMissing;
+  String get uploadFailureUnsupported;
+  String get uploadFailureRejected;
 
   // ─── Session / sign out ───────────────────────────────────────────────
   String get settingsSignOut;
@@ -257,6 +265,9 @@ abstract class AppLocalizations {
 
   // ─── Common ──────────────────────────────────────────────────────────
   String get commonRetry;
+  String get commonClose;
+  String get commonErrorNetwork;
+  String get commonErrorSessionExpired;
   String get commonMenu;
   String get commonNotifications;
   String get commonNotFound;

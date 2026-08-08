@@ -99,6 +99,23 @@ class AppLocalizationsEn extends AppLocalizations {
       : '$count photos could not be uploaded.';
   @override
   String get uploadUploadedBadge => 'Uploaded';
+  @override
+  String uploadProgress(int completed, int total) =>
+      'Uploading $completed of $total…';
+  @override
+  String get uploadCancel => 'Cancel';
+  @override
+  String get uploadCancelled => 'Upload cancelled.';
+  @override
+  String get uploadShowFailures => 'Details';
+  @override
+  String get uploadFailureListTitle => 'Failed uploads';
+  @override
+  String get uploadFailureMissing => 'No longer in the device library.';
+  @override
+  String get uploadFailureUnsupported => 'This file type is not supported.';
+  @override
+  String get uploadFailureRejected => 'The server did not accept this photo.';
 
   // ─── Session / sign out ───────────────────────────────────────────────
   @override
@@ -438,6 +455,14 @@ class AppLocalizationsEn extends AppLocalizations {
   // ─── Common ──────────────────────────────────────────────────────────
   @override
   String get commonRetry => 'Retry';
+  @override
+  String get commonClose => 'Close';
+  @override
+  String get commonErrorNetwork =>
+      'Could not reach the server. Check your connection and try again.';
+  @override
+  String get commonErrorSessionExpired =>
+      'Your session has expired. Please sign in again.';
   @override
   String get commonMenu => 'Menu';
   @override

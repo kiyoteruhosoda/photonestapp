@@ -45,6 +45,16 @@ dart run tool/check_coverage.dart --verbose       # 下限割れ時に低い順�
 `tool/check_architecture.dart` は `--root` / `--package` を受け取ります。
 テスト用フィクスチャに対して走らせるためのもので、通常は不要です。
 
+### インテグレーションテスト
+
+`integration_test/` は実機またはエミュレータが必要なため `scripts/ci.sh` には
+含まれません。CI では `quality.yml` の `integration-tests` ジョブが Android
+エミュレータ上で実行します。ローカルで走らせるには、端末を接続してから:
+
+```bash
+flutter test integration_test
+```
+
 ### 検査ツール自体のテスト
 
 `test/tool/` が各ルールについて「違反入りのフィクスチャで非ゼロ終了すること」を

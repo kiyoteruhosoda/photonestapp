@@ -235,13 +235,13 @@ void main() {
       );
     });
 
-    test('maps a network failure to InfrastructureError', () async {
+    test('maps a transport failure to NetworkUnreachableError', () async {
       final subject = client(
         (request) async => throw http.ClientException('refused'),
       );
       await expectLater(
         subject.getJson('/albums'),
-        throwsA(isA<InfrastructureError>()),
+        throwsA(isA<NetworkUnreachableError>()),
       );
     });
 

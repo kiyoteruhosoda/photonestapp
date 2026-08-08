@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -115,8 +116,71 @@ void main() {
     await tester.tap(find.byType(AppPrimaryButton));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining(l10n.uploadFailed(1)), findsOneWidget);
+    // Once in the snackbar, once in the failure summary under the grid.
+    expect(find.textContaining(l10n.uploadFailed(1)), findsNWidgets(2));
     expect(scope.photoUploadRepository.uploaded, hasLength(1));
+  });
+
+  testWidgets('the failure summary opens a translated per-photo list', (
+    tester,
+  ) async {
+    final scope = scopeWithPhotos(['bad']);
+    scope.photoUploadRepository.failure = const InfrastructureError('HTTP 500');
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+
+    await tester.tap(find.byType(ThumbnailImage));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(AppPrimaryButton));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text(l10n.uploadShowFailures));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.uploadFailureListTitle), findsOneWidget);
+    expect(find.text('IMG_0001.jpg'), findsOneWidget);
+    // The reason is translated; the raw server message stays out of the UI.
+    expect(find.text(l10n.uploadFailureRejected), findsOneWidget);
+    expect(find.text('HTTP 500'), findsNothing);
+
+    await tester.tap(find.text(l10n.commonClose));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.uploadFailureListTitle), findsNothing);
+
+    // The summary can be dismissed once read.
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.uploadShowFailures), findsNothing);
+  });
+
+  testWidgets('a running batch shows progress and can be cancelled', (
+    tester,
+  ) async {
+    final scope = scopeWithPhotos(['a', 'b', 'c']);
+    var gate = Completer<void>();
+    scope.photoUploadRepository.gate = (_) => gate.future;
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+
+    for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byType(ThumbnailImage).at(i));
+    }
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(AppPrimaryButton));
+    await tester.pump();
+
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    expect(find.text(l10n.uploadProgress(0, 3)), findsOneWidget);
+
+    // Cancel while the first photo is still in flight: it completes, the
+    // remaining two are never attempted.
+    await tester.tap(find.text(l10n.uploadCancel));
+    final released = gate;
+    gate = Completer<void>()..complete();
+    released.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining(l10n.uploadCancelled), findsOneWidget);
+    expect(scope.photoUploadRepository.uploaded, hasLength(1));
+    expect(find.byType(LinearProgressIndicator), findsNothing);
   });
 
   testWidgets('the auto-upload switch persists and reports denial', (

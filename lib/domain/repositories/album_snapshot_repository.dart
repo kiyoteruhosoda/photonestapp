@@ -18,6 +18,11 @@ abstract interface class AlbumSnapshotRepository {
   ///
   /// An empty list is a real answer ("this account has no albums") and is
   /// remembered as such, distinct from never having saved at all.
+  ///
+  /// A full list is authoritative: detail pages of albums the list no
+  /// longer holds (deleted or no longer visible) are forgotten in the same
+  /// save, so an offline detail read — a deep link never consults the list
+  /// — cannot resurrect them.
   Future<void> saveAlbums(List<Album> albums);
 
   /// The album list as last saved, or null when no snapshot exists (or

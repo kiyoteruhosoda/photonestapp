@@ -108,6 +108,75 @@ void main() {
 
       expect(await subject.findAlbums(), isEmpty);
     });
+
+    test('saving the list forgets detail pages of albums it no longer '
+        'holds', () async {
+      // A deleted or hidden album must not resurrect offline through a
+      // stale detail page — a detail deep link never consults the list.
+      final subject = repository();
+      await subject.saveDetail(detail(), mediaPage: 1, mediaPageSize: 100);
+      await subject.saveDetail(detail(), mediaPage: 2, mediaPageSize: 100);
+      await subject.saveDetail(
+        detail(albumId: 4),
+        mediaPage: 1,
+        mediaPageSize: 100,
+      );
+
+      await subject.saveAlbums([testAlbum(id: 3)]);
+
+      expect(
+        await subject.findDetail(AlbumId(3), mediaPage: 1, mediaPageSize: 100),
+        isNotNull,
+      );
+      expect(
+        await subject.findDetail(AlbumId(3), mediaPage: 2, mediaPageSize: 100),
+        isNotNull,
+      );
+      expect(
+        await subject.findDetail(AlbumId(4), mediaPage: 1, mediaPageSize: 100),
+        isNull,
+      );
+      // The list row itself survived the pruning.
+      expect(await subject.findAlbums(), hasLength(1));
+    });
+
+    test('saving an empty list forgets every detail page', () async {
+      final subject = repository();
+      await subject.saveDetail(detail(), mediaPage: 1, mediaPageSize: 100);
+
+      await subject.saveAlbums(const []);
+
+      expect(
+        await subject.findDetail(AlbumId(3), mediaPage: 1, mediaPageSize: 100),
+        isNull,
+      );
+    });
+
+    test('pruning stays within the saving account', () async {
+      // Account A's full list says album 4 is gone *for A* — account B's
+      // snapshot of the same album id must survive.
+      final other = FakeApiEndpointRepository(
+        Uri.parse('https://other.example'),
+      );
+      final subjectB = SqfliteAlbumSnapshotRepository(
+        db,
+        sessions,
+        other,
+        clock: () => storedAt,
+      );
+      await subjectB.saveDetail(
+        detail(albumId: 4),
+        mediaPage: 1,
+        mediaPageSize: 100,
+      );
+
+      await repository().saveAlbums([testAlbum(id: 3)]);
+
+      expect(
+        await subjectB.findDetail(AlbumId(4), mediaPage: 1, mediaPageSize: 100),
+        isNotNull,
+      );
+    });
   });
 
   group('album detail pages', () {

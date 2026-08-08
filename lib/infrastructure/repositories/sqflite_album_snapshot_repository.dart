@@ -39,14 +39,21 @@ final class SqfliteAlbumSnapshotRepository implements AlbumSnapshotRepository {
   /// Key of the one album-list row per account.
   static const String _albumListKey = 'albums';
 
-  static String _detailKeyPrefix(AlbumId id) => 'album/${id.value}/page/';
+  /// Every detail-page key starts with this; the trailing slash keeps the
+  /// [_albumListKey] row out of prefix matches.
+  static const String _detailKeyRoot = 'album/';
+
+  static String _detailKeyPrefix(AlbumId id) =>
+      '$_detailKeyRoot${id.value}/page/';
 
   static String _detailKey(AlbumId id, int mediaPage, int mediaPageSize) =>
       '${_detailKeyPrefix(id)}$mediaPage/size/$mediaPageSize';
 
   @override
-  Future<void> saveAlbums(List<Album> albums) =>
-      _save(_albumListKey, albums.map(_albumToJson).toList());
+  Future<void> saveAlbums(List<Album> albums) async {
+    await _save(_albumListKey, albums.map(_albumToJson).toList());
+    await _forgetDetailsAbsentFrom(albums);
+  }
 
   @override
   Future<List<Album>?> findAlbums() async {
@@ -109,6 +116,53 @@ final class SqfliteAlbumSnapshotRepository implements AlbumSnapshotRepository {
         cause: error,
       );
     }
+  }
+
+  /// Deletes the detail pages of every album absent from [albums] — the
+  /// full list is authoritative, and a detail read never consults it, so a
+  /// deleted or hidden album would otherwise resurrect offline through its
+  /// stale pages.
+  Future<void> _forgetDetailsAbsentFrom(List<Album> albums) async {
+    final account = _activeAccountKey();
+    if (account == null) return;
+    final visible = albums.map((album) => album.id.value).toSet();
+    try {
+      final rows = await _database.query(
+        AppDatabase.albumSnapshotsTable,
+        columns: ['snapshot_key'],
+        where: 'account_key = ? AND snapshot_key LIKE ?',
+        whereArgs: [account, '$_detailKeyRoot%'],
+      );
+      final stale = rows.map((row) => row['snapshot_key']! as String).where((
+        key,
+      ) {
+        final albumId = _albumIdOfDetailKey(key);
+        return albumId == null || !visible.contains(albumId);
+      }).toList();
+      if (stale.isEmpty) return;
+      final batch = _database.batch();
+      for (final key in stale) {
+        batch.delete(
+          AppDatabase.albumSnapshotsTable,
+          where: 'account_key = ? AND snapshot_key = ?',
+          whereArgs: [account, key],
+        );
+      }
+      await batch.commit(noResult: true);
+    } on DatabaseException catch (error) {
+      throw InfrastructureError(
+        'Could not prune stale album snapshots.',
+        cause: error,
+      );
+    }
+  }
+
+  /// The album id a detail-page key names, or null for a key this build
+  /// does not recognise (which [_forgetDetailsAbsentFrom] treats as stale).
+  static int? _albumIdOfDetailKey(String key) {
+    final parts = key.split('/');
+    if (parts.length < 2 || '${parts.first}/' != _detailKeyRoot) return null;
+    return int.tryParse(parts[1]);
   }
 
   Future<void> _save(String key, Object payload) async {

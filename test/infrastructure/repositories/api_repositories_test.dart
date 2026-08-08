@@ -109,27 +109,6 @@ void main() {
       },
     );
 
-    test('refresh exchanges the refresh token for a rotated pair', () async {
-      final repository = ApiAuthRepository(
-        client(
-          (request) async => json({
-            'access_token': 'a2',
-            'refresh_token': 'r2',
-            'scope': ['gui:view'],
-          }),
-        ),
-      );
-
-      final refreshed = await repository.refresh(testAuthSession);
-
-      expect(jsonDecode(requests.single.body), {
-        'refresh_token': testAuthSession.refreshToken,
-      });
-      expect(refreshed.accessToken, 'a2');
-      expect(refreshed.refreshToken, 'r2');
-      expect(refreshed.scopes, ['gui:view']);
-    });
-
     test(
       'logout posts to the revoke endpoint with the bearer token', //
       () async {

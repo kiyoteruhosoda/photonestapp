@@ -307,8 +307,8 @@ AlbumMediaItem testAlbumMediaItem({
 final class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({AuthSession? session}) : sessionToReturn = session;
 
-  /// Session handed back by [login] / [refresh]; defaults to a session built
-  /// from the submitted credentials.
+  /// Session handed back by [login]; defaults to a session built from the
+  /// submitted credentials.
   AuthSession? sessionToReturn;
 
   /// When set, every method throws this instead of answering.
@@ -332,12 +332,6 @@ final class FakeAuthRepository implements AuthRepository {
           email: credentials.email,
           scopes: const ['gui:view'],
         );
-  }
-
-  @override
-  Future<AuthSession> refresh(AuthSession session) async {
-    _failIfAsked();
-    return sessionToReturn ?? session;
   }
 
   @override

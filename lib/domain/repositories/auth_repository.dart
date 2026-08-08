@@ -12,12 +12,6 @@ abstract interface class AuthRepository {
   /// and `InfrastructureError` when it cannot be reached.
   Future<AuthSession> login(LoginCredentials credentials);
 
-  /// Exchanges [session]'s refresh token for a fresh token pair.
-  ///
-  /// The returned session must be persisted immediately: refresh tokens
-  /// rotate, and the server forgets the one that was just used.
-  Future<AuthSession> refresh(AuthSession session);
-
   /// Revokes [session] on the server.
   Future<void> logout(AuthSession session);
 }

@@ -33,18 +33,6 @@ final class ApiAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<AuthSession> refresh(AuthSession session) async {
-    final payload = await _client.postJson('/auth/refresh', {
-      'refresh_token': session.refreshToken,
-    }, authenticated: false);
-    return session.withTokens(
-      accessToken: payload['access_token'] as String,
-      refreshToken: payload['refresh_token'] as String,
-      scopes: _scopesOf(payload['scope']),
-    );
-  }
-
-  @override
   Future<void> logout(AuthSession session) async {
     await _client.postJson('/auth/logout', const {});
   }

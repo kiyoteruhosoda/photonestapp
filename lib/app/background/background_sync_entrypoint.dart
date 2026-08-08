@@ -38,9 +38,6 @@ void backgroundSyncDispatcher() {
           infrastructure.uploadHistory,
           infrastructure.uploadFailures,
           logger,
-          // Failures recorded here say so, which is what lets the list
-          // separate "you were watching" from "this happened overnight".
-          automatic: true,
         ),
         RecordBackupResultUseCase(infrastructure.backupNotifications, logger),
         logger,

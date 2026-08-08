@@ -129,9 +129,8 @@ final class UploadPhotosUseCase {
     this._uploads,
     this._history,
     this._failures,
-    this._logger, {
-    this.automatic = false,
-  });
+    this._logger,
+  );
 
   final PhotoLibraryGateway _library;
   final PhotoUploadRepository _uploads;
@@ -139,13 +138,16 @@ final class UploadPhotosUseCase {
   final UploadFailureRepository _failures;
   final AppLogger _logger;
 
-  /// Whether this instance serves the background pass. Recorded with each
-  /// failure so the list can say a photo failed while nobody was watching.
-  final bool automatic;
-
   /// [onProgress] fires as the batch advances — once per byte-progress
   /// report from the photo in flight, and once more as each photo settles.
   /// [cancellation] stops the batch before the next photo once cancelled.
+  ///
+  /// [automatic] marks the batch as coming from a background pass rather
+  /// than a manual upload; it is recorded with each failure so the list can
+  /// say a photo failed while nobody was watching. It belongs to the call
+  /// rather than to the instance — the same use case serves both paths, and
+  /// a constructor flag would silently be wrong for whichever composition
+  /// root forgot it.
   ///
   /// [mayContinue] is awaited before each photo and stops the batch when it
   /// answers false. It exists for preconditions that can stop holding
@@ -158,6 +160,7 @@ final class UploadPhotosUseCase {
     void Function(UploadProgress progress)? onProgress,
     UploadCancellation? cancellation,
     Future<bool> Function()? mayContinue,
+    bool automatic = false,
   }) async {
     final uploaded = <LocalPhoto>[];
     final failed = <PhotoUploadFailure>[];
@@ -186,6 +189,7 @@ final class UploadPhotosUseCase {
         uploadedAt,
         uploaded,
         failed,
+        automatic: automatic,
         onBytes: onProgress == null
             ? null
             : (sent, total) => onProgress(
@@ -222,6 +226,7 @@ final class UploadPhotosUseCase {
     DateTime? uploadedAt,
     List<LocalPhoto> uploaded,
     List<PhotoUploadFailure> failed, {
+    required bool automatic,
     UploadBytesProgress? onBytes,
   }) async {
     try {
@@ -232,19 +237,33 @@ final class UploadPhotosUseCase {
         PhotoUploadFailureReason.missingFromLibrary,
         'Photo is no longer in the device library.',
         failed,
+        automatic: automatic,
       );
       return;
     } on AppError catch (error) {
       _logger.warning('[Upload] ${photo.fileName} failed: ${error.message}');
-      await _recordFailure(photo, _reasonFor(error), error.message, failed);
+      await _recordFailure(
+        photo,
+        _reasonFor(error),
+        error.message,
+        failed,
+        automatic: automatic,
+      );
       return;
     }
     await _history.markUploaded(photo, uploadedAt ?? DateTime.now().toUtc());
-    // A photo that finally went through is no longer a live problem, so its
-    // record goes away rather than lingering in the failure list forever.
-    await _failures.clear(photo.localId);
     uploaded.add(photo);
     _logger.info('[Upload] sent ${photo.fileName}');
+    // A photo that finally went through is no longer a live problem, so its
+    // record goes away rather than lingering in the failure list forever.
+    // Swallowed like the write below: the server has already accepted the
+    // file, and aborting the batch over a bookkeeping row would strand the
+    // rest of it — and invite a re-upload of what just succeeded.
+    try {
+      await _failures.clear(photo.localId);
+    } on AppError catch (error) {
+      _logger.warning('[Upload] could not clear the failure record: $error');
+    }
   }
 
   /// Adds the failure to the batch's list and to the durable record.
@@ -257,8 +276,9 @@ final class UploadPhotosUseCase {
     LocalPhoto photo,
     PhotoUploadFailureReason reason,
     String message,
-    List<PhotoUploadFailure> failed,
-  ) async {
+    List<PhotoUploadFailure> failed, {
+    required bool automatic,
+  }) async {
     failed.add(
       PhotoUploadFailure(photo: photo, reason: reason, message: message),
     );

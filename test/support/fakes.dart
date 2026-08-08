@@ -340,6 +340,9 @@ final class FakeUploadFailureRepository implements UploadFailureRepository {
   /// When set, [record] throws this instead of storing.
   AppError? recordFailure;
 
+  /// When set, [clear] throws this instead of forgetting.
+  AppError? clearFailure;
+
   @override
   Stream<void> get changes => changed.stream;
 
@@ -373,6 +376,8 @@ final class FakeUploadFailureRepository implements UploadFailureRepository {
 
   @override
   Future<void> clear(String localId) async {
+    final error = clearFailure;
+    if (error != null) throw error;
     if (failures.remove(localId) != null) changed.add(null);
   }
 

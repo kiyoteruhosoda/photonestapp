@@ -237,19 +237,28 @@ void main() {
       expect((await failures.list()).single.attempts, 2);
     });
 
-    test('a background pass records that nobody was watching', () async {
-      final background = UploadPhotosUseCase(
-        library,
-        uploads,
-        history,
-        failures,
-        logger,
-        automatic: true,
-      );
-
-      await background.execute([testLocalPhoto(localId: 'b')]);
+    test('an automatic batch records that nobody was watching', () async {
+      // The flag rides on the call, not on the instance: the same use case
+      // serves the manual screen and both automatic paths (the foreground
+      // coordinator and the WorkManager engine).
+      await uploadUseCase().execute([
+        testLocalPhoto(localId: 'b'),
+      ], automatic: true);
 
       expect((await failures.list()).single.automatic, isTrue);
+    });
+
+    test('a record that cannot be cleared does not lose the upload', () async {
+      // The server has already accepted the file; a failing bookkeeping
+      // delete must not abort the batch or drop the photo from the result.
+      final photo = testLocalPhoto(localId: 'a');
+      library.bytesById['a'] = Uint8List.fromList([1]);
+      failures.clearFailure = const InfrastructureError('database is locked');
+
+      final result = await uploadUseCase().execute([photo]);
+
+      expect(result.uploaded.map((photo) => photo.localId), ['a']);
+      expect(history.marked, hasLength(1));
     });
 
     test('a photo that finally uploads stops being a failure', () async {
@@ -340,6 +349,22 @@ void main() {
       library.accessGranted = false;
       final report = await syncUseCase().execute();
       expect(report.skipped, SyncSkipReason.noLibraryAccess);
+    });
+
+    test('failures from a sync pass are recorded as automatic', () async {
+      settings
+        ..enabled = true
+        ..since = DateTime.utc(2026, 8, 1);
+      // No bytes for this photo, so the upload fails.
+      library.photos = [
+        testLocalPhoto(localId: 'broken', takenAt: DateTime.utc(2026, 8, 3)),
+      ];
+
+      await syncUseCase().execute();
+
+      // True for the foreground coordinator's passes too, not just the
+      // WorkManager engine's — neither has a user watching.
+      expect((await failures.list()).single.automatic, isTrue);
     });
 
     test('skips a metered connection while restricted to unmetered', () async {

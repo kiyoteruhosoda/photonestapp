@@ -229,9 +229,12 @@ class UploadRunNotifier extends Notifier<UploadRunState> {
 
 /// The photos that are currently failing to upload, kept across restarts.
 ///
-/// Follows the store's change stream, so a batch running right now — and a
-/// background pass that happens to run while the app is open — update the
-/// list without a manual refresh.
+/// Follows the store's change stream, so writes made **in this isolate** —
+/// a manual batch, or a foreground auto-upload pass — update the list at
+/// once. WorkManager's headless engine has its own repository instance and
+/// its own controller, so its writes are invisible here; [refresh] is what
+/// picks those up, and the composition root calls it whenever the app comes
+/// back to the foreground.
 final AsyncNotifierProvider<UploadFailuresNotifier, List<UploadFailure>>
 uploadFailuresProvider =
     AsyncNotifierProvider<UploadFailuresNotifier, List<UploadFailure>>(
@@ -258,6 +261,10 @@ class UploadFailuresNotifier extends AsyncNotifier<List<UploadFailure>> {
     await ref.read(dismissUploadFailuresUseCaseProvider).execute();
     await _reread();
   }
+
+  /// Re-reads the store. The way writes from another isolate — the
+  /// background upload engine — reach this list.
+  Future<void> refresh() => _reread();
 
   Future<void> _reread() async {
     state = await AsyncValue.guard(

@@ -173,6 +173,10 @@ final class SyncNewPhotosUseCase {
     final result = await _uploadPhotos.execute(
       pending,
       mayContinue: _mayUploadOverCurrentConnection,
+      // Every pass through here is automatic, whichever isolate runs it —
+      // the foreground coordinator's passes are just as unwatched as the
+      // background engine's.
+      automatic: true,
     );
     // Recorded from inside the pass so both isolates — foreground app and
     // background WorkManager engine — leave the same trace in the list.

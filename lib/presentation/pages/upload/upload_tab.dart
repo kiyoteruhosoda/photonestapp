@@ -34,6 +34,12 @@ class _UploadTabState extends ConsumerState<UploadTab> {
     }
   }
 
+  Future<void> _toggleUnmeteredOnly(bool unmeteredOnly) {
+    return ref
+        .read(autoUploadUnmeteredOnlyProvider.notifier)
+        .setUnmeteredOnly(unmeteredOnly);
+  }
+
   Future<void> _uploadSelected(List<UploadCandidate> candidates) async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -101,6 +107,7 @@ class _UploadTabState extends ConsumerState<UploadTab> {
     final l10n = AppLocalizations.of(context);
     final candidates = ref.watch(uploadCandidatesProvider);
     final autoEnabled = ref.watch(autoUploadEnabledProvider);
+    final unmeteredOnly = ref.watch(autoUploadUnmeteredOnlyProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -113,25 +120,55 @@ class _UploadTabState extends ConsumerState<UploadTab> {
             0,
           ),
           child: AppCard(
-            child: SwitchListTile(
-              value: autoEnabled,
-              onChanged: (enabled) => unawaited(_toggleAuto(enabled)),
-              secondary: Icon(
-                Icons.cloud_upload_outlined,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-              title: Text(
-                l10n.uploadAutoTitle,
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              subtitle: Text(
-                l10n.uploadAutoSubtitle,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.componentPadding,
-                vertical: AppSpacing.xs,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SwitchListTile(
+                  value: autoEnabled,
+                  onChanged: (enabled) => unawaited(_toggleAuto(enabled)),
+                  secondary: Icon(
+                    Icons.cloud_upload_outlined,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    l10n.uploadAutoTitle,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    l10n.uploadAutoSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.componentPadding,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+                // Disabled rather than hidden while auto-upload is off: the
+                // choice is still persisted, and hiding it would make the
+                // switch appear to change meaning between visits.
+                SwitchListTile(
+                  value: unmeteredOnly,
+                  onChanged: autoEnabled
+                      ? (value) => unawaited(_toggleUnmeteredOnly(value))
+                      : null,
+                  secondary: Icon(
+                    Icons.wifi_outlined,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    l10n.uploadAutoUnmeteredTitle,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    l10n.uploadAutoUnmeteredSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.componentPadding,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

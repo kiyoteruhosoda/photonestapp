@@ -112,6 +112,7 @@ const Map<Layer, List<String>> _bannedUris = <Layer, List<String>>{
 /// `package:path` is deliberately absent — it is pure string manipulation
 /// with no platform behind it.
 const List<String> _ioPackages = [
+  'package:connectivity_plus/',
   'package:dio/',
   'package:http/',
   'package:sqflite/',

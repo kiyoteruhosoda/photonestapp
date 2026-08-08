@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
@@ -19,6 +21,7 @@ void main() {
   late FakePhotoUploadRepository uploads;
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
+  late FakeNetworkConnectionGateway network;
   late FakeSyncLeaseRepository syncLease;
   late FakeBackupNotificationRepository notifications;
   late RecordingAppLogger logger;
@@ -29,6 +32,7 @@ void main() {
     uploads = FakePhotoUploadRepository();
     settings = FakeAutoUploadSettingsRepository();
     sessions = FakeSessionRepository(testAuthSession);
+    network = FakeNetworkConnectionGateway();
     syncLease = FakeSyncLeaseRepository();
     notifications = FakeBackupNotificationRepository();
     logger = RecordingAppLogger();
@@ -40,6 +44,7 @@ void main() {
   SyncNewPhotosUseCase syncUseCase() => SyncNewPhotosUseCase(
     settings,
     sessions,
+    network,
     library,
     history,
     syncLease,
@@ -257,6 +262,37 @@ void main() {
       expect(report.skipped, SyncSkipReason.noLibraryAccess);
     });
 
+    test('skips a metered connection while restricted to unmetered', () async {
+      settings.enabled = true;
+      network.unmetered = false;
+      final report = await syncUseCase().execute();
+      expect(report.skipped, SyncSkipReason.meteredConnection);
+      // Checked before access, so a skipped pass never prompts for photos.
+      expect(library.accessRequests, 0);
+    });
+
+    test('uploads over a metered connection once the restriction is '
+        'lifted', () async {
+      settings
+        ..enabled = true
+        ..unmeteredOnly = false
+        ..since = DateTime.utc(2026, 8, 1);
+      network.unmetered = false;
+      final fresh = testLocalPhoto(
+        localId: 'fresh',
+        takenAt: DateTime.utc(2026, 8, 3),
+      );
+      library.photos = [fresh];
+      library.bytesById['fresh'] = Uint8List.fromList([1]);
+
+      final report = await syncUseCase().execute();
+
+      expect(report.skipped, isNull);
+      expect(report.uploadedCount, 1);
+      // The connection is never even queried when the setting is off.
+      expect(network.checks, 0);
+    });
+
     test('uploads only photos taken after the enable stamp and not yet '
         'uploaded', () async {
       settings
@@ -308,6 +344,7 @@ void main() {
       final paged = SyncNewPhotosUseCase(
         settings,
         sessions,
+        network,
         library,
         history,
         syncLease,
@@ -431,7 +468,8 @@ void main() {
     setUp(() {
       backgroundSync
         ..scheduleRequests = 0
-        ..cancelRequests = 0;
+        ..cancelRequests = 0
+        ..scheduledUnmeteredOnly.clear();
     });
     SetAutoUploadEnabledUseCase usecase() =>
         SetAutoUploadEnabledUseCase(settings, library, backgroundSync, logger);
@@ -442,6 +480,15 @@ void main() {
       expect(backgroundSync.scheduleRequests, 1);
       expect(backgroundSync.cancelRequests, 0);
     });
+
+    test(
+      'registers the schedule with the saved connection restriction',
+      () async {
+        settings.unmeteredOnly = false;
+        await usecase().execute(true);
+        expect(backgroundSync.scheduledUnmeteredOnly, [false]);
+      },
+    );
 
     test('refuses to enable when the user denies photo access', () async {
       library.accessGranted = false;
@@ -457,6 +504,40 @@ void main() {
       expect(settings.enabled, isFalse);
       expect(library.accessRequests, 0);
       expect(backgroundSync.cancelRequests, 1);
+    });
+  });
+
+  group('auto-upload connection restriction', () {
+    final backgroundSync = FakeBackgroundSyncScheduler();
+    setUp(() {
+      backgroundSync
+        ..scheduleRequests = 0
+        ..cancelRequests = 0
+        ..scheduledUnmeteredOnly.clear();
+    });
+    SetAutoUploadUnmeteredOnlyUseCase usecase() =>
+        SetAutoUploadUnmeteredOnlyUseCase(settings, backgroundSync, logger);
+
+    test('reads the saved value', () {
+      settings.unmeteredOnly = false;
+      expect(GetAutoUploadUnmeteredOnlyUseCase(settings).execute(), isFalse);
+    });
+
+    test(
+      're-registers the schedule so the OS honours the new choice',
+      () async {
+        settings.enabled = true;
+        await usecase().execute(false);
+        expect(settings.unmeteredOnly, isFalse);
+        expect(backgroundSync.scheduledUnmeteredOnly, [false]);
+      },
+    );
+
+    test('saves without scheduling while auto-upload is off', () async {
+      settings.enabled = false;
+      await usecase().execute(false);
+      expect(settings.unmeteredOnly, isFalse);
+      expect(backgroundSync.scheduleRequests, 0);
     });
   });
 

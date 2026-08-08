@@ -16,9 +16,16 @@ final class SharedPreferencesAutoUploadSettingsRepository
 
   static const String _enabledKey = 'autoUpload.enabled';
   static const String _sinceKey = 'autoUpload.since';
+  static const String _unmeteredOnlyKey = 'autoUpload.unmeteredOnly';
 
   @override
   bool isEnabled() => _preferences.getBool(_enabledKey) ?? false;
+
+  // Absent means "never chosen", and the default for a feature that uploads
+  // originals is the one that cannot surprise anyone with a data bill. That
+  // also covers installs that predate this setting.
+  @override
+  bool isUnmeteredOnly() => _preferences.getBool(_unmeteredOnlyKey) ?? true;
 
   @override
   DateTime? enabledSince() {
@@ -38,5 +45,10 @@ final class SharedPreferencesAutoUploadSettingsRepository
     if (enabled && _preferences.getString(_sinceKey) == null) {
       await _preferences.setString(_sinceKey, _clock().toIso8601String());
     }
+  }
+
+  @override
+  Future<void> setUnmeteredOnly(bool unmeteredOnly) async {
+    await _preferences.setBool(_unmeteredOnlyKey, unmeteredOnly);
   }
 }

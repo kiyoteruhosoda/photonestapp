@@ -86,6 +86,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadAutoDenied =>
       'Photo library access is required for auto-upload.';
   @override
+  String get uploadAutoUnmeteredTitle => 'Only over Wi-Fi';
+  @override
+  String get uploadAutoUnmeteredSubtitle =>
+      'Wait for Wi-Fi instead of uploading over mobile data.';
+  @override
   String get uploadPermissionTitle => 'No photo access';
   @override
   String get uploadPermissionBody =>

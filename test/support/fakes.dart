@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
+import 'package:flutterbase/application/ports/network_connection_gateway.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/entities/album_media_item.dart';
@@ -644,9 +645,13 @@ final class FakeBackgroundSyncScheduler implements BackgroundSyncScheduler {
   int scheduleRequests = 0;
   int cancelRequests = 0;
 
+  /// The `unmeteredOnly` flag of every registration, in order.
+  final List<bool> scheduledUnmeteredOnly = <bool>[];
+
   @override
-  Future<void> ensureScheduled() async {
+  Future<void> ensureScheduled({required bool unmeteredOnly}) async {
     scheduleRequests++;
+    scheduledUnmeteredOnly.add(unmeteredOnly);
   }
 
   @override
@@ -721,11 +726,20 @@ final class FakeUploadHistoryRepository implements UploadHistoryRepository {
 /// In-memory [AutoUploadSettingsRepository].
 final class FakeAutoUploadSettingsRepository
     implements AutoUploadSettingsRepository {
-  FakeAutoUploadSettingsRepository({this.enabled = false, this.since});
+  FakeAutoUploadSettingsRepository({
+    this.enabled = false,
+    this.since,
+    this.unmeteredOnly = true,
+  });
 
   bool enabled;
   DateTime? since;
+
+  /// Mirrors the production default: restricted to unmetered connections
+  /// until the user says otherwise.
+  bool unmeteredOnly;
   final List<bool> savedStates = <bool>[];
+  final List<bool> savedUnmeteredOnly = <bool>[];
 
   @override
   bool isEnabled() => enabled;
@@ -734,10 +748,33 @@ final class FakeAutoUploadSettingsRepository
   DateTime? enabledSince() => since;
 
   @override
+  bool isUnmeteredOnly() => unmeteredOnly;
+
+  @override
   Future<void> setEnabled(bool value) async {
     savedStates.add(value);
     enabled = value;
     if (value) since ??= testPhotoTakenAt;
+  }
+
+  @override
+  Future<void> setUnmeteredOnly(bool value) async {
+    savedUnmeteredOnly.add(value);
+    unmeteredOnly = value;
+  }
+}
+
+/// In-memory [NetworkConnectionGateway].
+final class FakeNetworkConnectionGateway implements NetworkConnectionGateway {
+  FakeNetworkConnectionGateway({this.unmetered = true});
+
+  bool unmetered;
+  int checks = 0;
+
+  @override
+  Future<bool> isUnmetered() async {
+    checks++;
+    return unmetered;
   }
 }
 

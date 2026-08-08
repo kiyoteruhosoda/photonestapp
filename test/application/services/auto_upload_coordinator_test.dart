@@ -15,6 +15,7 @@ void main() {
   late FakePhotoUploadRepository uploads;
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
+  late FakeNetworkConnectionGateway network;
   late FakeBackgroundSyncScheduler backgroundSync;
   late FakeSyncLeaseRepository syncLease;
   late FakeBackupNotificationRepository notifications;
@@ -29,6 +30,7 @@ void main() {
       since: DateTime.utc(2026, 8, 1),
     );
     sessions = FakeSessionRepository(testAuthSession);
+    network = FakeNetworkConnectionGateway();
     backgroundSync = FakeBackgroundSyncScheduler();
     syncLease = FakeSyncLeaseRepository();
     notifications = FakeBackupNotificationRepository();
@@ -41,6 +43,7 @@ void main() {
       SyncNewPhotosUseCase(
         settings,
         sessions,
+        network,
         library,
         history,
         syncLease,
@@ -75,11 +78,28 @@ void main() {
   });
 
   test('start re-asserts the background schedule while enabled', () async {
+    settings.unmeteredOnly = false;
     final subject = coordinator()..start();
     addTearDown(subject.stop);
 
     await pumpEventQueue();
     expect(backgroundSync.scheduleRequests, 1);
+    // The repaired registration carries the user's current choice, not the
+    // one the schedule happened to be registered with.
+    expect(backgroundSync.scheduledUnmeteredOnly, [false]);
+  });
+
+  test('a library change on a metered connection uploads nothing', () async {
+    network.unmetered = false;
+    final subject = coordinator()..start();
+    addTearDown(subject.stop);
+    await pumpEventQueue();
+
+    seed('new-photo');
+    library.changes.add(null);
+    await pumpEventQueue(times: 50);
+
+    expect(uploads.uploaded, isEmpty);
   });
 
   test('start leaves the background schedule alone while disabled', () async {

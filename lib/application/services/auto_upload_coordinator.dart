@@ -43,7 +43,11 @@ final class AutoUploadCoordinator {
     // cleared task list must not silently end background syncing the user
     // switched on. The toggle use case owns changes; this only repairs.
     if (_settings.isEnabled()) {
-      unawaited(_backgroundSync.ensureScheduled());
+      unawaited(
+        _backgroundSync.ensureScheduled(
+          unmeteredOnly: _settings.isUnmeteredOnly(),
+        ),
+      );
     }
     unawaited(triggerSync());
   }

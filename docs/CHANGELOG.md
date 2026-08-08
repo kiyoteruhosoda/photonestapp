@@ -3,6 +3,29 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-08 — 自動アップロードを既定で Wi-Fi 限定にする
+
+- 旧 Progress #20。自動アップロードは写真・動画の**原本**を送るのに、
+  回線が従量課金かどうかを見ておらず（WorkManager の制約は
+  `NetworkType.connected`、フォアグラウンドのパスは接続種別を参照すらして
+  いなかった）、モバイル回線でも走っていた。設定「Wi-Fi 接続時のみ」
+  （既定 ON。保存が無い＝この設定より前のインストールも ON 扱い）を
+  `AutoUploadSettingsRepository` に追加し、二経路とも同じ判定を通す。
+  バックグラウンドは登録制約を `NetworkType.unmetered` にして OS に
+  判定させる。制約は登録時に焼き込まれるため、設定変更時は
+  `SetAutoUploadUnmeteredOnlyUseCase` が再登録する
+  （`ExistingPeriodicWorkPolicy.keep` → `update`。既存のタイミングは保たれる）。
+  フォアグラウンドは `NetworkConnectionGateway`（Application ポート）+
+  `ConnectivityPlusNetworkConnectionGateway`（Infrastructure、
+  `connectivity_plus`）を新設し、`SyncNewPhotosUseCase` が
+  ライブラリアクセス確認より**前**に判定する（スキップするパスで写真の
+  権限ダイアログを出さないため）。スキップ理由は
+  `SyncSkipReason.meteredConnection`。手動アップロードは対象外
+  （ユーザーが明示的に押した操作をブロックしない）。
+  接続種別は transport（wifi / ethernet）で判定するため、
+  ユーザーが従量課金と印を付けた Wi-Fi はフォアグラウンドでは
+  unmetered 扱いになる（バックグラウンドは OS 判定なので正しく弾く）。
+
 ## 2026-08-08 — アルバムメタデータのオフラインスナップショット
 
 - 旧 Progress #14。#10 でサムネイルの実体は SQLite に永続化されたが、

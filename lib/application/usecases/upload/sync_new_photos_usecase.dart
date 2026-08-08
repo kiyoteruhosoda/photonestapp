@@ -1,4 +1,5 @@
 import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:flutterbase/application/ports/network_connection_gateway.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
@@ -16,6 +17,10 @@ enum SyncSkipReason {
 
   /// Nobody is signed in, so there is nowhere to upload to.
   notSignedIn,
+
+  /// Auto-upload is restricted to unmetered connections and the device is
+  /// on a metered one (or offline).
+  meteredConnection,
 
   /// The user has not granted photo-library access.
   noLibraryAccess,
@@ -56,6 +61,7 @@ final class SyncNewPhotosUseCase {
   const SyncNewPhotosUseCase(
     this._settings,
     this._sessions,
+    this._network,
     this._library,
     this._history,
     this._syncLease,
@@ -68,6 +74,7 @@ final class SyncNewPhotosUseCase {
 
   final AutoUploadSettingsRepository _settings;
   final SessionRepository _sessions;
+  final NetworkConnectionGateway _network;
   final PhotoLibraryGateway _library;
   final UploadHistoryRepository _history;
   final SyncLeaseRepository _syncLease;
@@ -94,6 +101,14 @@ final class SyncNewPhotosUseCase {
     }
     if (_sessions.load() == null) {
       return const SyncReport.skippedBecause(SyncSkipReason.notSignedIn);
+    }
+    // Checked before library access so a pass that is going to be skipped
+    // anyway never triggers a permission prompt. The background pass is
+    // already gated by the same rule at the scheduler level; this is what
+    // stops a photo taken with the app open from going out over mobile data.
+    if (_settings.isUnmeteredOnly() && !await _network.isUnmetered()) {
+      _logger.info('[AutoUpload] connection is metered — skipping this pass');
+      return const SyncReport.skippedBecause(SyncSkipReason.meteredConnection);
     }
     if (!await _library.ensureAccess()) {
       _logger.warning('[AutoUpload] photo library access not granted');

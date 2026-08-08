@@ -75,6 +75,8 @@ abstract class AppLocalizations {
   String get uploadAutoTitle;
   String get uploadAutoSubtitle;
   String get uploadAutoDenied;
+  String get uploadAutoUnmeteredTitle;
+  String get uploadAutoUnmeteredSubtitle;
   String get uploadPermissionTitle;
   String get uploadPermissionBody;
   String get uploadPermissionRetry;

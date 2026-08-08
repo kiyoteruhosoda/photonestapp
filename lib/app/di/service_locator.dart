@@ -2,6 +2,7 @@ import 'package:flutterbase/app/background/background_sync_entrypoint.dart';
 import 'package:flutterbase/application/ports/app_logger.dart';
 import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
 import 'package:flutterbase/application/ports/external_link_launcher.dart';
+import 'package:flutterbase/application/ports/network_connection_gateway.dart';
 import 'package:flutterbase/application/ports/photo_library_gateway.dart';
 import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
 import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
@@ -27,9 +28,11 @@ import 'package:flutterbase/application/usecases/notification/watch_backup_notif
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
@@ -103,6 +106,9 @@ Future<void> setupServiceLocator() async {
       infrastructure.autoUploadSettings,
     )
     ..registerSingleton<PhotoLibraryGateway>(infrastructure.photoLibrary)
+    ..registerSingleton<NetworkConnectionGateway>(
+      infrastructure.networkConnection,
+    )
     ..registerSingleton<BackgroundSyncScheduler>(infrastructure.backgroundSync);
 
   sl<AppLogger>().info(
@@ -209,6 +215,7 @@ Future<void> setupServiceLocator() async {
     () => SyncNewPhotosUseCase(
       sl<AutoUploadSettingsRepository>(),
       sl<SessionRepository>(),
+      sl<NetworkConnectionGateway>(),
       sl<PhotoLibraryGateway>(),
       sl<UploadHistoryRepository>(),
       sl<SyncLeaseRepository>(),
@@ -243,6 +250,16 @@ Future<void> setupServiceLocator() async {
     () => SetAutoUploadEnabledUseCase(
       sl<AutoUploadSettingsRepository>(),
       sl<PhotoLibraryGateway>(),
+      sl<BackgroundSyncScheduler>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<GetAutoUploadUnmeteredOnlyUseCase>(
+    () => GetAutoUploadUnmeteredOnlyUseCase(sl<AutoUploadSettingsRepository>()),
+  );
+  sl.registerFactory<SetAutoUploadUnmeteredOnlyUseCase>(
+    () => SetAutoUploadUnmeteredOnlyUseCase(
+      sl<AutoUploadSettingsRepository>(),
       sl<BackgroundSyncScheduler>(),
       sl<AppLogger>(),
     ),

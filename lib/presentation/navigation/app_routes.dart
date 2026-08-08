@@ -34,6 +34,9 @@ class AppRoutes {
   static const String debug = '/debug';
   static const String logs = '/logs';
 
+  /// The notification list behind the header's bell button.
+  static const String notifications = '/notifications';
+
   /// Diagnostics screen that echoes the link it was opened with.
   static const String deepLink = '/link';
 

@@ -20,6 +20,10 @@ import 'package:flutterbase/application/usecases/language/get_language_preferenc
 import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
+import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
@@ -34,6 +38,7 @@ import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/providers/album_providers.dart';
 import 'package:flutterbase/presentation/providers/app_info_providers.dart';
 import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:flutterbase/presentation/providers/notification_providers.dart';
 import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:flutterbase/presentation/providers/settings_providers.dart';
 import 'package:flutterbase/presentation/providers/upload_providers.dart';
@@ -56,6 +61,7 @@ class TestScope {
     FakeLanguagePreferenceRepository? languageRepository,
     FakeDebugSettingsRepository? debugSettingsRepository,
     FakeAppInfoRepository? appInfoRepository,
+    FakeBackupNotificationRepository? notificationRepository,
     RecordingAppLogger? logger,
     FakeAuthRepository? authRepository,
     FakeSessionRepository? sessionRepository,
@@ -75,6 +81,8 @@ class TestScope {
        debugSettingsRepository =
            debugSettingsRepository ?? FakeDebugSettingsRepository(),
        appInfoRepository = appInfoRepository ?? FakeAppInfoRepository(),
+       notificationRepository =
+           notificationRepository ?? FakeBackupNotificationRepository(),
        logger = logger ?? RecordingAppLogger(),
        authRepository = authRepository ?? FakeAuthRepository(),
        // Widget tests exercise screens that sit behind the login guard, so
@@ -104,6 +112,7 @@ class TestScope {
   final FakeLanguagePreferenceRepository languageRepository;
   final FakeDebugSettingsRepository debugSettingsRepository;
   final FakeAppInfoRepository appInfoRepository;
+  final FakeBackupNotificationRepository notificationRepository;
   final RecordingAppLogger logger;
   final FakeAuthRepository authRepository;
   final FakeSessionRepository sessionRepository;
@@ -169,6 +178,15 @@ class TestScope {
     );
     return <Override>[
       appLoggerProvider.overrideWithValue(logger),
+      listBackupNotificationsUseCaseProvider.overrideWithValue(
+        ListBackupNotificationsUseCase(notificationRepository),
+      ),
+      getUnreadNotificationCountUseCaseProvider.overrideWithValue(
+        GetUnreadNotificationCountUseCase(notificationRepository),
+      ),
+      markNotificationsReadUseCaseProvider.overrideWithValue(
+        MarkNotificationsReadUseCase(notificationRepository),
+      ),
       listAlbumsUseCaseProvider.overrideWithValue(
         ListAlbumsUseCase(albumRepository),
       ),
@@ -213,6 +231,7 @@ class TestScope {
             uploadHistoryRepository,
             syncLeaseRepository,
             uploadPhotos,
+            RecordBackupResultUseCase(notificationRepository, logger),
             logger,
             leaseHolder: 'foreground',
           ),
@@ -334,6 +353,7 @@ class TestScope {
             GoRoute(path: 'debug', builder: placeholder),
             GoRoute(path: 'logs', builder: placeholder),
             GoRoute(path: 'link', builder: placeholder),
+            GoRoute(path: 'notifications', builder: placeholder),
             GoRoute(path: 'albums/:id', builder: placeholder),
           ],
         ),

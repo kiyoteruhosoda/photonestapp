@@ -223,6 +223,13 @@ abstract class AppLocalizations {
   String get logLevelWarning;
   String get logLevelError;
 
+  // ─── Notifications ───────────────────────────────────────────────────
+  String get notificationsTitle;
+  String get notificationsEmpty;
+  String get notificationsEmptyHint;
+  String get notificationBackupCompleted;
+  String get notificationBackupHadFailures;
+
   // ─── Deep links (App Links) ──────────────────────────────────────────
   String get deepLinkTitle;
   String get deepLinkIntro;

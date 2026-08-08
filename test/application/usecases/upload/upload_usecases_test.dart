@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
 import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
@@ -19,6 +20,7 @@ void main() {
   late FakeAutoUploadSettingsRepository settings;
   late FakeSessionRepository sessions;
   late FakeSyncLeaseRepository syncLease;
+  late FakeBackupNotificationRepository notifications;
   late RecordingAppLogger logger;
 
   setUp(() {
@@ -28,6 +30,7 @@ void main() {
     settings = FakeAutoUploadSettingsRepository();
     sessions = FakeSessionRepository(testAuthSession);
     syncLease = FakeSyncLeaseRepository();
+    notifications = FakeBackupNotificationRepository();
     logger = RecordingAppLogger();
   });
 
@@ -41,6 +44,7 @@ void main() {
     history,
     syncLease,
     uploadUseCase(),
+    RecordBackupResultUseCase(notifications, logger),
     logger,
     leaseHolder: 'foreground',
   );
@@ -308,6 +312,7 @@ void main() {
         history,
         syncLease,
         uploadUseCase(),
+        RecordBackupResultUseCase(notifications, logger),
         logger,
         leaseHolder: 'foreground',
         pageSize: 3,
@@ -315,6 +320,9 @@ void main() {
       final report = await paged.execute();
 
       expect(report.uploadedCount, 2);
+      // The pass leaves its trace in the notification list.
+      expect(notifications.stored.single.uploadedCount, 2);
+      expect(notifications.stored.single.failedCount, 0);
       expect(
         uploads.uploaded.map((entry) => entry.$1.localId),
         containsAll(['photo-3', 'photo-4']),

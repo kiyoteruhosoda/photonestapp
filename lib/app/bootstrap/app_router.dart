@@ -6,6 +6,7 @@ import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/pages/albums/album_detail_page.dart';
 import 'package:flutterbase/presentation/pages/auth/login_page.dart';
 import 'package:flutterbase/presentation/pages/main_page.dart';
+import 'package:flutterbase/presentation/pages/notifications/notifications_page.dart';
 import 'package:flutterbase/presentation/pages/system/about_page.dart';
 import 'package:flutterbase/presentation/pages/system/debug_page.dart';
 import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
@@ -122,6 +123,10 @@ class AppRouter {
             GoRoute(
               path: _relative(AppRoutes.deepLink),
               builder: (context, state) => DeepLinkPage(uri: state.uri),
+            ),
+            GoRoute(
+              path: _relative(AppRoutes.notifications),
+              builder: (context, state) => const NotificationsPage(),
             ),
           ],
         ),

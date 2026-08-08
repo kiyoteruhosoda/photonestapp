@@ -120,8 +120,6 @@ void main() {
     testWidgets('renders a notifications action', (tester) async {
       await pumpInScope(tester, const MainPage());
       expect(find.byIcon(Icons.notifications_outlined), findsOneWidget);
-      await tester.tap(find.byIcon(Icons.notifications_outlined));
-      await tester.pumpAndSettle();
     });
   });
 
@@ -274,6 +272,34 @@ void main() {
       await tester.tap(inDrawer(l10n.drawerDebug));
       await tester.pumpAndSettle();
       expect(scope.location, '/debug');
+    });
+
+    testWidgets('the bell button navigates to /notifications', (tester) async {
+      final scope = await pumpInScope(tester, const MainPage());
+      await tester.tap(find.byIcon(Icons.notifications_outlined));
+      await tester.pumpAndSettle();
+      expect(scope.location, '/notifications');
+    });
+
+    testWidgets('the bell shows a badge while notifications are unread', (
+      tester,
+    ) async {
+      final scope = TestScope(
+        notificationRepository: FakeBackupNotificationRepository([
+          testBackupNotification(id: 1),
+          testBackupNotification(id: 2),
+        ]),
+      );
+      await pumpInScope(tester, const MainPage(), scope: scope);
+      expect(find.byType(Badge), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+    });
+
+    testWidgets('the bell stays plain when everything was seen', (
+      tester,
+    ) async {
+      await pumpInScope(tester, const MainPage());
+      expect(find.byType(Badge), findsNothing);
     });
 
     testWidgets('Deep Links in the drawer navigates to /link', (tester) async {

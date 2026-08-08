@@ -357,6 +357,18 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get logLevelError => 'Error';
 
+  // ─── Notifications ───────────────────────────────────────────────────
+  @override
+  String get notificationsTitle => '通知';
+  @override
+  String get notificationsEmpty => '通知はまだありません';
+  @override
+  String get notificationsEmptyHint => 'バックアップの結果がここに表示されます。';
+  @override
+  String get notificationBackupCompleted => 'バックアップが完了しました';
+  @override
+  String get notificationBackupHadFailures => 'バックアップでエラーが発生しました';
+
   // ─── Deep links (App Links) ──────────────────────────────────────────
   @override
   String get deepLinkTitle => 'ディープリンク';

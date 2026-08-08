@@ -7,6 +7,7 @@ import 'package:flutterbase/domain/entities/album.dart';
 import 'package:flutterbase/domain/entities/album_media_item.dart';
 import 'package:flutterbase/domain/entities/app_info.dart';
 import 'package:flutterbase/domain/entities/auth_session.dart';
+import 'package:flutterbase/domain/entities/backup_notification.dart';
 import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:flutterbase/domain/entities/media_playback_source.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
@@ -15,6 +16,7 @@ import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
 import 'package:flutterbase/domain/repositories/app_info_repository.dart';
 import 'package:flutterbase/domain/repositories/auth_repository.dart';
 import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
 import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
 import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
@@ -137,6 +139,102 @@ final class FakeAppInfoRepository implements AppInfoRepository {
     callCount++;
     if (failure != null) throw Exception('$failure');
     return info ?? testAppInfo;
+  }
+}
+
+/// A fixed instant for notification fixtures, so tests never reason about
+/// the wall clock.
+final DateTime testNotificationOccurredAt = DateTime.utc(2026, 8, 8, 9, 30);
+
+/// Builds a stored notification without going through a repository.
+BackupNotification testBackupNotification({
+  int id = 1,
+  int uploadedCount = 3,
+  int failedCount = 0,
+  DateTime? occurredAt,
+  bool isRead = false,
+}) {
+  return BackupNotification(
+    id: id,
+    uploadedCount: uploadedCount,
+    failedCount: failedCount,
+    occurredAt: occurredAt ?? testNotificationOccurredAt,
+    isRead: isRead,
+  );
+}
+
+/// In-memory [BackupNotificationRepository].
+///
+/// Assigns ids the way SQLite does — monotonically, never reusing one.
+final class FakeBackupNotificationRepository
+    implements BackupNotificationRepository {
+  FakeBackupNotificationRepository([List<BackupNotification>? initial]) {
+    for (final notification in initial ?? const <BackupNotification>[]) {
+      _stored[notification.id] = notification;
+      if (notification.id >= _nextId) _nextId = notification.id + 1;
+    }
+  }
+
+  final Map<int, BackupNotification> _stored = <int, BackupNotification>{};
+  int _nextId = 1;
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  /// How many times [markAllRead] ran.
+  int markAllReadCalls = 0;
+
+  List<BackupNotification> get stored => _stored.values.toList();
+
+  @override
+  Future<List<BackupNotification>> findAll() async {
+    _failIfAsked();
+    final all = _stored.values.toList()..sort((a, b) => b.id.compareTo(a.id));
+    return all;
+  }
+
+  @override
+  Future<BackupNotification> add({
+    required int uploadedCount,
+    required int failedCount,
+    required DateTime occurredAt,
+  }) async {
+    _failIfAsked();
+    final notification = BackupNotification(
+      id: _nextId++,
+      uploadedCount: uploadedCount,
+      failedCount: failedCount,
+      occurredAt: occurredAt,
+    );
+    _stored[notification.id] = notification;
+    return notification;
+  }
+
+  @override
+  Future<int> unreadCount() async {
+    _failIfAsked();
+    return _stored.values.where((n) => !n.isRead).length;
+  }
+
+  @override
+  Future<void> markAllRead() async {
+    _failIfAsked();
+    markAllReadCalls++;
+    for (final entry in _stored.entries.toList()) {
+      final n = entry.value;
+      _stored[entry.key] = BackupNotification(
+        id: n.id,
+        uploadedCount: n.uploadedCount,
+        failedCount: n.failedCount,
+        occurredAt: n.occurredAt,
+        isRead: true,
+      );
+    }
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
   }
 }
 

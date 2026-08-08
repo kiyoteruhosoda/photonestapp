@@ -36,6 +36,7 @@ void main() {
         AppDatabase.uploadedPhotosTable,
         AppDatabase.mediaThumbnailsTable,
         AppDatabase.syncLeasesTable,
+        AppDatabase.backupNotificationsTable,
       ]),
     );
   });
@@ -216,6 +217,22 @@ CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
     );
   });
 
+  test('creates the backup_notifications table for the in-app list', () async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(${AppDatabase.backupNotificationsTable})',
+    );
+    expect(
+      columns.map((row) => row['name']),
+      containsAll(<String>[
+        'id',
+        'uploaded_count',
+        'failed_count',
+        'occurred_at',
+        'read',
+      ]),
+    );
+  });
+
   test('creates the sync_leases table for cross-isolate leases', () async {
     final columns = await db.rawQuery(
       'PRAGMA table_info(${AppDatabase.syncLeasesTable})',
@@ -285,6 +302,11 @@ CREATE TABLE ${AppDatabase.mediaThumbnailsTable} (
     expect(
       tables.map((row) => row['name']),
       contains(AppDatabase.syncLeasesTable),
+    );
+    // The v6 step of the same ladder added the notification table.
+    expect(
+      tables.map((row) => row['name']),
+      contains(AppDatabase.backupNotificationsTable),
     );
   });
 

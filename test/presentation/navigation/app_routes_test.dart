@@ -12,6 +12,7 @@ void main() {
         AppRoutes.debug,
         AppRoutes.logs,
         AppRoutes.albumDetail,
+        AppRoutes.notifications,
         AppRoutes.deepLink,
       ]) {
         expect(path, startsWith('/'), reason: '$path must be absolute');

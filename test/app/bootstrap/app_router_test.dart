@@ -9,6 +9,7 @@ import 'package:flutterbase/presentation/navigation/app_routes.dart';
 import 'package:flutterbase/presentation/pages/albums/album_detail_page.dart';
 import 'package:flutterbase/presentation/pages/auth/login_page.dart';
 import 'package:flutterbase/presentation/pages/main_page.dart';
+import 'package:flutterbase/presentation/pages/notifications/notifications_page.dart';
 import 'package:flutterbase/presentation/pages/system/about_page.dart';
 import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
 import 'package:flutterbase/presentation/pages/system/not_found_page.dart';
@@ -56,6 +57,11 @@ void main() {
     testWidgets('/about opens the about page', (tester) async {
       await openAt(tester, AppRoutes.about);
       expect(find.byType(AboutPage), findsOneWidget);
+    });
+
+    testWidgets('/notifications opens the notification list', (tester) async {
+      await openAt(tester, AppRoutes.notifications);
+      expect(find.byType(NotificationsPage), findsOneWidget);
     });
 
     testWidgets('an unknown location shows the not-found page', (tester) async {

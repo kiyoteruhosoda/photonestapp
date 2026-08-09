@@ -21,4 +21,12 @@ abstract interface class MediaLibraryRepository {
     int pageSize = 100,
     MediaLibraryQuery query = const MediaLibraryQuery(),
   });
+
+  /// A window of the trash — media moved there but not yet purged.
+  ///
+  /// A separate method rather than a flag on [findPage]: the trash is a
+  /// different list with different actions (restore, not open), and mixing
+  /// the two behind one call has already produced screens that show deleted
+  /// media by accident.
+  Future<MediaLibraryPage> findTrashPage({String? cursor, int pageSize = 100});
 }

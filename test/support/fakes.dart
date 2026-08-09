@@ -24,6 +24,7 @@ import 'package:photonest/domain/repositories/auto_upload_settings_repository.da
 import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 import 'package:photonest/domain/repositories/debug_settings_repository.dart';
 import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
@@ -457,6 +458,12 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
   /// page mid-flight and restart the timeline underneath it.
   Future<void> Function()? gate;
 
+  /// Media in the trash, answered by [findTrashPage].
+  List<MediaItem> trashed = <MediaItem>[];
+
+  /// Trash windows requested, in order, as (cursor, pageSize).
+  final List<(String?, int)> requestedTrashPages = <(String?, int)>[];
+
   /// The cursor is the offset of the next item, spelled the way the server
   /// spells it: opaque to the caller, meaningful only here.
   static const String _cursorPrefix = 'after:';
@@ -486,6 +493,29 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
     final hasNext = end < source.length;
     return MediaLibraryPage(
       items: source.sublist(start, hasNext ? end : source.length),
+      nextCursor: hasNext ? '$_cursorPrefix$end' : null,
+    );
+  }
+
+  @override
+  Future<MediaLibraryPage> findTrashPage({
+    String? cursor,
+    int pageSize = 100,
+  }) async {
+    requestedTrashPages.add((cursor, pageSize));
+    await gate?.call();
+    final error = failure;
+    if (error != null) throw error;
+    final start = cursor == null
+        ? 0
+        : int.parse(cursor.substring(_cursorPrefix.length));
+    if (start >= trashed.length) {
+      return const MediaLibraryPage(items: <MediaItem>[], nextCursor: null);
+    }
+    final end = start + pageSize;
+    final hasNext = end < trashed.length;
+    return MediaLibraryPage(
+      items: trashed.sublist(start, hasNext ? end : trashed.length),
       nextCursor: hasNext ? '$_cursorPrefix$end' : null,
     );
   }
@@ -707,6 +737,50 @@ final class FakeAlbumSnapshotRepository implements AlbumSnapshotRepository {
     _failIfAsked();
     removedDetails.add(id);
     savedDetails.removeWhere((key, _) => key.$1 == id.value);
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// In-memory [MediaCurationRepository].
+final class FakeMediaCurationRepository implements MediaCurationRepository {
+  /// Favourite state as this fake holds it, by media id.
+  final Map<int, bool> favorites = <int, bool>{};
+
+  /// Media moved to the trash, in order.
+  final List<MediaId> trashed = <MediaId>[];
+
+  /// Media restored, in order.
+  final List<MediaId> restored = <MediaId>[];
+
+  /// When set, every call throws this instead of answering.
+  AppError? failure;
+
+  /// When set, the server settles on this instead of what was asked for —
+  /// stands in for another device having changed it in between.
+  bool? settleFavoriteAt;
+
+  @override
+  Future<bool> setFavorite(MediaId id, {required bool favorite}) async {
+    _failIfAsked();
+    final settled = settleFavoriteAt ?? favorite;
+    favorites[id.value] = settled;
+    return settled;
+  }
+
+  @override
+  Future<void> moveToTrash(MediaId id) async {
+    _failIfAsked();
+    trashed.add(id);
+  }
+
+  @override
+  Future<void> restore(MediaId id) async {
+    _failIfAsked();
+    restored.add(id);
   }
 
   void _failIfAsked() {

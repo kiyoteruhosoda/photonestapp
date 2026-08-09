@@ -81,8 +81,22 @@ abstract class AppLocalizations {
   String get mediaSaveNoAccess;
   String get mediaSaveDownloadFailed;
   String get mediaSaveWriteFailed;
+  String get mediaAddFavorite;
+  String get mediaRemoveFavorite;
+  String get mediaFavoriteFailed;
+  String get mediaMoveToTrash;
+  String get mediaMoveToTrashConfirm;
+  String get mediaMovedToTrash;
+  String get mediaTrashFailed;
   String get videoNotReady;
   String get videoUnavailable;
+
+  // ─── Trash ────────────────────────────────────────────────────────────
+  String get trashTitle;
+  String get trashEmpty;
+  String get trashRestore;
+  String get trashRestored;
+  String get trashRestoreFailed;
 
   // ─── Upload ───────────────────────────────────────────────────────────
   String get uploadTitle;
@@ -273,6 +287,7 @@ abstract class AppLocalizations {
   // ─── Common ──────────────────────────────────────────────────────────
   String get commonRetry;
   String get commonClose;
+  String get commonCancel;
   String get commonErrorNetwork;
   String get commonErrorSessionExpired;
   String get commonMenu;

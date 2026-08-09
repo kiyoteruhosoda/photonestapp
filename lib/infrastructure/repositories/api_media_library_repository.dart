@@ -41,6 +41,32 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
         if (query.favoritesOnly) 'favorite': '1',
       },
     );
+    // The server sends a cursor only when more media follows, so anything
+    // that is not a non-empty string reads as "no more". An optimistic
+    // default would keep requesting the same window forever.
+    return _pageFrom(payload);
+  }
+
+  @override
+  Future<MediaLibraryPage> findTrashPage({
+    String? cursor,
+    int pageSize = 100,
+  }) async {
+    final payload = await _client.getJson(
+      '/media',
+      query: {
+        'pageSize': '$pageSize',
+        'order': 'desc',
+        'cursor': ?cursor,
+        // Deleted only — not "include deleted", which would mix the trash
+        // into the ordinary library.
+        'deleted_only': '1',
+      },
+    );
+    return _pageFrom(payload);
+  }
+
+  static MediaLibraryPage _pageFrom(Map<String, dynamic> payload) {
     final items = payload['items'];
     if (items is! List) {
       throw const InfrastructureError('Media list response had no items.');
@@ -50,9 +76,6 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
           .whereType<Map<String, dynamic>>()
           .map(_mediaItemFrom)
           .toList(growable: false),
-      // The server sends a cursor only when more media follows, so anything
-      // that is not a non-empty string reads as "no more". An optimistic
-      // default would keep requesting the same window forever.
       nextCursor: _cursorFrom(payload['nextCursor']),
     );
   }
@@ -68,6 +91,8 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
       filename: json['filename'] as String? ?? '',
       shotAt: _utcInstant(json['shot_at']),
       isVideo: _isTrue(json['is_video']),
+      isFavorite: _isTrue(json['is_favorite']),
+      isDeleted: _isTrue(json['is_deleted']),
     );
   }
 

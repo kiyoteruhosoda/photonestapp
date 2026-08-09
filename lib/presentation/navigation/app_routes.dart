@@ -34,6 +34,9 @@ class AppRoutes {
   static const String debug = '/debug';
   static const String logs = '/logs';
 
+  /// Media moved to the trash, restorable until the server clears it.
+  static const String trash = '/trash';
+
   /// The notification list behind the header's bell button.
   static const String notifications = '/notifications';
 

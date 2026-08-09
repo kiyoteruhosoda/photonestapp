@@ -398,6 +398,12 @@ class _SettingsContent extends ConsumerWidget {
           ),
         const SizedBox(height: AppSpacing.lg),
         AppListCard(
+          title: l10n.trashTitle,
+          leading: const Icon(Icons.delete_outline),
+          onTap: () => unawaited(context.push<void>(AppRoutes.trash)),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        AppListCard(
           title: l10n.settingsDeepLink,
           leading: const Icon(Icons.link_outlined),
           onTap: () => unawaited(context.push<void>(AppRoutes.deepLink)),

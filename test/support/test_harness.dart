@@ -19,10 +19,12 @@ import 'package:photonest/application/usecases/debug/set_debug_mode_usecase.dart
 import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
+import 'package:photonest/application/usecases/media/list_trashed_media_usecase.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/thumbnail_url_batch.dart';
 import 'package:photonest/application/usecases/notification/get_unread_notification_count_usecase.dart';
@@ -83,6 +85,7 @@ class TestScope {
     FakeMediaThumbnailUrlRepository? mediaThumbnailUrlRepository,
     FakeMediaThumbnailCacheRepository? mediaThumbnailCacheRepository,
     FakeMediaLibraryRepository? mediaLibraryRepository,
+    FakeMediaCurationRepository? mediaCurationRepository,
     FakeMediaOriginalRepository? mediaOriginalRepository,
     FakeMediaPlaybackRepository? mediaPlaybackRepository,
     FakePhotoUploadRepository? photoUploadRepository,
@@ -121,6 +124,8 @@ class TestScope {
            mediaThumbnailCacheRepository ?? FakeMediaThumbnailCacheRepository(),
        mediaLibraryRepository =
            mediaLibraryRepository ?? FakeMediaLibraryRepository(),
+       mediaCurationRepository =
+           mediaCurationRepository ?? FakeMediaCurationRepository(),
        mediaOriginalRepository =
            mediaOriginalRepository ?? FakeMediaOriginalRepository(),
        mediaPlaybackRepository =
@@ -151,6 +156,7 @@ class TestScope {
   final FakeMediaThumbnailUrlRepository mediaThumbnailUrlRepository;
   final FakeMediaThumbnailCacheRepository mediaThumbnailCacheRepository;
   final FakeMediaLibraryRepository mediaLibraryRepository;
+  final FakeMediaCurationRepository mediaCurationRepository;
   final FakeMediaOriginalRepository mediaOriginalRepository;
   final FakeMediaPlaybackRepository mediaPlaybackRepository;
   final FakePhotoUploadRepository photoUploadRepository;
@@ -256,6 +262,12 @@ class TestScope {
       ),
       listLibraryMediaUseCaseProvider.overrideWithValue(
         ListLibraryMediaUseCase(mediaLibraryRepository, logger),
+      ),
+      listTrashedMediaUseCaseProvider.overrideWithValue(
+        ListTrashedMediaUseCase(mediaLibraryRepository, logger),
+      ),
+      curateMediaUseCaseProvider.overrideWithValue(
+        CurateMediaUseCase(mediaCurationRepository, logger),
       ),
       getMediaOriginalUseCaseProvider.overrideWithValue(
         GetMediaOriginalUseCase(mediaOriginalRepository),

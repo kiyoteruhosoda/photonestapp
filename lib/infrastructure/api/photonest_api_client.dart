@@ -72,6 +72,15 @@ final class PhotoNestApiClient {
     return _decodeJson(response);
   }
 
+  /// DELETEs [path]. The body is ignored: these endpoints answer with a
+  /// result envelope the caller has nothing to decide from.
+  Future<void> delete(String path) async {
+    await _sendWithRetry(
+      authenticated: true,
+      build: () => http.Request('DELETE', _resolve(path)),
+    );
+  }
+
   /// GETs [path] and returns the raw body — thumbnails and other binaries.
   Future<Uint8List> getBytes(String path, {Map<String, String>? query}) async {
     final response = await _sendWithRetry(

@@ -1,10 +1,12 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
+import 'package:photonest/application/usecases/media/list_trashed_media_usecase.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/entities/media_library_page.dart';
@@ -43,6 +45,20 @@ final Provider<SaveMediaOriginalUseCase> saveMediaOriginalUseCaseProvider =
     Provider<SaveMediaOriginalUseCase>((ref) {
       throw UnimplementedError(
         missingOverrideMessage('saveMediaOriginalUseCaseProvider'),
+      );
+    });
+
+final Provider<ListTrashedMediaUseCase> listTrashedMediaUseCaseProvider =
+    Provider<ListTrashedMediaUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('listTrashedMediaUseCaseProvider'),
+      );
+    });
+
+final Provider<CurateMediaUseCase> curateMediaUseCaseProvider =
+    Provider<CurateMediaUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('curateMediaUseCaseProvider'),
       );
     });
 
@@ -191,6 +207,119 @@ class LibraryMediaQueryNotifier extends Notifier<MediaLibraryQuery> {
   }
 }
 
+/// Applies favourite / trash / restore and keeps the loaded timeline in step.
+///
+/// Separate from [LibraryMediaNotifier] so the timeline keeps its one job
+/// (paging) and this keeps its own (changing one item). It reaches back into
+/// the timeline's state rather than reloading it: a reload would lose the
+/// reader's scroll position and re-fetch every window they had already read.
+final NotifierProvider<MediaCurationNotifier, MediaCurationState>
+mediaCurationProvider =
+    NotifierProvider<MediaCurationNotifier, MediaCurationState>(
+      MediaCurationNotifier.new,
+    );
+
+/// What the curation controls need to render: which item is mid-change, and
+/// the last failure to report.
+final class MediaCurationState {
+  const MediaCurationState({this.busyId, this.lastFailure});
+
+  /// The media a request is in flight for, or null when idle. The control
+  /// for that item disables itself so a double tap cannot send twice.
+  final MediaId? busyId;
+
+  /// The most recent failure, for the caller to show and then clear.
+  final Object? lastFailure;
+
+  bool isBusy(MediaId id) => busyId == id;
+}
+
+/// Runs the curation calls and writes the result into the loaded timeline.
+class MediaCurationNotifier extends Notifier<MediaCurationState> {
+  @override
+  MediaCurationState build() => const MediaCurationState();
+
+  /// Flips the favourite mark. Returns the state the server settled on, or
+  /// null when the call failed.
+  Future<bool?> toggleFavorite(MediaItem item) async {
+    return _run(item.id, () async {
+      final settled = await ref
+          .read(curateMediaUseCaseProvider)
+          .setFavorite(item.id, favorite: !item.isFavorite);
+      _replaceInTimeline(item.id, (current) => current.withFavorite(settled));
+      return settled;
+    });
+  }
+
+  /// Moves the media to the trash and drops it from the timeline.
+  Future<bool> moveToTrash(MediaItem item) async {
+    final result = await _run(item.id, () async {
+      await ref.read(curateMediaUseCaseProvider).moveToTrash(item.id);
+      _removeFromTimeline(item.id);
+      return true;
+    });
+    return result ?? false;
+  }
+
+  /// Brings the media back out of the trash. The timeline is not touched —
+  /// the trash view reloads, and the main timeline picks it up on its next
+  /// read rather than guessing where the item belongs in capture order.
+  Future<bool> restore(MediaItem item) async {
+    final result = await _run(item.id, () async {
+      await ref.read(curateMediaUseCaseProvider).restore(item.id);
+      return true;
+    });
+    return result ?? false;
+  }
+
+  /// Clears the last failure once the screen has shown it.
+  void acknowledgeFailure() {
+    if (state.lastFailure == null) return;
+    state = MediaCurationState(busyId: state.busyId);
+  }
+
+  Future<T?> _run<T>(MediaId id, Future<T> Function() action) async {
+    if (state.busyId != null) return null;
+    state = MediaCurationState(busyId: id);
+    try {
+      final result = await action();
+      state = const MediaCurationState();
+      return result;
+    } on Object catch (error) {
+      // The failure is state, not an exception to the caller: the screen
+      // shows it and the item stays as it was.
+      state = MediaCurationState(lastFailure: error);
+      return null;
+    }
+  }
+
+  void _replaceInTimeline(MediaId id, MediaItem Function(MediaItem) update) {
+    _updateTimeline(
+      (media) => [
+        for (final item in media)
+          if (item.id == id) update(item) else item,
+      ],
+    );
+  }
+
+  void _removeFromTimeline(MediaId id) {
+    _updateTimeline(
+      (media) => [
+        for (final item in media)
+          if (item.id != id) item,
+      ],
+    );
+  }
+
+  void _updateTimeline(List<MediaItem> Function(List<MediaItem>) update) {
+    final timeline = ref.read(libraryMediaProvider);
+    final loaded = timeline.value;
+    // Nothing to keep in step while the timeline is loading or failed.
+    if (loaded == null) return;
+    ref.read(libraryMediaProvider.notifier).replaceMedia(update(loaded.media));
+  }
+}
+
 /// The whole library in capture order, paged in as the timeline scrolls.
 final AsyncNotifierProvider<LibraryMediaNotifier, LibraryMediaState>
 libraryMediaProvider =
@@ -221,6 +350,18 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
         .read(listLibraryMediaUseCaseProvider)
         .execute(pageSize: libraryMediaPageSize, query: query);
     return LibraryMediaState(media: page.items, nextCursor: page.nextCursor);
+  }
+
+  /// Swaps the loaded media for [media], keeping the paging position.
+  ///
+  /// For changes to items already on screen (a favourite mark, a delete):
+  /// re-reading would lose the reader's place and re-fetch every window.
+  /// A no-op while the timeline is loading or failed — there is nothing on
+  /// screen to keep in step with.
+  void replaceMedia(List<MediaItem> media) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(media: media));
   }
 
   /// Re-reads the library from the first page, e.g. after a pull-to-refresh.
@@ -277,5 +418,48 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
         loadMoreFailed: false,
       ),
     );
+  }
+}
+
+// ─── Trash ─────────────────────────────────────────────────────────────────
+
+/// Media in the trash, newest deletion first.
+///
+/// `autoDispose` on purpose, unlike the library timeline: the trash is opened
+/// deliberately and rarely, and holding a list of media that is about to be
+/// purged would only go stale. Leaving the screen forgets it, so reopening
+/// asks the server again.
+final AsyncNotifierProvider<TrashedMediaNotifier, List<MediaItem>>
+trashedMediaProvider =
+    AsyncNotifierProvider<TrashedMediaNotifier, List<MediaItem>>(
+      TrashedMediaNotifier.new,
+    );
+
+/// Reads the trash and drops restored media from it.
+class TrashedMediaNotifier extends AsyncNotifier<List<MediaItem>> {
+  @override
+  Future<List<MediaItem>> build() async {
+    ref.watch(sessionIdentityProvider);
+    final page = await ref
+        .read(listTrashedMediaUseCaseProvider)
+        .execute(pageSize: libraryMediaPageSize);
+    return page.items;
+  }
+
+  /// Re-reads the trash from the first window.
+  Future<void> reload() async {
+    state = const AsyncValue<List<MediaItem>>.loading();
+    state = await AsyncValue.guard(build);
+  }
+
+  /// Drops [id] from the loaded trash after a successful restore, so the
+  /// list does not keep offering to restore something already restored.
+  void forget(MediaId id) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data([
+      for (final item in current)
+        if (item.id != id) item,
+    ]);
   }
 }

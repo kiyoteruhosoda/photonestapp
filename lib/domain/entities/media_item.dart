@@ -12,6 +12,8 @@ final class MediaItem {
     required this.filename,
     this.shotAt,
     this.isVideo = false,
+    this.isFavorite = false,
+    this.isDeleted = false,
   });
 
   final MediaId id;
@@ -24,6 +26,24 @@ final class MediaItem {
   /// open the player instead of the still-image viewer.
   final bool isVideo;
 
+  /// Marked as a favourite by someone signed in to this library.
+  final bool isFavorite;
+
+  /// In the trash. Restorable until the server purges the file (ADR-0018 on
+  /// the server side); the app only ever sees these in the trash view.
+  final bool isDeleted;
+
+  /// The same media with [isFavorite] flipped — what the viewer renders
+  /// while the server confirms.
+  MediaItem withFavorite(bool favorite) => MediaItem(
+    id: id,
+    filename: filename,
+    shotAt: shotAt,
+    isVideo: isVideo,
+    isFavorite: favorite,
+    isDeleted: isDeleted,
+  );
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) || (other is MediaItem && other.id == id);
@@ -32,5 +52,7 @@ final class MediaItem {
   int get hashCode => id.hashCode;
 
   @override
-  String toString() => 'MediaItem(${id.value}, $filename)';
+  String toString() =>
+      'MediaItem(${id.value}, $filename'
+      '${isFavorite ? ', favorite' : ''}${isDeleted ? ', deleted' : ''})';
 }

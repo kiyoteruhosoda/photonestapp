@@ -93,6 +93,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mediaSaveDownloadFailed => 'Could not download the original.';
   @override
   String get mediaSaveWriteFailed => 'Could not save to your device.';
+  @override
+  String get mediaAddFavorite => 'Add to favorites';
+  @override
+  String get mediaRemoveFavorite => 'Remove from favorites';
+  @override
+  String get mediaFavoriteFailed => 'Could not change the favorite mark.';
+  @override
+  String get mediaMoveToTrash => 'Move to trash';
+  @override
+  String get mediaMoveToTrashConfirm =>
+      'Move this to the trash? You can restore it until the server clears it.';
+  @override
+  String get mediaMovedToTrash => 'Moved to the trash.';
+  @override
+  String get mediaTrashFailed => 'Could not move this to the trash.';
 
   @override
   String get videoNotReady =>
@@ -100,6 +115,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoUnavailable => 'This video cannot be played.';
+
+  // ─── Trash ────────────────────────────────────────────────────────────
+  @override
+  String get trashTitle => 'Trash';
+  @override
+  String get trashEmpty => 'The trash is empty';
+  @override
+  String get trashRestore => 'Restore';
+  @override
+  String get trashRestored => 'Restored.';
+  @override
+  String get trashRestoreFailed =>
+      'Could not restore this. The file may already have been cleared.';
 
   // ─── Upload ───────────────────────────────────────────────────────────
   @override
@@ -469,6 +497,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonRetry => 'Retry';
   @override
   String get commonClose => 'Close';
+  @override
+  String get commonCancel => 'Cancel';
   @override
   String get commonErrorNetwork =>
       'Could not reach the server. Check your connection and try again.';

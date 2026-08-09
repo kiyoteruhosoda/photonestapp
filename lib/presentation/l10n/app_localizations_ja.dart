@@ -90,12 +90,38 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mediaSaveDownloadFailed => '原本をダウンロードできませんでした。';
   @override
   String get mediaSaveWriteFailed => '端末に保存できませんでした。';
+  @override
+  String get mediaAddFavorite => 'お気に入りに追加';
+  @override
+  String get mediaRemoveFavorite => 'お気に入りから外す';
+  @override
+  String get mediaFavoriteFailed => 'お気に入りを変更できませんでした。';
+  @override
+  String get mediaMoveToTrash => 'ゴミ箱へ移動';
+  @override
+  String get mediaMoveToTrashConfirm => 'ゴミ箱へ移動しますか？サーバーが完全に削除するまでは元に戻せます。';
+  @override
+  String get mediaMovedToTrash => 'ゴミ箱へ移動しました。';
+  @override
+  String get mediaTrashFailed => 'ゴミ箱へ移動できませんでした。';
 
   @override
   String get videoNotReady => '動画はサーバーで準備中です。しばらくしてからもう一度お試しください。';
 
   @override
   String get videoUnavailable => 'この動画は再生できません。';
+
+  // ─── Trash ────────────────────────────────────────────────────────────
+  @override
+  String get trashTitle => 'ゴミ箱';
+  @override
+  String get trashEmpty => 'ゴミ箱は空です';
+  @override
+  String get trashRestore => '元に戻す';
+  @override
+  String get trashRestored => '元に戻しました。';
+  @override
+  String get trashRestoreFailed => '元に戻せませんでした。ファイルが既に完全に削除された可能性があります。';
 
   // ─── Upload ───────────────────────────────────────────────────────────
   @override
@@ -451,6 +477,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonRetry => '再試行';
   @override
   String get commonClose => '閉じる';
+  @override
+  String get commonCancel => 'キャンセル';
   @override
   String get commonErrorNetwork => 'サーバーに接続できませんでした。通信環境を確認して再試行してください。';
   @override

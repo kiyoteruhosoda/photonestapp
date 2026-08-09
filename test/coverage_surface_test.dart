@@ -39,10 +39,12 @@ import 'package:photonest/application/usecases/debug/set_debug_mode_usecase.dart
 import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
+import 'package:photonest/application/usecases/media/list_trashed_media_usecase.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/thumbnail_url_batch.dart';
 import 'package:photonest/application/usecases/notification/get_unread_notification_count_usecase.dart';
@@ -84,6 +86,7 @@ import 'package:photonest/domain/repositories/auto_upload_settings_repository.da
 import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 import 'package:photonest/domain/repositories/debug_settings_repository.dart';
 import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
@@ -114,6 +117,7 @@ import 'package:photonest/infrastructure/links/url_launcher_external_link_launch
 import 'package:photonest/infrastructure/logging/persistent_app_logger.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_curation_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_library_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_playback_repository.dart';
@@ -147,6 +151,7 @@ import 'package:photonest/presentation/pages/auth/login_page.dart';
 import 'package:photonest/presentation/pages/main_page.dart';
 import 'package:photonest/presentation/pages/media/media_search_bar.dart';
 import 'package:photonest/presentation/pages/media/media_tab.dart';
+import 'package:photonest/presentation/pages/media/trash_page.dart';
 import 'package:photonest/presentation/pages/notifications/notifications_page.dart';
 import 'package:photonest/presentation/pages/system/about_page.dart';
 import 'package:photonest/presentation/pages/system/debug_page.dart';

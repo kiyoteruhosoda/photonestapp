@@ -23,11 +23,15 @@ void main() {
     final state = await scope.container.read(libraryMediaProvider.future);
 
     expect(state.media, hasLength(libraryMediaPageSize));
-    expect(state.pagesLoaded, 1);
     expect(state.hasMore, isTrue);
+    // The first window carries no cursor.
+    expect(
+      scope.container.read(libraryMediaProvider).value!.nextCursor,
+      isNotNull,
+    );
   });
 
-  test('loadMore appends the next page and advances the counter', () async {
+  test('loadMore follows the cursor and appends the next page', () async {
     final scope = TestScope(
       mediaLibraryRepository: FakeMediaLibraryRepository(
         media: mediaRange(1, 250),
@@ -39,13 +43,13 @@ void main() {
     await notifier.loadMore();
     var state = scope.container.read(libraryMediaProvider).value!;
     expect(state.media, hasLength(200));
-    expect(state.pagesLoaded, 2);
     expect(state.hasMore, isTrue);
 
     await notifier.loadMore();
     state = scope.container.read(libraryMediaProvider).value!;
     expect(state.media, hasLength(250));
-    // A short page ends the paging whatever `hasNext` said.
+    // The last window carries no cursor, which is what ends the paging.
+    expect(state.nextCursor, isNull);
     expect(state.hasMore, isFalse);
   });
 
@@ -63,7 +67,7 @@ void main() {
     final state = scope.container.read(libraryMediaProvider).value!;
     final ids = state.media.map((item) => item.id.value).toList();
     expect(ids.toSet(), hasLength(ids.length));
-    expect(state.pagesLoaded, 2);
+    expect(state.media, hasLength(150));
   });
 
   test(
@@ -128,7 +132,7 @@ void main() {
 
       final state = scope.container.read(libraryMediaProvider).value!;
       expect(state.media.map((item) => item.id.value), [500, 501, 502]);
-      expect(state.pagesLoaded, 1);
+      expect(state.nextCursor, isNull);
       expect(state.loadingMore, isFalse);
     },
   );
@@ -171,8 +175,8 @@ void main() {
     await notifier.reload();
 
     final state = scope.container.read(libraryMediaProvider).value!;
-    expect(state.pagesLoaded, 1);
     expect(state.media, hasLength(libraryMediaPageSize));
-    expect(repository.requestedPages.last, (1, libraryMediaPageSize));
+    // Back to the top: the first window is requested without a cursor.
+    expect(repository.requestedPages.last, (null, libraryMediaPageSize));
   });
 }

@@ -19,11 +19,14 @@ import 'package:photonest/application/usecases/debug/set_debug_mode_usecase.dart
 import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart';
 import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
+import 'package:photonest/application/usecases/media/list_trashed_media_usecase.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
+import 'package:photonest/application/usecases/media/thumbnail_url_batch.dart';
 import 'package:photonest/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:photonest/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:photonest/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -51,11 +54,13 @@ import 'package:photonest/domain/repositories/auto_upload_settings_repository.da
 import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 import 'package:photonest/domain/repositories/debug_settings_repository.dart';
 import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -104,10 +109,14 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<MediaThumbnailRepository>(
       infrastructure.mediaThumbnails,
     )
+    ..registerSingleton<MediaThumbnailUrlRepository>(
+      infrastructure.mediaThumbnailUrls,
+    )
     ..registerSingleton<MediaThumbnailCacheRepository>(
       infrastructure.mediaThumbnailCache,
     )
     ..registerSingleton<MediaLibraryRepository>(infrastructure.mediaLibrary)
+    ..registerSingleton<MediaCurationRepository>(infrastructure.mediaCuration)
     ..registerSingleton<MediaOriginalRepository>(infrastructure.mediaOriginals)
     ..registerSingleton<MediaPlaybackRepository>(infrastructure.mediaPlayback)
     ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
@@ -196,12 +205,26 @@ Future<void> setupServiceLocator() async {
       sl<AppLogger>(),
     ),
   );
+  // One batcher for the whole app, not one per use case: the point is that
+  // the tiles built in the same frame share a request, and a per-instance
+  // queue would put each tile in a batch of one.
+  sl.registerSingleton<ThumbnailUrlBatch>(
+    ThumbnailUrlBatch(sl<MediaThumbnailUrlRepository>(), sl<AppLogger>()),
+  );
   sl.registerFactory<GetMediaThumbnailUseCase>(
     () => GetMediaThumbnailUseCase(
       sl<MediaThumbnailRepository>(),
       sl<MediaThumbnailCacheRepository>(),
       sl<AppLogger>(),
+      sl<ThumbnailUrlBatch>(),
     ),
+  );
+  sl.registerFactory<ListTrashedMediaUseCase>(
+    () =>
+        ListTrashedMediaUseCase(sl<MediaLibraryRepository>(), sl<AppLogger>()),
+  );
+  sl.registerFactory<CurateMediaUseCase>(
+    () => CurateMediaUseCase(sl<MediaCurationRepository>(), sl<AppLogger>()),
   );
   sl.registerFactory<GetMediaPlaybackUseCase>(
     () => GetMediaPlaybackUseCase(sl<MediaPlaybackRepository>()),

@@ -73,7 +73,7 @@ void main() {
     expect(find.text(l10n.albumsMediaCount(2)), findsOneWidget);
     expect(find.text(l10n.albumsMediaCount(1)), findsOneWidget);
     // The covered album fetched its thumbnail; the bare one shows the icon.
-    expect(scope.mediaThumbnailRepository.fetched, hasLength(1));
+    expect(scope.mediaThumbnailUrlRepository.requested, hasLength(1));
     expect(find.byIcon(Icons.photo_album_outlined), findsOneWidget);
   });
 

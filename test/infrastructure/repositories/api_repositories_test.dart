@@ -323,21 +323,25 @@ void main() {
                 'is_video': 1,
               },
             ],
-            'page': 2,
             'pageSize': 50,
             'hasNext': true,
+            'nextCursor': 'opaque-cursor',
           }),
         ),
       );
 
-      final page = await repository.findPage(page: 2, pageSize: 50);
+      final page = await repository.findPage(
+        cursor: 'prev-cursor',
+        pageSize: 50,
+      );
 
       expect(requests.single.url.path, '/api/media');
       expect(requests.single.url.queryParameters, {
-        'page': '2',
         'pageSize': '50',
         'order': 'desc',
+        'cursor': 'prev-cursor',
       });
+      expect(page.nextCursor, 'opaque-cursor');
       expect(page.hasNext, isTrue);
       expect(page.items.map((item) => item.id.value), [5, 6]);
       // The endpoint answers in snake_case with 0/1 flags, unlike
@@ -356,6 +360,7 @@ void main() {
               {'id': 5, 'filename': 'clip.mp4', 'is_video': true},
             ],
             'hasNext': false,
+            'nextCursor': null,
           }),
         ),
       );

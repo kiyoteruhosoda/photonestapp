@@ -61,9 +61,106 @@ void main() {
     expect(find.text(l10n.mediaViewerPosition(2, 3)), findsOneWidget);
     // The neighbour's rendition was fetched, so the swipe really moved.
     expect(
-      scope.mediaThumbnailRepository.fetched.map((entry) => entry.$1.value),
+      scope.mediaThumbnailUrlRepository.requested.map(
+        (entry) => entry.$1.value,
+      ),
       contains(2),
     );
+  });
+
+  testWidgets('the favourite mark can be flipped from the viewer', (
+    tester,
+  ) async {
+    final curation = FakeMediaCurationRepository();
+    final scope = await openViewer(
+      tester,
+      items: photos(1),
+      scope: TestScope(mediaCurationRepository: curation),
+    );
+
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.pumpAndSettle();
+
+    expect(curation.favorites[1], isTrue);
+    // The filled heart is what tells the reader it took.
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+    expect(scope.container, isNotNull);
+  });
+
+  testWidgets('a failed favourite says so and leaves the mark alone', (
+    tester,
+  ) async {
+    await openViewer(
+      tester,
+      items: photos(1),
+      scope: TestScope(
+        mediaCurationRepository: FakeMediaCurationRepository()
+          ..failure = const NetworkUnreachableError('offline'),
+      ),
+    );
+
+    await tester.tap(find.byIcon(Icons.favorite_border));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.mediaFavoriteFailed), findsOneWidget);
+    expect(find.byIcon(Icons.favorite_border), findsOneWidget);
+  });
+
+  testWidgets('deleting asks first and can be called off', (tester) async {
+    final curation = FakeMediaCurationRepository();
+    await openViewer(
+      tester,
+      items: photos(2),
+      scope: TestScope(mediaCurationRepository: curation),
+    );
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.mediaMoveToTrashConfirm), findsOneWidget);
+
+    await tester.tap(find.text(l10n.commonCancel));
+    await tester.pumpAndSettle();
+
+    expect(curation.trashed, isEmpty);
+    // Still the same two photos.
+    expect(find.text(l10n.mediaViewerPosition(1, 2)), findsOneWidget);
+  });
+
+  testWidgets('a confirmed delete drops the page and keeps the viewer open', (
+    tester,
+  ) async {
+    final curation = FakeMediaCurationRepository();
+    await openViewer(
+      tester,
+      items: photos(2),
+      scope: TestScope(mediaCurationRepository: curation),
+    );
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.mediaMoveToTrash).last);
+    await tester.pumpAndSettle();
+
+    expect(curation.trashed, hasLength(1));
+    // One photo left, and the viewer is still showing it.
+    expect(find.text(l10n.mediaViewerPosition(1, 1)), findsOneWidget);
+  });
+
+  testWidgets('deleting the only photo closes the viewer', (tester) async {
+    await openViewer(
+      tester,
+      items: photos(1),
+      scope: TestScope(mediaCurationRepository: FakeMediaCurationRepository()),
+    );
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text(l10n.mediaMoveToTrash).last);
+    await tester.pumpAndSettle();
+
+    // Nothing left to look at.
+    expect(find.byType(Dialog), findsNothing);
   });
 
   testWidgets('the original is only requested when asked for', (tester) async {

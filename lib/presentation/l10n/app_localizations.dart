@@ -37,7 +37,6 @@ abstract class AppLocalizations {
   // ─── Navigation ───────────────────────────────────────────────────────
   String get appName;
   String get navHome;
-  String get navSearch;
   String get navSettings;
   String get navAlbums;
   String get navPhotos;
@@ -81,11 +80,24 @@ abstract class AppLocalizations {
   String get mediaSaveNoAccess;
   String get mediaSaveDownloadFailed;
   String get mediaSaveWriteFailed;
+  String get mediaAddFavorite;
+  String get mediaRemoveFavorite;
+  String get mediaFavoriteFailed;
+  String get mediaMoveToTrash;
+  String get mediaMoveToTrashConfirm;
+  String get mediaMovedToTrash;
+  String get mediaTrashFailed;
   String get videoNotReady;
   String get videoUnavailable;
 
+  // ─── Trash ────────────────────────────────────────────────────────────
+  String get trashTitle;
+  String get trashEmpty;
+  String get trashRestore;
+  String get trashRestored;
+  String get trashRestoreFailed;
+
   // ─── Upload ───────────────────────────────────────────────────────────
-  String get uploadTitle;
   String get uploadAutoTitle;
   String get uploadAutoSubtitle;
   String get uploadAutoDenied;
@@ -96,7 +108,6 @@ abstract class AppLocalizations {
   String get uploadPermissionRetry;
   String get uploadEmpty;
   String get uploadRecentSection;
-  String get uploadSelected;
   String uploadSelectedCount(int count);
   String get uploadSubmit;
   String uploadDone(int count);
@@ -128,22 +139,15 @@ abstract class AppLocalizations {
   String get drawerLogs;
   String get drawerDeepLink;
 
-  // ─── Home tab ─────────────────────────────────────────────────────────
-  String get homeWelcomeTitle;
-  String get homeCardBody;
-  String get homeComponentsTitle;
-  String get homePrimaryButton;
-  String get homeSecondaryButton;
-  String get homeTextFieldLabel;
-  String get homeTextFieldHint;
-  String get homeListCardTitle;
-  String get homeListCardSubtitle;
-  String get homeListCardItem2;
-
-  // ─── Search tab ───────────────────────────────────────────────────────
+  // ─── Media search ─────────────────────────────────────────────────────
   String get searchFieldLabel;
   String get searchFieldHint;
-  String get searchEmptyMessage;
+  String get searchNoResults;
+  String get searchClearFilters;
+  String get searchFilterAll;
+  String get searchFilterPhotos;
+  String get searchFilterVideos;
+  String get searchFilterFavorites;
 
   // ─── Settings tab ─────────────────────────────────────────────────────
   String get settingsTitle;
@@ -175,7 +179,6 @@ abstract class AppLocalizations {
   String get aboutPlatform;
   String get aboutPlatformValue;
   String get aboutDebugUnlocked;
-  String get aboutDebugAlreadyOn;
 
   // ─── Debug page ───────────────────────────────────────────────────────
   String get debugTitle;
@@ -262,21 +265,18 @@ abstract class AppLocalizations {
   String get deepLinkCopied;
 
   // ─── Licenses page ───────────────────────────────────────────────────
-  String get licensesTitle;
-  String get licensesDetails;
 
   // ─── Common ──────────────────────────────────────────────────────────
   String get commonRetry;
   String get commonClose;
+  String get commonCancel;
   String get commonErrorNetwork;
   String get commonErrorSessionExpired;
   String get commonMenu;
   String get commonNotifications;
   String get commonNotFound;
   String get commonPageNotFound;
-  String get commonLoading;
   String get commonError;
-  String get commonEmpty;
 }
 
 class _AppLocalizationsDelegate

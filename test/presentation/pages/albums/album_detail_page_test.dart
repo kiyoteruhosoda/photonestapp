@@ -46,7 +46,7 @@ void main() {
 
     expect(find.text('Holiday'), findsOneWidget);
     expect(find.byType(ThumbnailImage), findsNWidgets(2));
-    expect(scope.mediaThumbnailRepository.fetched, hasLength(2));
+    expect(scope.mediaThumbnailUrlRepository.requested, hasLength(2));
   });
 
   testWidgets('an album with no media shows the empty state', (tester) async {
@@ -94,8 +94,11 @@ void main() {
 
     expect(find.text('Holiday'), findsOneWidget);
     expect(find.byType(ThumbnailImage), findsNWidgets(2));
-    // The pixels came from the persistent cache, not the network.
+    // The pixels came from the persistent cache, not the network — no URL
+    // is even issued for something already on the device.
     expect(scope.mediaThumbnailRepository.fetched, isEmpty);
+    expect(scope.mediaThumbnailRepository.fetchedFrom, isEmpty);
+    expect(scope.mediaThumbnailUrlRepository.issued, isEmpty);
   });
 
   testWidgets('tapping a tile opens the full-screen viewer and closes', (
@@ -114,7 +117,7 @@ void main() {
     expect(find.byType(Dialog), findsOneWidget);
     // The viewer asks for the large rendition.
     expect(
-      scope.mediaThumbnailRepository.fetched.map((entry) => entry.$2),
+      scope.mediaThumbnailUrlRepository.requested.map((entry) => entry.$2),
       contains(2048),
     );
 
@@ -158,7 +161,7 @@ void main() {
     expect(find.text(l10n.videoNotReady), findsOneWidget);
     // No full-image request was made for the 2048 rendition.
     expect(
-      scope.mediaThumbnailRepository.fetched.map((entry) => entry.$2),
+      scope.mediaThumbnailUrlRepository.requested.map((entry) => entry.$2),
       isNot(contains(2048)),
     );
   });

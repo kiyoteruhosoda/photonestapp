@@ -46,6 +46,13 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
   );
   late int _index = widget.initialIndex;
 
+  /// The list as this viewer shows it.
+  ///
+  /// A copy of what was handed in, because curation changes it in place: a
+  /// favourite mark has to repaint the icon, and a delete has to drop the
+  /// page. The caller's list belongs to the grid that opened the viewer.
+  late List<MediaItem> _items = List.of(widget.items);
+
   /// Media the reader asked to see at full resolution.
   ///
   /// Tracked per item rather than as one flag for the viewer: swiping on
@@ -63,7 +70,80 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
     super.dispose();
   }
 
-  MediaItem get _current => widget.items[_index];
+  MediaItem get _current => _items[_index];
+
+  /// Flips the favourite mark, showing the server's answer.
+  Future<void> _toggleFavorite() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final item = _current;
+    final settled = await ref
+        .read(mediaCurationProvider.notifier)
+        .toggleFavorite(item);
+    if (!mounted) return;
+    if (settled == null) {
+      ref.read(mediaCurationProvider.notifier).acknowledgeFailure();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.mediaFavoriteFailed)));
+      return;
+    }
+    setState(() {
+      _items = [
+        for (final each in _items)
+          if (each.id == item.id) each.withFavorite(settled) else each,
+      ];
+    });
+  }
+
+  /// Moves the media to the trash after the reader confirms.
+  Future<void> _moveToTrash() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+    final item = _current;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        content: Text(l10n.mediaMoveToTrashConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.commonCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(l10n.mediaMoveToTrash),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final moved = await ref
+        .read(mediaCurationProvider.notifier)
+        .moveToTrash(item);
+    if (!mounted) return;
+    if (!moved) {
+      ref.read(mediaCurationProvider.notifier).acknowledgeFailure();
+      messenger.showSnackBar(SnackBar(content: Text(l10n.mediaTrashFailed)));
+      return;
+    }
+    messenger.showSnackBar(SnackBar(content: Text(l10n.mediaMovedToTrash)));
+    final remaining = [
+      for (final each in _items)
+        if (each.id != item.id) each,
+    ];
+    // Nothing left to look at — the viewer has no subject any more.
+    if (remaining.isEmpty) {
+      navigator.pop();
+      return;
+    }
+    setState(() {
+      _items = remaining;
+      // Deleting the last page steps back rather than off the end.
+      if (_index >= remaining.length) _index = remaining.length - 1;
+      _pages.jumpToPage(_index);
+    });
+  }
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
@@ -93,6 +173,7 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final curating = ref.watch(mediaCurationProvider);
     final item = _current;
     return Dialog.fullscreen(
       backgroundColor: Colors.black,
@@ -101,10 +182,10 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
           Positioned.fill(
             child: PageView.builder(
               controller: _pages,
-              itemCount: widget.items.length,
+              itemCount: _items.length,
               onPageChanged: (page) => setState(() => _index = page),
               itemBuilder: (context, page) {
-                final pageItem = widget.items[page];
+                final pageItem = _items[page];
                 return pageItem.isVideo
                     ? _VideoPage(item: pageItem)
                     : _ImagePage(
@@ -119,10 +200,11 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
             left: 0,
             right: 0,
             child: _ViewerBar(
-              position: l10n.mediaViewerPosition(
-                _index + 1,
-                widget.items.length,
-              ),
+              position: l10n.mediaViewerPosition(_index + 1, _items.length),
+              isFavorite: item.isFavorite,
+              busy: curating.isBusy(item.id),
+              onToggleFavorite: () => unawaited(_toggleFavorite()),
+              onMoveToTrash: () => unawaited(_moveToTrash()),
               // Videos stream a rendition the player owns, so there is
               // nothing to swap in place; saving is how their untouched file
               // is reached.
@@ -143,12 +225,23 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
 class _ViewerBar extends StatelessWidget {
   const _ViewerBar({
     required this.position,
+    required this.isFavorite,
+    required this.busy,
+    required this.onToggleFavorite,
+    required this.onMoveToTrash,
     required this.onShowOriginal,
     required this.onSave,
     required this.saving,
   });
 
   final String position;
+  final bool isFavorite;
+
+  /// True while this item's favourite or trash request is in flight — the
+  /// controls disable so a double tap cannot send twice.
+  final bool busy;
+  final VoidCallback onToggleFavorite;
+  final VoidCallback onMoveToTrash;
   final VoidCallback? onShowOriginal;
   final VoidCallback? onSave;
   final bool saving;
@@ -172,6 +265,22 @@ class _ViewerBar extends StatelessWidget {
                 position,
                 style: const TextStyle(color: Colors.white),
               ),
+            ),
+            IconButton(
+              onPressed: busy ? null : onToggleFavorite,
+              tooltip: isFavorite
+                  ? l10n.mediaRemoveFavorite
+                  : l10n.mediaAddFavorite,
+              icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+              color: isFavorite ? Colors.redAccent : Colors.white,
+              disabledColor: Colors.white38,
+            ),
+            IconButton(
+              onPressed: busy ? null : onMoveToTrash,
+              tooltip: l10n.mediaMoveToTrash,
+              icon: const Icon(Icons.delete_outline),
+              color: Colors.white,
+              disabledColor: Colors.white38,
             ),
             IconButton(
               onPressed: onShowOriginal,

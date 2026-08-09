@@ -19,9 +19,10 @@ void main() {
   test('passes the requested window through to the repository', () async {
     library.media = [for (var i = 1; i <= 5; i++) testMediaItem(id: i)];
 
-    final page = await usecase().execute(page: 2, pageSize: 2);
+    final first = await usecase().execute(pageSize: 2);
+    final page = await usecase().execute(cursor: first.nextCursor, pageSize: 2);
 
-    expect(library.requestedPages, [(2, 2)]);
+    expect(library.requestedPages, [(null, 2), (first.nextCursor, 2)]);
     expect(page.items.map((item) => item.id.value), [3, 4]);
     expect(page.hasNext, isTrue);
   });
@@ -29,9 +30,11 @@ void main() {
   test('the last page reports no more', () async {
     library.media = [for (var i = 1; i <= 4; i++) testMediaItem(id: i)];
 
-    final page = await usecase().execute(page: 2, pageSize: 2);
+    final first = await usecase().execute(pageSize: 2);
+    final page = await usecase().execute(cursor: first.nextCursor, pageSize: 2);
 
     expect(page.items, hasLength(2));
+    expect(page.nextCursor, isNull);
     expect(page.hasNext, isFalse);
   });
 

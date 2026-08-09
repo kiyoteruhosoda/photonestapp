@@ -10,8 +10,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get navHome => 'ホーム';
   @override
-  String get navSearch => '検索';
-  @override
   String get navSettings => '設定';
   @override
   String get navAlbums => 'アルバム';
@@ -90,6 +88,20 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mediaSaveDownloadFailed => '原本をダウンロードできませんでした。';
   @override
   String get mediaSaveWriteFailed => '端末に保存できませんでした。';
+  @override
+  String get mediaAddFavorite => 'お気に入りに追加';
+  @override
+  String get mediaRemoveFavorite => 'お気に入りから外す';
+  @override
+  String get mediaFavoriteFailed => 'お気に入りを変更できませんでした。';
+  @override
+  String get mediaMoveToTrash => 'ゴミ箱へ移動';
+  @override
+  String get mediaMoveToTrashConfirm => 'ゴミ箱へ移動しますか？サーバーが完全に削除するまでは元に戻せます。';
+  @override
+  String get mediaMovedToTrash => 'ゴミ箱へ移動しました。';
+  @override
+  String get mediaTrashFailed => 'ゴミ箱へ移動できませんでした。';
 
   @override
   String get videoNotReady => '動画はサーバーで準備中です。しばらくしてからもう一度お試しください。';
@@ -97,9 +109,19 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get videoUnavailable => 'この動画は再生できません。';
 
-  // ─── Upload ───────────────────────────────────────────────────────────
+  // ─── Trash ────────────────────────────────────────────────────────────
   @override
-  String get uploadTitle => 'アップロード';
+  String get trashTitle => 'ゴミ箱';
+  @override
+  String get trashEmpty => 'ゴミ箱は空です';
+  @override
+  String get trashRestore => '元に戻す';
+  @override
+  String get trashRestored => '元に戻しました。';
+  @override
+  String get trashRestoreFailed => '元に戻せませんでした。ファイルが既に完全に削除された可能性があります。';
+
+  // ─── Upload ───────────────────────────────────────────────────────────
   @override
   String get uploadAutoTitle => '新しい写真を自動アップロード';
   @override
@@ -120,8 +142,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get uploadEmpty => 'この端末に写真が見つかりません。';
   @override
   String get uploadRecentSection => '最近の写真';
-  @override
-  String get uploadSelected => '選択中';
   @override
   String uploadSelectedCount(int count) => '$count 件選択中';
   @override
@@ -180,37 +200,23 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get drawerDeepLink => 'ディープリンク';
 
-  // ─── Home tab ─────────────────────────────────────────────────────────
-  @override
-  String get homeWelcomeTitle => 'ようこそ';
-  @override
-  String get homeCardBody =>
-      'このアプリはデジタル庁デザインシステム（DADS）に準拠しています。'
-      'カラートークン、タイポグラフィ、スペーシングを基盤とした一貫性のあるUIを提供します。';
-  @override
-  String get homeComponentsTitle => 'コンポーネント';
-  @override
-  String get homePrimaryButton => 'プライマリボタン';
-  @override
-  String get homeSecondaryButton => 'セカンダリボタン';
-  @override
-  String get homeTextFieldLabel => 'テキスト入力';
-  @override
-  String get homeTextFieldHint => 'ここに入力してください';
-  @override
-  String get homeListCardTitle => 'リストカード';
-  @override
-  String get homeListCardSubtitle => 'サブタイトル';
-  @override
-  String get homeListCardItem2 => '項目 2';
-
-  // ─── Search tab ───────────────────────────────────────────────────────
+  // ─── Media search ─────────────────────────────────────────────────────
   @override
   String get searchFieldLabel => '検索';
   @override
-  String get searchFieldHint => 'キーワードを入力';
+  String get searchFieldHint => 'ファイル名・カメラ・キャプション・タグ';
   @override
-  String get searchEmptyMessage => 'キーワードを入力して検索してください';
+  String get searchNoResults => '条件に合う写真がありません';
+  @override
+  String get searchClearFilters => '条件をクリア';
+  @override
+  String get searchFilterAll => 'すべて';
+  @override
+  String get searchFilterPhotos => '写真';
+  @override
+  String get searchFilterVideos => '動画';
+  @override
+  String get searchFilterFavorites => 'お気に入り';
 
   // ─── Settings tab ─────────────────────────────────────────────────────
   @override
@@ -267,8 +273,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutPlatformValue => 'Android / iOS';
   @override
   String get aboutDebugUnlocked => 'デバッグモードを有効にしました';
-  @override
-  String get aboutDebugAlreadyOn => 'デバッグモードは既に有効です';
 
   // ─── Debug page ───────────────────────────────────────────────────────
   @override
@@ -431,16 +435,14 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deepLinkCopied => 'クリップボードにコピーしました';
 
   // ─── Licenses page ───────────────────────────────────────────────────
-  @override
-  String get licensesTitle => 'ライセンス';
-  @override
-  String get licensesDetails => '詳細は各パッケージのライセンスファイルをご参照ください。';
 
   // ─── Common ──────────────────────────────────────────────────────────
   @override
   String get commonRetry => '再試行';
   @override
   String get commonClose => '閉じる';
+  @override
+  String get commonCancel => 'キャンセル';
   @override
   String get commonErrorNetwork => 'サーバーに接続できませんでした。通信環境を確認して再試行してください。';
   @override
@@ -454,9 +456,5 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get commonPageNotFound => 'ページが見つかりません';
   @override
-  String get commonLoading => '読み込み中...';
-  @override
   String get commonError => 'エラーが発生しました';
-  @override
-  String get commonEmpty => 'データがありません';
 }

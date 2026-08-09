@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/l10n/error_descriptions.dart';
+import 'package:photonest/presentation/pages/media/media_search_bar.dart';
 import 'package:photonest/presentation/providers/media_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
 import 'package:photonest/presentation/widgets/ui/widgets.dart';
@@ -19,8 +20,25 @@ class MediaTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // The search bar stays put through loading and failure: taking it away
+    // while the narrowed read is in flight would leave the reader unable to
+    // correct a filter that returns nothing.
+    return Column(
+      children: [
+        const MediaSearchBar(),
+        Expanded(child: _LibraryBody()),
+      ],
+    );
+  }
+}
+
+/// The part below the search bar: loading, failure, empty or the timeline.
+class _LibraryBody extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final library = ref.watch(libraryMediaProvider);
+    final query = ref.watch(libraryMediaQueryProvider);
     return switch (library) {
       AsyncLoading<LibraryMediaState>() => const AppLoadingView(),
       AsyncError<LibraryMediaState>(:final error) => AppErrorView(
@@ -28,10 +46,19 @@ class MediaTab extends ConsumerWidget {
         onRetry: () =>
             unawaited(ref.read(libraryMediaProvider.notifier).reload()),
       ),
-      // The empty state carries its own reload: the provider outlives the
-      // tab, so a library that was empty on first read would otherwise stay
-      // empty on screen after the first upload — with no gesture to correct
-      // it, since the pull-to-refresh lives in the timeline below.
+      // 0 件の意味が 2 通りある。絞り込み中は「条件に合うものが無い」で、
+      // 直す先は条件（クリアの導線）。絞り込んでいなければ「ライブラリが空」
+      // で、直す先は読み直し（プロバイダはタブより長生きするため、最初の
+      // 取得が空だった後にアップロードしても画面は空のままになる。
+      // 引き直す手はタイムラインの pull-to-refresh にしか無い）。
+      AsyncData<LibraryMediaState>(value: final value)
+          when value.media.isEmpty && !query.isUnfiltered =>
+        AppEmptyView(
+          message: l10n.searchNoResults,
+          icon: Icons.search_off,
+          actionLabel: l10n.searchClearFilters,
+          action: ref.read(libraryMediaQueryProvider.notifier).clear,
+        ),
       AsyncData<LibraryMediaState>(value: final value)
           when value.media.isEmpty =>
         AppEmptyView(

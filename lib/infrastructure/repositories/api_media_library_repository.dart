@@ -3,6 +3,7 @@ import 'package:photonest/domain/entities/media_library_page.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_library_query.dart';
 import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 /// [MediaLibraryRepository] backed by the PhotoNest `GET /api/media`
@@ -18,17 +19,54 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
   final PhotoNestApiClient _client;
 
   @override
-  Future<MediaLibraryPage> findPage({int page = 1, int pageSize = 100}) async {
+  Future<MediaLibraryPage> findPage({
+    String? cursor,
+    int pageSize = 100,
+    MediaLibraryQuery query = const MediaLibraryQuery(),
+  }) async {
     final payload = await _client.getJson(
       '/media',
       query: {
-        'page': '$page',
         'pageSize': '$pageSize',
         // Newest capture first — the order the timeline reads in. Sent
         // explicitly rather than relying on the server's default.
         'order': 'desc',
+        // Omitted on the first window; the server then starts from the top.
+        'cursor': ?cursor,
+        // Absent filters are omitted rather than sent empty: the server
+        // treats a present-but-blank q as a match against '' and would
+        // return nothing.
+        'q': ?query.searchText,
+        'type': ?query.kind.queryValue,
+        if (query.favoritesOnly) 'favorite': '1',
       },
     );
+    // The server sends a cursor only when more media follows, so anything
+    // that is not a non-empty string reads as "no more". An optimistic
+    // default would keep requesting the same window forever.
+    return _pageFrom(payload);
+  }
+
+  @override
+  Future<MediaLibraryPage> findTrashPage({
+    String? cursor,
+    int pageSize = 100,
+  }) async {
+    final payload = await _client.getJson(
+      '/media',
+      query: {
+        'pageSize': '$pageSize',
+        'order': 'desc',
+        'cursor': ?cursor,
+        // Deleted only — not "include deleted", which would mix the trash
+        // into the ordinary library.
+        'deleted_only': '1',
+      },
+    );
+    return _pageFrom(payload);
+  }
+
+  static MediaLibraryPage _pageFrom(Map<String, dynamic> payload) {
     final items = payload['items'];
     if (items is! List) {
       throw const InfrastructureError('Media list response had no items.');
@@ -38,12 +76,13 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
           .whereType<Map<String, dynamic>>()
           .map(_mediaItemFrom)
           .toList(growable: false),
-      // The server always reports this. A missing or unexpected value reads
-      // as "no more": an optimistic default would keep requesting empty
-      // pages forever, and the caller's short-page check is the second guard
-      // against stopping one page early.
-      hasNext: _isTrue(payload['hasNext']),
+      nextCursor: _cursorFrom(payload['nextCursor']),
     );
+  }
+
+  static String? _cursorFrom(Object? raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    return raw;
   }
 
   static MediaItem _mediaItemFrom(Map<String, dynamic> json) {
@@ -52,6 +91,8 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
       filename: json['filename'] as String? ?? '',
       shotAt: _utcInstant(json['shot_at']),
       isVideo: _isTrue(json['is_video']),
+      isFavorite: _isTrue(json['is_favorite']),
+      isDeleted: _isTrue(json['is_deleted']),
     );
   }
 

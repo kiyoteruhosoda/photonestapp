@@ -24,11 +24,13 @@ import 'package:photonest/domain/repositories/auto_upload_settings_repository.da
 import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 import 'package:photonest/domain/repositories/debug_settings_repository.dart';
 import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -42,6 +44,7 @@ import 'package:photonest/domain/value_objects/app_theme_mode.dart';
 import 'package:photonest/domain/value_objects/log_level.dart';
 import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_library_query.dart';
 
 /// In-memory repository doubles.
 ///
@@ -435,8 +438,18 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
 
   List<MediaItem> media;
 
-  /// Pages requested, in order, as (page, pageSize).
-  final List<(int, int)> requestedPages = <(int, int)>[];
+  /// Pages requested, in order, as (cursor, pageSize). The first window's
+  /// cursor is null.
+  final List<(String?, int)> requestedPages = <(String?, int)>[];
+
+  /// Narrowings requested, in order. Lets a test assert that the timeline
+  /// re-read the library when the reader changed the search.
+  final List<MediaLibraryQuery> requestedQueries = <MediaLibraryQuery>[];
+
+  /// When set, only media whose filename contains this fake's idea of a
+  /// match is answered — enough to tell "the search reached the server"
+  /// from "the list was filtered on the device".
+  bool Function(MediaItem item, MediaLibraryQuery query)? matches;
 
   /// When set, every request throws this instead of answering.
   AppError? failure;
@@ -445,20 +458,65 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
   /// page mid-flight and restart the timeline underneath it.
   Future<void> Function()? gate;
 
+  /// Media in the trash, answered by [findTrashPage].
+  List<MediaItem> trashed = <MediaItem>[];
+
+  /// Trash windows requested, in order, as (cursor, pageSize).
+  final List<(String?, int)> requestedTrashPages = <(String?, int)>[];
+
+  /// The cursor is the offset of the next item, spelled the way the server
+  /// spells it: opaque to the caller, meaningful only here.
+  static const String _cursorPrefix = 'after:';
+
   @override
-  Future<MediaLibraryPage> findPage({int page = 1, int pageSize = 100}) async {
-    requestedPages.add((page, pageSize));
+  Future<MediaLibraryPage> findPage({
+    String? cursor,
+    int pageSize = 100,
+    MediaLibraryQuery query = const MediaLibraryQuery(),
+  }) async {
+    requestedPages.add((cursor, pageSize));
+    requestedQueries.add(query);
     await gate?.call();
     final error = failure;
     if (error != null) throw error;
-    final start = (page - 1) * pageSize;
-    if (start >= media.length) {
-      return const MediaLibraryPage(items: <MediaItem>[], hasNext: false);
+    final predicate = matches;
+    final source = predicate == null
+        ? media
+        : media.where((item) => predicate(item, query)).toList(growable: false);
+    final start = cursor == null
+        ? 0
+        : int.parse(cursor.substring(_cursorPrefix.length));
+    if (start >= source.length) {
+      return const MediaLibraryPage(items: <MediaItem>[], nextCursor: null);
     }
     final end = start + pageSize;
+    final hasNext = end < source.length;
     return MediaLibraryPage(
-      items: media.sublist(start, end < media.length ? end : media.length),
-      hasNext: end < media.length,
+      items: source.sublist(start, hasNext ? end : source.length),
+      nextCursor: hasNext ? '$_cursorPrefix$end' : null,
+    );
+  }
+
+  @override
+  Future<MediaLibraryPage> findTrashPage({
+    String? cursor,
+    int pageSize = 100,
+  }) async {
+    requestedTrashPages.add((cursor, pageSize));
+    await gate?.call();
+    final error = failure;
+    if (error != null) throw error;
+    final start = cursor == null
+        ? 0
+        : int.parse(cursor.substring(_cursorPrefix.length));
+    if (start >= trashed.length) {
+      return const MediaLibraryPage(items: <MediaItem>[], nextCursor: null);
+    }
+    final end = start + pageSize;
+    final hasNext = end < trashed.length;
+    return MediaLibraryPage(
+      items: trashed.sublist(start, hasNext ? end : trashed.length),
+      nextCursor: hasNext ? '$_cursorPrefix$end' : null,
     );
   }
 }
@@ -687,11 +745,70 @@ final class FakeAlbumSnapshotRepository implements AlbumSnapshotRepository {
   }
 }
 
+/// In-memory [MediaCurationRepository].
+final class FakeMediaCurationRepository implements MediaCurationRepository {
+  /// Favourite state as this fake holds it, by media id.
+  final Map<int, bool> favorites = <int, bool>{};
+
+  /// Media moved to the trash, in order.
+  final List<MediaId> trashed = <MediaId>[];
+
+  /// Media restored, in order.
+  final List<MediaId> restored = <MediaId>[];
+
+  /// When set, every call throws this instead of answering.
+  AppError? failure;
+
+  /// When set, the server settles on this instead of what was asked for —
+  /// stands in for another device having changed it in between.
+  bool? settleFavoriteAt;
+
+  /// When set, awaited before each call is answered — lets a test hold one
+  /// request in flight and start another for a different media item.
+  Future<void> Function()? gate;
+
+  @override
+  Future<bool> setFavorite(MediaId id, {required bool favorite}) async {
+    await gate?.call();
+    _failIfAsked();
+    final settled = settleFavoriteAt ?? favorite;
+    favorites[id.value] = settled;
+    return settled;
+  }
+
+  @override
+  Future<void> moveToTrash(MediaId id) async {
+    await gate?.call();
+    _failIfAsked();
+    trashed.add(id);
+  }
+
+  @override
+  Future<void> restore(MediaId id) async {
+    await gate?.call();
+    _failIfAsked();
+    restored.add(id);
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
 /// In-memory [MediaThumbnailRepository] returning a fixed byte pattern.
 final class FakeMediaThumbnailRepository implements MediaThumbnailRepository {
+  /// Reads that went through the app server, one round trip each.
   final List<(MediaId, int)> fetched = <(MediaId, int)>[];
 
+  /// Reads that went through a signed URL (proxy or CDN edge).
+  final List<SignedMediaUrl> fetchedFrom = <SignedMediaUrl>[];
+
   AppError? failure;
+
+  /// When set, only signed-URL reads throw it — lets a test check the
+  /// fallback to the app server.
+  AppError? signedFailure;
 
   @override
   Future<Uint8List> fetch(MediaId id, {required int size}) async {
@@ -699,6 +816,52 @@ final class FakeMediaThumbnailRepository implements MediaThumbnailRepository {
     if (error != null) throw error;
     fetched.add((id, size));
     return testPngBytes;
+  }
+
+  @override
+  Future<Uint8List> fetchFrom(SignedMediaUrl url) async {
+    final error = signedFailure ?? failure;
+    if (error != null) throw error;
+    fetchedFrom.add(url);
+    return testPngBytes;
+  }
+}
+
+/// In-memory [MediaThumbnailUrlRepository] that issues a URL per media item.
+final class FakeMediaThumbnailUrlRepository
+    implements MediaThumbnailUrlRepository {
+  /// Batches asked for, in order — the point of the batching is that this
+  /// stays short while the grid is long.
+  final List<(List<MediaId>, int)> issued = <(List<MediaId>, int)>[];
+
+  /// Media the server refuses to issue for (deleted, purged).
+  final Set<int> unissuable = <int>{};
+
+  /// Every thumbnail asked for, flattened to (media, size) — what a test
+  /// means by "the grid requested this rendition", whichever batch it
+  /// travelled in.
+  List<(MediaId, int)> get requested => [
+    for (final (ids, size) in issued)
+      for (final id in ids) (id, size),
+  ];
+
+  AppError? failure;
+
+  @override
+  Future<Map<MediaId, SignedMediaUrl>> issue(
+    List<MediaId> ids, {
+    required int size,
+  }) async {
+    issued.add((List<MediaId>.of(ids), size));
+    final error = failure;
+    if (error != null) throw error;
+    return {
+      for (final id in ids)
+        if (!unissuable.contains(id.value))
+          id: SignedMediaUrl(
+            url: Uri.parse('https://cdn.example.com/thumb/${id.value}/$size'),
+          ),
+    };
   }
 }
 

@@ -65,7 +65,8 @@ void main() {
       // The load-more cell sits far below the fold, so only the first page
       // has been asked for. Building it eagerly would chain straight through
       // the whole library at startup.
-      expect(repository.requestedPages, [(1, libraryMediaPageSize)]);
+      // The first window carries no cursor.
+      expect(repository.requestedPages, [(null, libraryMediaPageSize)]);
     });
 
     testWidgets('scrolling to the end pages the next window in', (
@@ -82,17 +83,23 @@ void main() {
 
       // Scroll towards the end. The load-more cell is built — and the next
       // page requested — as soon as it comes within the grid's build range.
-      final scrollable = find.byType(Scrollable).first;
+      // The timeline's scrollable is named explicitly: the search field above
+      // it has one of its own, and `Scrollable.first` would drag that instead.
+      final scrollable = find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      );
       for (var i = 0; i < 60 && repository.requestedPages.length < 2; i++) {
         await tester.drag(scrollable, const Offset(0, -600));
         await tester.pump();
       }
       await tester.pumpAndSettle();
 
-      expect(repository.requestedPages, [
-        (1, libraryMediaPageSize),
-        (2, libraryMediaPageSize),
-      ]);
+      expect(repository.requestedPages, hasLength(2));
+      expect(repository.requestedPages.first, (null, libraryMediaPageSize));
+      // The second window follows the cursor the first one handed back.
+      expect(repository.requestedPages.last.$1, isNotNull);
+      expect(repository.requestedPages.last.$2, libraryMediaPageSize);
     });
 
     testWidgets('media is grouped under the day it was captured', (

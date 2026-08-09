@@ -7,6 +7,7 @@ import 'package:photonest/presentation/navigation/app_routes.dart';
 import 'package:photonest/presentation/pages/albums/album_detail_page.dart';
 import 'package:photonest/presentation/pages/auth/login_page.dart';
 import 'package:photonest/presentation/pages/main_page.dart';
+import 'package:photonest/presentation/pages/media/trash_page.dart';
 import 'package:photonest/presentation/pages/notifications/notifications_page.dart';
 import 'package:photonest/presentation/pages/system/about_page.dart';
 import 'package:photonest/presentation/pages/system/debug_page.dart';
@@ -119,6 +120,10 @@ class AppRouter {
             GoRoute(
               path: _relative(AppRoutes.logs),
               builder: (context, state) => const LogsPage(),
+            ),
+            GoRoute(
+              path: _relative(AppRoutes.trash),
+              builder: (context, state) => const TrashPage(),
             ),
             GoRoute(
               path: _relative(AppRoutes.deepLink),

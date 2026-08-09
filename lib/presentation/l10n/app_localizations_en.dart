@@ -10,8 +10,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get navHome => 'Home';
   @override
-  String get navSearch => 'Search';
-  @override
   String get navSettings => 'Settings';
   @override
   String get navAlbums => 'Albums';
@@ -93,6 +91,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mediaSaveDownloadFailed => 'Could not download the original.';
   @override
   String get mediaSaveWriteFailed => 'Could not save to your device.';
+  @override
+  String get mediaAddFavorite => 'Add to favorites';
+  @override
+  String get mediaRemoveFavorite => 'Remove from favorites';
+  @override
+  String get mediaFavoriteFailed => 'Could not change the favorite mark.';
+  @override
+  String get mediaMoveToTrash => 'Move to trash';
+  @override
+  String get mediaMoveToTrashConfirm =>
+      'Move this to the trash? You can restore it until the server clears it.';
+  @override
+  String get mediaMovedToTrash => 'Moved to the trash.';
+  @override
+  String get mediaTrashFailed => 'Could not move this to the trash.';
 
   @override
   String get videoNotReady =>
@@ -101,9 +114,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get videoUnavailable => 'This video cannot be played.';
 
-  // ─── Upload ───────────────────────────────────────────────────────────
+  // ─── Trash ────────────────────────────────────────────────────────────
   @override
-  String get uploadTitle => 'Upload';
+  String get trashTitle => 'Trash';
+  @override
+  String get trashEmpty => 'The trash is empty';
+  @override
+  String get trashRestore => 'Restore';
+  @override
+  String get trashRestored => 'Restored.';
+  @override
+  String get trashRestoreFailed =>
+      'Could not restore this. The file may already have been cleared.';
+
+  // ─── Upload ───────────────────────────────────────────────────────────
   @override
   String get uploadAutoTitle => 'Auto-upload new photos';
   @override
@@ -128,8 +152,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadEmpty => 'No photos found on this device.';
   @override
   String get uploadRecentSection => 'Recent photos';
-  @override
-  String get uploadSelected => 'Selected';
   @override
   String uploadSelectedCount(int count) =>
       count == 1 ? '1 selected' : '$count selected';
@@ -193,38 +215,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get drawerDeepLink => 'Deep Links';
 
-  // ─── Home tab ─────────────────────────────────────────────────────────
-  @override
-  String get homeWelcomeTitle => 'Welcome';
-  @override
-  String get homeCardBody =>
-      'This app is built following the Digital Agency Design System (DADS). '
-      'It provides a consistent UI based on color tokens, typography, '
-      'and spacing.';
-  @override
-  String get homeComponentsTitle => 'Components';
-  @override
-  String get homePrimaryButton => 'Primary Button';
-  @override
-  String get homeSecondaryButton => 'Secondary Button';
-  @override
-  String get homeTextFieldLabel => 'Text Input';
-  @override
-  String get homeTextFieldHint => 'Enter text here';
-  @override
-  String get homeListCardTitle => 'List Card';
-  @override
-  String get homeListCardSubtitle => 'Subtitle text';
-  @override
-  String get homeListCardItem2 => 'Item 2';
-
-  // ─── Search tab ───────────────────────────────────────────────────────
+  // ─── Media search ─────────────────────────────────────────────────────
   @override
   String get searchFieldLabel => 'Search';
   @override
-  String get searchFieldHint => 'Enter keyword';
+  String get searchFieldHint => 'Filename, camera, caption or tag';
   @override
-  String get searchEmptyMessage => 'Enter a keyword to search';
+  String get searchNoResults => 'No photos match the current filters';
+  @override
+  String get searchClearFilters => 'Clear filters';
+  @override
+  String get searchFilterAll => 'All';
+  @override
+  String get searchFilterPhotos => 'Photos';
+  @override
+  String get searchFilterVideos => 'Videos';
+  @override
+  String get searchFilterFavorites => 'Favorites';
 
   // ─── Settings tab ─────────────────────────────────────────────────────
   @override
@@ -281,8 +288,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPlatformValue => 'Android / iOS';
   @override
   String get aboutDebugUnlocked => 'Debug mode enabled';
-  @override
-  String get aboutDebugAlreadyOn => 'Debug mode is already on';
 
   // ─── Debug page ───────────────────────────────────────────────────────
   @override
@@ -448,17 +453,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deepLinkCopied => 'Copied to clipboard';
 
   // ─── Licenses page ───────────────────────────────────────────────────
-  @override
-  String get licensesTitle => 'Licenses';
-  @override
-  String get licensesDetails =>
-      'Please refer to the package license file for details.';
 
   // ─── Common ──────────────────────────────────────────────────────────
   @override
   String get commonRetry => 'Retry';
   @override
   String get commonClose => 'Close';
+  @override
+  String get commonCancel => 'Cancel';
   @override
   String get commonErrorNetwork =>
       'Could not reach the server. Check your connection and try again.';
@@ -474,9 +476,5 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get commonPageNotFound => 'Page Not Found';
   @override
-  String get commonLoading => 'Loading...';
-  @override
   String get commonError => 'An error occurred';
-  @override
-  String get commonEmpty => 'No data';
 }

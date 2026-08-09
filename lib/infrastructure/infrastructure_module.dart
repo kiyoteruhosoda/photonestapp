@@ -14,11 +14,13 @@ import 'package:photonest/domain/repositories/auto_upload_settings_repository.da
 import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 import 'package:photonest/domain/repositories/debug_settings_repository.dart';
 import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -35,10 +37,12 @@ import 'package:photonest/infrastructure/links/url_launcher_external_link_launch
 import 'package:photonest/infrastructure/logging/persistent_app_logger.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_curation_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_library_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_thumbnail_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_thumbnail_url_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:photonest/infrastructure/repositories/package_info_app_info_repository.dart';
 import 'package:photonest/infrastructure/repositories/secure_storage_session_repository.dart';
@@ -80,8 +84,10 @@ final class InfrastructureModule {
     required this.albums,
     required this.albumSnapshots,
     required this.mediaThumbnails,
+    required this.mediaThumbnailUrls,
     required this.mediaThumbnailCache,
     required this.mediaLibrary,
+    required this.mediaCuration,
     required this.mediaOriginals,
     required this.mediaPlayback,
     required this.photoUploads,
@@ -169,12 +175,14 @@ final class InfrastructureModule {
         apiEndpoints,
       ),
       mediaThumbnails: ApiMediaThumbnailRepository(apiClient),
+      mediaThumbnailUrls: ApiMediaThumbnailUrlRepository(apiClient),
       mediaThumbnailCache: SqfliteMediaThumbnailCacheRepository(
         database,
         sessions,
         apiEndpoints,
       ),
       mediaLibrary: ApiMediaLibraryRepository(apiClient),
+      mediaCuration: ApiMediaCurationRepository(apiClient),
       mediaOriginals: ApiMediaOriginalRepository(apiClient),
       mediaPlayback: ApiMediaPlaybackRepository(apiClient),
       photoUploads: ApiPhotoUploadRepository(
@@ -218,8 +226,10 @@ final class InfrastructureModule {
   final AlbumRepository albums;
   final AlbumSnapshotRepository albumSnapshots;
   final MediaThumbnailRepository mediaThumbnails;
+  final MediaThumbnailUrlRepository mediaThumbnailUrls;
   final MediaThumbnailCacheRepository mediaThumbnailCache;
   final MediaLibraryRepository mediaLibrary;
+  final MediaCurationRepository mediaCuration;
   final MediaOriginalRepository mediaOriginals;
   final MediaPlaybackRepository mediaPlayback;
   final PhotoUploadRepository photoUploads;

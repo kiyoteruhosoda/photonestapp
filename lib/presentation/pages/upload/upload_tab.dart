@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:photonest/application/usecases/upload/list_device_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:photonest/domain/entities/upload_failure.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
@@ -38,6 +39,25 @@ class _UploadTabState extends ConsumerState<UploadTab> {
     return ref
         .read(autoUploadUnmeteredOnlyProvider.notifier)
         .setUnmeteredOnly(unmeteredOnly);
+  }
+
+  /// Opens the backup-target chooser and persists what comes back.
+  ///
+  /// A dialog rather than a screen: narrowing the target is something you do
+  /// once, from the switch it qualifies, and a pushed route would put a
+  /// back-stack entry between the reader and their photos.
+  Future<void> _chooseBackupAlbums() async {
+    final current = ref.read(backupAlbumsProvider);
+    // Re-read the device every time: an album created since the last visit
+    // must be pickable without restarting the app.
+    ref.invalidate(deviceAlbumsProvider);
+    final chosen = await showDialog<Set<String>>(
+      context: context,
+      builder: (dialogContext) =>
+          _BackupAlbumsDialog(initialSelection: current),
+    );
+    if (chosen == null) return;
+    await ref.read(backupAlbumsProvider.notifier).setAlbumIds(chosen);
   }
 
   Future<void> _uploadSelected(List<UploadCandidate> candidates) async {
@@ -117,6 +137,7 @@ class _UploadTabState extends ConsumerState<UploadTab> {
     final candidates = ref.watch(uploadCandidatesProvider);
     final autoEnabled = ref.watch(autoUploadEnabledProvider);
     final unmeteredOnly = ref.watch(autoUploadUnmeteredOnlyProvider);
+    final backupAlbums = ref.watch(backupAlbumsProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -172,6 +193,33 @@ class _UploadTabState extends ConsumerState<UploadTab> {
                     l10n.uploadAutoUnmeteredSubtitle,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.componentPadding,
+                    vertical: AppSpacing.xs,
+                  ),
+                ),
+                // Usable while auto-upload is off, unlike the Wi-Fi switch:
+                // switching auto-upload on starts a pass immediately, so a
+                // row that could only be reached afterwards would force
+                // everyone through one pass of the target they were trying
+                // to avoid. Narrowing first has to be possible.
+                ListTile(
+                  onTap: () => unawaited(_chooseBackupAlbums()),
+                  leading: Icon(
+                    Icons.photo_album_outlined,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  title: Text(
+                    l10n.uploadAutoAlbumsTitle,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  subtitle: Text(
+                    backupAlbums.isEmpty
+                        ? l10n.uploadAutoAlbumsAll
+                        : l10n.uploadAutoAlbumsCount(backupAlbums.length),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.componentPadding,
                     vertical: AppSpacing.xs,
@@ -394,6 +442,141 @@ class _UploadTabState extends ConsumerState<UploadTab> {
       ),
     );
   }
+}
+
+/// Picks which device albums automatic upload reads.
+///
+/// Pops the chosen album ids, or null when dismissed. An empty set means
+/// the whole library — the same shape the settings store keeps, so nothing
+/// downstream has to translate "all".
+class _BackupAlbumsDialog extends ConsumerStatefulWidget {
+  const _BackupAlbumsDialog({required this.initialSelection});
+
+  final Set<String> initialSelection;
+
+  @override
+  ConsumerState<_BackupAlbumsDialog> createState() =>
+      _BackupAlbumsDialogState();
+}
+
+class _BackupAlbumsDialogState extends ConsumerState<_BackupAlbumsDialog> {
+  late bool _wholeLibrary = widget.initialSelection.isEmpty;
+  late final Set<String> _selected = {...widget.initialSelection};
+
+  /// Nothing ticked while the whole-library option is off would silently
+  /// mean "everything" once saved, which is the opposite of what the reader
+  /// just did. Saving is blocked instead.
+  bool get _canSave => _wholeLibrary || _selected.isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final choices = ref.watch(deviceAlbumsProvider);
+
+    return AlertDialog(
+      title: Text(l10n.uploadAutoAlbumsDialogTitle),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: switch (choices) {
+          AsyncLoading<DeviceAlbumChoices>() => const AppLoadingView(),
+          AsyncError<DeviceAlbumChoices>(:final error) => AppErrorView(
+            message: describeLoadError(error, l10n),
+            onRetry: () =>
+                unawaited(ref.read(deviceAlbumsProvider.notifier).reload()),
+          ),
+          AsyncData<DeviceAlbumChoices>(value: final value)
+              when !value.accessGranted =>
+            AppEmptyView(
+              message:
+                  '${l10n.uploadPermissionTitle}\n'
+                  '${l10n.uploadPermissionBody}',
+              icon: Icons.no_photography_outlined,
+              actionLabel: l10n.uploadPermissionRetry,
+              action: () =>
+                  unawaited(ref.read(deviceAlbumsProvider.notifier).reload()),
+            ),
+          AsyncData<DeviceAlbumChoices>(value: final value) => _buildChoices(
+            value,
+            l10n,
+          ),
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.uploadCancel),
+        ),
+        TextButton(
+          onPressed: _canSave
+              ? () => Navigator.of(
+                  context,
+                ).pop(_wholeLibrary ? const <String>{} : _selected)
+              : null,
+          child: Text(l10n.commonSave),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChoices(DeviceAlbumChoices choices, AppLocalizations l10n) {
+    return ListView(
+      shrinkWrap: true,
+      children: [
+        SwitchListTile(
+          value: _wholeLibrary,
+          onChanged: (value) => setState(() => _wholeLibrary = value),
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.uploadAutoAlbumsAllOption),
+          // Says out loud what "everything" costs: screen recordings and
+          // received videos go up too, which is the surprise this whole
+          // choice exists to remove.
+          subtitle: Text(l10n.uploadAutoAlbumsAllOptionSubtitle),
+        ),
+        const Divider(),
+        if (choices.albums.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+            child: Text(l10n.uploadAutoAlbumsEmpty),
+          )
+        else
+          for (final album in choices.albums)
+            CheckboxListTile(
+              // Greyed out rather than hidden while the whole-library option
+              // is on: the ticks are still there when it goes back off.
+              enabled: !_wholeLibrary,
+              value: _selected.contains(album.id),
+              onChanged: _wholeLibrary
+                  ? null
+                  : (checked) => setState(() {
+                      if (checked ?? false) {
+                        _selected.add(album.id);
+                      } else {
+                        _selected.remove(album.id);
+                      }
+                    }),
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                album.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              subtitle: Text(l10n.uploadAutoAlbumsItemCount(album.itemCount)),
+            ),
+        if (!_canSave)
+          Padding(
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
+            child: Text(
+              l10n.uploadAutoAlbumsPickOne,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
+            ),
+          ),
+      ],
+    );
+  }
+
+  ColorScheme get colorScheme => Theme.of(context).colorScheme;
 }
 
 /// One-line recap of the last batch's failures, with the way into the

@@ -38,11 +38,14 @@ import 'package:photonest/application/usecases/theme/set_theme_preference_usecas
 import 'package:photonest/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_device_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/watch_upload_failures_usecase.dart';
@@ -327,6 +330,21 @@ Future<void> setupServiceLocator() async {
       sl<AutoUploadSettingsRepository>(),
       sl<BackgroundSyncScheduler>(),
       sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<GetBackupAlbumsUseCase>(
+    () => GetBackupAlbumsUseCase(sl<AutoUploadSettingsRepository>()),
+  );
+  sl.registerFactory<SetBackupAlbumsUseCase>(
+    () => SetBackupAlbumsUseCase(
+      sl<AutoUploadSettingsRepository>(),
+      sl<AppLogger>(),
+    ),
+  );
+  sl.registerFactory<ListDeviceAlbumsUseCase>(
+    () => ListDeviceAlbumsUseCase(
+      sl<PhotoLibraryGateway>(),
+      sl<AutoUploadSettingsRepository>(),
     ),
   );
 

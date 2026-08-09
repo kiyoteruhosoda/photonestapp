@@ -147,6 +147,29 @@ final class SyncNewPhotosUseCase {
     }
   }
 
+  /// Whether the batch this pass started may keep going.
+  ///
+  /// Re-checked before every photo, because a pass over originals can run
+  /// for many minutes: both the connection and the backup target can change
+  /// while it does. Photos left unattempted stay unrecorded, so the next
+  /// pass — the one the coordinator runs as soon as this one ends — picks
+  /// up whatever the new choice actually asks for.
+  Future<bool> _mayContinueSending(Set<String> targetWhenPassStarted) async {
+    if (!_targetStillMatches(targetWhenPassStarted)) {
+      _logger.info('[AutoUpload] backup target changed — stopping this batch');
+      return false;
+    }
+    return _mayUploadOverCurrentConnection();
+  }
+
+  /// Whether the persisted backup target is still the one this pass planned
+  /// against. A narrowed target must not keep sending what it excluded.
+  bool _targetStillMatches(Set<String> targetWhenPassStarted) {
+    final current = _settings.backupAlbumIds();
+    return current.length == targetWhenPassStarted.length &&
+        current.containsAll(targetWhenPassStarted);
+  }
+
   /// Whether the connection the device is on right now is one auto-upload is
   /// allowed to spend. Both the setting and the connection are re-read on
   /// every call, so neither is captured at the start of a pass.
@@ -160,19 +183,40 @@ final class SyncNewPhotosUseCase {
   Future<SyncReport> _runPass() async {
     final since = _settings.enabledSince();
     final uploaded = await _history.uploadedLocalIds();
+    // An empty selection means the whole library — queried as a single
+    // pass over the platform's "everything" bucket rather than as every
+    // album, so the default costs exactly what it did before. Copied so the
+    // comparison below cannot be defeated by a repository that hands back
+    // the same mutable set it stores.
+    final selectedAlbumIds = {..._settings.backupAlbumIds()};
+    final targets = selectedAlbumIds.isEmpty
+        ? const <String?>[null]
+        : selectedAlbumIds.toList();
+
     // Page through the whole window after `since`: the library answers
     // newest-first, so stopping at the first page would revisit the same
     // already-uploaded photos forever once more than one page had
     // accumulated, and the older ones would never be examined.
     final pending = <LocalPhoto>[];
-    for (var page = 0; ; page++) {
-      final batch = await _library.photosTakenAfter(
-        since,
-        limit: pageSize,
-        page: page,
-      );
-      pending.addAll(batch.where((photo) => !uploaded.contains(photo.localId)));
-      if (batch.length < pageSize) break;
+    // The same asset can sit in more than one selected album, and would
+    // otherwise be sent twice within a single pass — the upload history is
+    // only written once the pass is over, so it cannot catch that.
+    final seen = <String>{};
+    for (final albumId in targets) {
+      for (var page = 0; ; page++) {
+        final batch = await _library.photosTakenAfter(
+          since,
+          limit: pageSize,
+          page: page,
+          albumId: albumId,
+        );
+        for (final photo in batch) {
+          if (uploaded.contains(photo.localId)) continue;
+          if (!seen.add(photo.localId)) continue;
+          pending.add(photo);
+        }
+        if (batch.length < pageSize) break;
+      }
     }
     if (pending.isEmpty) {
       return const SyncReport(
@@ -188,7 +232,7 @@ final class SyncNewPhotosUseCase {
     // unattempted stay unrecorded, so the next pass picks them up.
     final result = await _uploadPhotos.execute(
       pending,
-      mayContinue: _mayUploadOverCurrentConnection,
+      mayContinue: () => _mayContinueSending(selectedAlbumIds),
       // Every pass through here is automatic, whichever isolate runs it —
       // the foreground coordinator's passes are just as unwatched as the
       // background engine's.

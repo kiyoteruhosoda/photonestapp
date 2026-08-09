@@ -169,6 +169,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadAutoUnmeteredSubtitle =>
       'Wait for Wi-Fi instead of uploading over mobile data.';
   @override
+  String get uploadAutoAlbumsTitle => 'What gets backed up';
+  @override
+  String get uploadAutoAlbumsAll => 'Everything on this device';
+  @override
+  String uploadAutoAlbumsCount(int count) =>
+      count == 1 ? '1 album' : '$count albums';
+  @override
+  String get uploadAutoAlbumsDialogTitle => 'What gets backed up';
+  @override
+  String get uploadAutoAlbumsAllOption => 'Everything on this device';
+  @override
+  String get uploadAutoAlbumsAllOptionSubtitle =>
+      'Includes screenshots, saved images, and videos.';
+  @override
+  String get uploadAutoAlbumsEmpty => 'No albums found on this device.';
+  @override
+  String get uploadAutoAlbumsPickOne => 'Choose at least one album.';
+  @override
+  String uploadAutoAlbumsItemCount(int count) =>
+      count == 1 ? '1 item' : '$count items';
+  @override
   String get uploadPermissionTitle => 'No photo access';
   @override
   String get uploadPermissionBody =>
@@ -488,6 +509,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonClose => 'Close';
   @override
   String get commonCancel => 'Cancel';
+  @override
+  String get commonSave => 'Save';
   @override
   String get commonErrorNetwork =>
       'Could not reach the server. Check your connection and try again.';

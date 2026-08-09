@@ -6,11 +6,14 @@ import 'package:photonest/application/services/auto_upload_coordinator.dart';
 import 'package:photonest/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_device_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/watch_upload_failures_usecase.dart';
 import 'package:photonest/domain/entities/local_photo.dart';
@@ -74,6 +77,27 @@ setAutoUploadUnmeteredOnlyUseCaseProvider =
     Provider<SetAutoUploadUnmeteredOnlyUseCase>((ref) {
       throw UnimplementedError(
         missingOverrideMessage('setAutoUploadUnmeteredOnlyUseCaseProvider'),
+      );
+    });
+
+final Provider<GetBackupAlbumsUseCase> getBackupAlbumsUseCaseProvider =
+    Provider<GetBackupAlbumsUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('getBackupAlbumsUseCaseProvider'),
+      );
+    });
+
+final Provider<SetBackupAlbumsUseCase> setBackupAlbumsUseCaseProvider =
+    Provider<SetBackupAlbumsUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('setBackupAlbumsUseCaseProvider'),
+      );
+    });
+
+final Provider<ListDeviceAlbumsUseCase> listDeviceAlbumsUseCaseProvider =
+    Provider<ListDeviceAlbumsUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('listDeviceAlbumsUseCaseProvider'),
       );
     });
 
@@ -323,6 +347,53 @@ class AutoUploadUnmeteredOnlyNotifier extends Notifier<bool> {
     if (ref.read(autoUploadEnabledProvider)) {
       await ref.read(autoUploadCoordinatorProvider).triggerSync();
     }
+  }
+}
+
+/// The device albums automatic upload is limited to — empty means the whole
+/// library — together with the command to change the choice.
+final NotifierProvider<BackupAlbumsNotifier, Set<String>> backupAlbumsProvider =
+    NotifierProvider<BackupAlbumsNotifier, Set<String>>(
+      BackupAlbumsNotifier.new,
+    );
+
+/// Mirrors the persisted backup-target choice.
+class BackupAlbumsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => ref.read(getBackupAlbumsUseCaseProvider).execute();
+
+  /// Persists the choice, then pokes the coordinator: widening the target
+  /// should start uploading what was excluded right away rather than at the
+  /// next library change.
+  Future<void> setAlbumIds(Set<String> albumIds) async {
+    await ref.read(setBackupAlbumsUseCaseProvider).execute(albumIds);
+    state = albumIds;
+    if (ref.read(autoUploadEnabledProvider)) {
+      await ref.read(autoUploadCoordinatorProvider).triggerSync();
+    }
+  }
+}
+
+/// The device's albums for the backup-target chooser. Read only while the
+/// chooser is open — listing albums asks the platform for library access.
+final AsyncNotifierProvider<DeviceAlbumsNotifier, DeviceAlbumChoices>
+deviceAlbumsProvider =
+    AsyncNotifierProvider<DeviceAlbumsNotifier, DeviceAlbumChoices>(
+      DeviceAlbumsNotifier.new,
+    );
+
+/// Drives [deviceAlbumsProvider].
+class DeviceAlbumsNotifier extends AsyncNotifier<DeviceAlbumChoices> {
+  @override
+  Future<DeviceAlbumChoices> build() =>
+      ref.read(listDeviceAlbumsUseCaseProvider).execute();
+
+  /// Re-queries the device (also re-requests access).
+  Future<void> reload() async {
+    state = const AsyncValue<DeviceAlbumChoices>.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(listDeviceAlbumsUseCaseProvider).execute(),
+    );
   }
 }
 

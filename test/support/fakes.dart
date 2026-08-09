@@ -8,6 +8,7 @@ import 'package:photonest/domain/entities/album.dart';
 import 'package:photonest/domain/entities/app_info.dart';
 import 'package:photonest/domain/entities/auth_session.dart';
 import 'package:photonest/domain/entities/backup_notification.dart';
+import 'package:photonest/domain/entities/device_album.dart';
 import 'package:photonest/domain/entities/local_photo.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/entities/media_library_page.dart';
@@ -1184,7 +1185,8 @@ final class FakeAutoUploadSettingsRepository
     this.enabled = false,
     this.since,
     this.unmeteredOnly = true,
-  });
+    Set<String>? albumIds,
+  }) : albumIds = albumIds ?? <String>{};
 
   bool enabled;
   DateTime? since;
@@ -1192,8 +1194,12 @@ final class FakeAutoUploadSettingsRepository
   /// Mirrors the production default: restricted to unmetered connections
   /// until the user says otherwise.
   bool unmeteredOnly;
+
+  /// Mirrors the production default: empty means the whole library.
+  Set<String> albumIds;
   final List<bool> savedStates = <bool>[];
   final List<bool> savedUnmeteredOnly = <bool>[];
+  final List<Set<String>> savedAlbumIds = <Set<String>>[];
 
   @override
   bool isEnabled() => enabled;
@@ -1215,6 +1221,15 @@ final class FakeAutoUploadSettingsRepository
   Future<void> setUnmeteredOnly(bool value) async {
     savedUnmeteredOnly.add(value);
     unmeteredOnly = value;
+  }
+
+  @override
+  Set<String> backupAlbumIds() => albumIds;
+
+  @override
+  Future<void> setBackupAlbumIds(Set<String> value) async {
+    savedAlbumIds.add(value);
+    albumIds = value;
   }
 }
 
@@ -1243,11 +1258,24 @@ final class FakeNetworkConnectionGateway implements NetworkConnectionGateway {
 /// [changes] is a broadcast controller a test can push events into to
 /// simulate the platform's library-change broadcast.
 final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
-  FakePhotoLibraryGateway({this.accessGranted = true, List<LocalPhoto>? photos})
-    : photos = photos ?? <LocalPhoto>[];
+  FakePhotoLibraryGateway({
+    this.accessGranted = true,
+    List<LocalPhoto>? photos,
+    List<DeviceAlbum>? deviceAlbums,
+    Map<String, List<LocalPhoto>>? photosByAlbum,
+  }) : photos = photos ?? <LocalPhoto>[],
+       deviceAlbums = deviceAlbums ?? <DeviceAlbum>[],
+       photosByAlbum = photosByAlbum ?? <String, List<LocalPhoto>>{};
 
   bool accessGranted;
   List<LocalPhoto> photos;
+
+  /// What [albums] answers.
+  List<DeviceAlbum> deviceAlbums;
+
+  /// Photos per album id. An album missing here holds nothing — which is
+  /// also how a deleted album reads.
+  final Map<String, List<LocalPhoto>> photosByAlbum;
 
   /// Bytes per local id; a photo missing here reads back as null.
   final Map<String, Uint8List> bytesById = <String, Uint8List>{};
@@ -1266,6 +1294,10 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
   int accessRequests = 0;
   final List<DateTime?> queriedSince = <DateTime?>[];
 
+  /// Album ids the gateway was queried with, in order. Null is the whole
+  /// library.
+  final List<String?> queriedAlbumIds = <String?>[];
+
   @override
   Future<bool> ensureAccess() async {
     accessRequests++;
@@ -1273,13 +1305,21 @@ final class FakePhotoLibraryGateway implements PhotoLibraryGateway {
   }
 
   @override
+  Future<List<DeviceAlbum>> albums() async => deviceAlbums;
+
+  @override
   Future<List<LocalPhoto>> photosTakenAfter(
     DateTime? since, {
     int limit = 100,
     int page = 0,
+    String? albumId,
   }) async {
     queriedSince.add(since);
-    return photos
+    queriedAlbumIds.add(albumId);
+    final source = albumId == null
+        ? photos
+        : photosByAlbum[albumId] ?? const <LocalPhoto>[];
+    return source
         .where((photo) => since == null || photo.takenAt.isAfter(since))
         .skip(page * limit)
         .take(limit)

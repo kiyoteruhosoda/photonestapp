@@ -198,13 +198,13 @@ class _UploadTabState extends ConsumerState<UploadTab> {
                     vertical: AppSpacing.xs,
                   ),
                 ),
-                // Disabled the same way the Wi-Fi switch is, and for the
-                // same reason: the choice is persisted either way.
+                // Usable while auto-upload is off, unlike the Wi-Fi switch:
+                // switching auto-upload on starts a pass immediately, so a
+                // row that could only be reached afterwards would force
+                // everyone through one pass of the target they were trying
+                // to avoid. Narrowing first has to be possible.
                 ListTile(
-                  enabled: autoEnabled,
-                  onTap: autoEnabled
-                      ? () => unawaited(_chooseBackupAlbums())
-                      : null,
+                  onTap: () => unawaited(_chooseBackupAlbums()),
                   leading: Icon(
                     Icons.photo_album_outlined,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,

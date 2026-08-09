@@ -234,16 +234,35 @@ void main() {
     expect(scope.backgroundSyncScheduler.scheduledUnmeteredOnly.last, isFalse);
   });
 
-  testWidgets('the backup target reads as the whole device until narrowed', (
+  testWidgets('the backup target can be narrowed before auto-upload is on', (
     tester,
   ) async {
-    final scope = TestScope();
+    // Switching auto-upload on starts a pass at once, so the target has to be
+    // reachable beforehand — otherwise everyone's first pass runs against the
+    // whole device, which is the thing this choice exists to avoid.
+    final scope = TestScope(
+      photoLibrary: FakePhotoLibraryGateway(
+        deviceAlbums: [DeviceAlbum(id: 'camera', name: 'Camera', itemCount: 6)],
+      ),
+    );
     await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
-    final targetRow = find.widgetWithText(ListTile, l10n.uploadAutoAlbumsTitle);
 
     expect(find.text(l10n.uploadAutoAlbumsAll), findsOneWidget);
-    // Auto-upload is off, so the target cannot be changed yet.
-    expect(tester.widget<ListTile>(targetRow).onTap, isNull);
+    expect(scope.autoUploadSettingsRepository.enabled, isFalse);
+
+    await tester.tap(find.widgetWithText(ListTile, l10n.uploadAutoAlbumsTitle));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.widgetWithText(SwitchListTile, l10n.uploadAutoAlbumsAllOption),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, l10n.commonSave));
+    await tester.pumpAndSettle();
+
+    expect(scope.autoUploadSettingsRepository.albumIds, {'camera'});
+    expect(find.text(l10n.uploadAutoAlbumsCount(1)), findsOneWidget);
   });
 
   testWidgets('narrowing the backup target to one album saves the choice', (

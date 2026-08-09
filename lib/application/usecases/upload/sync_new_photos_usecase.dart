@@ -147,6 +147,29 @@ final class SyncNewPhotosUseCase {
     }
   }
 
+  /// Whether the batch this pass started may keep going.
+  ///
+  /// Re-checked before every photo, because a pass over originals can run
+  /// for many minutes: both the connection and the backup target can change
+  /// while it does. Photos left unattempted stay unrecorded, so the next
+  /// pass — the one the coordinator runs as soon as this one ends — picks
+  /// up whatever the new choice actually asks for.
+  Future<bool> _mayContinueSending(Set<String> targetWhenPassStarted) async {
+    if (!_targetStillMatches(targetWhenPassStarted)) {
+      _logger.info('[AutoUpload] backup target changed — stopping this batch');
+      return false;
+    }
+    return _mayUploadOverCurrentConnection();
+  }
+
+  /// Whether the persisted backup target is still the one this pass planned
+  /// against. A narrowed target must not keep sending what it excluded.
+  bool _targetStillMatches(Set<String> targetWhenPassStarted) {
+    final current = _settings.backupAlbumIds();
+    return current.length == targetWhenPassStarted.length &&
+        current.containsAll(targetWhenPassStarted);
+  }
+
   /// Whether the connection the device is on right now is one auto-upload is
   /// allowed to spend. Both the setting and the connection are re-read on
   /// every call, so neither is captured at the start of a pass.
@@ -162,8 +185,10 @@ final class SyncNewPhotosUseCase {
     final uploaded = await _history.uploadedLocalIds();
     // An empty selection means the whole library — queried as a single
     // pass over the platform's "everything" bucket rather than as every
-    // album, so the default costs exactly what it did before.
-    final selectedAlbumIds = _settings.backupAlbumIds();
+    // album, so the default costs exactly what it did before. Copied so the
+    // comparison below cannot be defeated by a repository that hands back
+    // the same mutable set it stores.
+    final selectedAlbumIds = {..._settings.backupAlbumIds()};
     final targets = selectedAlbumIds.isEmpty
         ? const <String?>[null]
         : selectedAlbumIds.toList();
@@ -207,7 +232,7 @@ final class SyncNewPhotosUseCase {
     // unattempted stay unrecorded, so the next pass picks them up.
     final result = await _uploadPhotos.execute(
       pending,
-      mayContinue: _mayUploadOverCurrentConnection,
+      mayContinue: () => _mayContinueSending(selectedAlbumIds),
       // Every pass through here is automatic, whichever isolate runs it —
       // the foreground coordinator's passes are just as unwatched as the
       // background engine's.

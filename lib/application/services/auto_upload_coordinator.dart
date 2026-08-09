@@ -33,6 +33,7 @@ final class AutoUploadCoordinator {
   StreamSubscription<void>? _subscription;
   Timer? _debounce;
   bool _syncing = false;
+  bool _pokedWhileRunning = false;
 
   /// Runs one initial pass and starts watching the library. Idempotent.
   void start() {
@@ -67,23 +68,39 @@ final class AutoUploadCoordinator {
     _debounce = Timer(_debounceDuration, () => unawaited(triggerSync()));
   }
 
-  /// Runs one sync pass, unless one is already running.
+  /// Runs one sync pass, never two at once.
   ///
   /// Overlap protection matters: a pass can take a long time on a slow
   /// connection, and a second concurrent pass would upload the same photos —
   /// the history is only written after each successful upload.
+  ///
+  /// A poke that arrives during a pass is **not** dropped, though. A running
+  /// pass took its preconditions — which albums to read, whether Wi-Fi is
+  /// required — when it started, so it cannot answer a choice made since;
+  /// dropping the poke would leave that choice unapplied until the next
+  /// library change. The poke is remembered and one more pass runs when the
+  /// current one ends.
   Future<void> triggerSync() async {
-    if (_syncing) return;
+    if (_syncing) {
+      _pokedWhileRunning = true;
+      return;
+    }
     _syncing = true;
     try {
-      final report = await _syncNewPhotos.execute();
-      if (report.uploadedCount > 0) {
-        _logger.info(
-          '[AutoUpload] pass uploaded ${report.uploadedCount} photo(s)',
-        );
-      }
+      do {
+        // Cleared before the pass, not after: a poke that lands while this
+        // pass runs must survive into the next iteration.
+        _pokedWhileRunning = false;
+        final report = await _syncNewPhotos.execute();
+        if (report.uploadedCount > 0) {
+          _logger.info(
+            '[AutoUpload] pass uploaded ${report.uploadedCount} photo(s)',
+          );
+        }
+      } while (_pokedWhileRunning);
     } finally {
       _syncing = false;
+      _pokedWhileRunning = false;
     }
   }
 }

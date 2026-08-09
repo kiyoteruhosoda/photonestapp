@@ -632,6 +632,31 @@ void main() {
       expect(uploads.uploaded, hasLength(1));
     });
 
+    test('narrowing the target mid-pass stops the rest of the batch', () async {
+      settings.albumIds = {'camera', 'screenshots'};
+      library.photosByAlbum['camera'] = [
+        testLocalPhoto(localId: 'photo-0', takenAt: DateTime.utc(2026, 8, 5)),
+      ];
+      library.photosByAlbum['screenshots'] = [
+        testLocalPhoto(localId: 'shot-0', takenAt: DateTime.utc(2026, 8, 5, 9)),
+      ];
+      library.bytesById['photo-0'] = Uint8List.fromList([1]);
+      library.bytesById['shot-0'] = Uint8List.fromList([2]);
+      // Sending originals takes minutes; the reader narrows the target while
+      // the batch is still running. Nothing excluded may keep going out.
+      uploads.gate = (photo) async {
+        if (photo.localId == 'photo-0') settings.albumIds = {'camera'};
+      };
+
+      final report = await syncUseCase().execute();
+
+      expect(uploads.uploaded.map((entry) => entry.$1.localId), ['photo-0']);
+      expect(report.result?.cancelled, isTrue);
+      // Nothing was recorded for the photo that was never attempted, so the
+      // next pass is free to decide about it under the new choice.
+      expect(history.marked.map((photo) => photo.localId), ['photo-0']);
+    });
+
     test('an album that no longer exists does not stop the pass', () async {
       settings.albumIds = {'gone', 'camera'};
       library.photosByAlbum['camera'] = [

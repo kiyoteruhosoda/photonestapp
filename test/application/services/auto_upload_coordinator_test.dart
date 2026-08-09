@@ -156,4 +156,26 @@ void main() {
     // history is only written once an upload finishes.
     expect(uploads.uploaded, hasLength(1));
   });
+
+  test('a trigger during a pass is answered once that pass ends', () async {
+    seed('first');
+    final subject = coordinator();
+    addTearDown(subject.stop);
+    // A pass takes its preconditions — which albums to read, whether Wi-Fi is
+    // required — when it starts, so a choice saved while it runs can only be
+    // answered by a further pass. Dropping the poke would leave that choice
+    // unapplied until the next library change.
+    uploads.gate = (photo) async {
+      if (photo.localId != 'first') return;
+      seed('second');
+      await subject.triggerSync();
+    };
+
+    await subject.triggerSync();
+
+    expect(uploads.uploaded.map((entry) => entry.$1.localId), [
+      'first',
+      'second',
+    ]);
+  });
 }

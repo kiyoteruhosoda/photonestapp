@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/l10n/error_descriptions.dart';
 import 'package:photonest/presentation/providers/media_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
 import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
@@ -136,6 +138,13 @@ class _TrashRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final busy = ref.watch(mediaCurationProvider).isBusy(item.id);
+    // The server guards restore with the same permission as deletion, so a
+    // session that may not delete may not bring anything back either. The
+    // rows stay — what was thrown away is still worth seeing — but without
+    // an action that could only ever answer 403.
+    final canRestore = ref
+        .watch(grantedPermissionsProvider)
+        .allows(MediaPermission.trashMedia);
     return ListTile(
       leading: SizedBox(
         width: 56,
@@ -146,16 +155,18 @@ class _TrashRow extends ConsumerWidget {
       ),
       title: Text(item.filename, overflow: TextOverflow.ellipsis),
       subtitle: item.isVideo ? Text(l10n.mediaVideoLabel) : null,
-      trailing: busy
-          ? const SizedBox(
-              width: AppSpacing.lg,
-              height: AppSpacing.lg,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : TextButton(
-              onPressed: () => unawaited(_restore(context, ref)),
-              child: Text(l10n.trashRestore),
-            ),
+      trailing: switch ((busy, canRestore)) {
+        (true, _) => const SizedBox(
+          width: AppSpacing.lg,
+          height: AppSpacing.lg,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        (false, true) => TextButton(
+          onPressed: () => unawaited(_restore(context, ref)),
+          child: Text(l10n.trashRestore),
+        ),
+        (false, false) => null,
+      },
     );
   }
 }

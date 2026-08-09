@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/l10n/error_descriptions.dart';
 import 'package:photonest/presentation/providers/media_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
 import 'package:photonest/presentation/widgets/ui/media_tag_editor.dart';
 import 'package:photonest/presentation/widgets/ui/thumbnail_image.dart';
@@ -185,6 +187,7 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final curating = ref.watch(mediaCurationProvider);
+    final permissions = ref.watch(grantedPermissionsProvider);
     final item = _current;
     return Dialog.fullscreen(
       backgroundColor: Colors.black,
@@ -214,9 +217,21 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
               position: l10n.mediaViewerPosition(_index + 1, _items.length),
               isFavorite: item.isFavorite,
               busy: curating.isBusy(item.id),
-              onToggleFavorite: () => unawaited(_toggleFavorite()),
-              onEditTags: () => unawaited(_editTags()),
-              onMoveToTrash: () => unawaited(_moveToTrash()),
+              // Null where the session holds no permission for the call
+              // behind the button, which drops the button from the bar.
+              // Dropped rather than disabled: the bar is a row of icons over
+              // the photo, and a greyed-out icon there reads as "not yet"
+              // instead of "not yours" — the permission does not come back
+              // by waiting.
+              onToggleFavorite: permissions.allows(MediaPermission.markFavorite)
+                  ? () => unawaited(_toggleFavorite())
+                  : null,
+              onEditTags: permissions.allows(MediaPermission.tagMedia)
+                  ? () => unawaited(_editTags())
+                  : null,
+              onMoveToTrash: permissions.allows(MediaPermission.trashMedia)
+                  ? () => unawaited(_moveToTrash())
+                  : null,
               // Videos stream a rendition the player owns, so there is
               // nothing to swap in place; saving is how their untouched file
               // is reached.
@@ -253,13 +268,17 @@ class _ViewerBar extends StatelessWidget {
   /// True while this item's favourite or trash request is in flight — the
   /// controls disable so a double tap cannot send twice.
   final bool busy;
-  final VoidCallback onToggleFavorite;
 
-  /// Opens the tag editor. Not gated on [busy]: tagging is a separate
-  /// request from the favourite and trash calls, and the editor sends
-  /// nothing until the reader saves.
-  final VoidCallback onEditTags;
-  final VoidCallback onMoveToTrash;
+  /// Null when the session may not mark favourites, which hides the button.
+  final VoidCallback? onToggleFavorite;
+
+  /// Opens the tag editor; null when the session may not manage tags. Not
+  /// gated on [busy]: tagging is a separate request from the favourite and
+  /// trash calls, and the editor sends nothing until the reader saves.
+  final VoidCallback? onEditTags;
+
+  /// Null when the session may not delete, which hides the button.
+  final VoidCallback? onMoveToTrash;
   final VoidCallback? onShowOriginal;
   final VoidCallback? onSave;
   final bool saving;
@@ -284,28 +303,31 @@ class _ViewerBar extends StatelessWidget {
                 style: const TextStyle(color: Colors.white),
               ),
             ),
-            IconButton(
-              onPressed: busy ? null : onToggleFavorite,
-              tooltip: isFavorite
-                  ? l10n.mediaRemoveFavorite
-                  : l10n.mediaAddFavorite,
-              icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
-              color: isFavorite ? Colors.redAccent : Colors.white,
-              disabledColor: Colors.white38,
-            ),
-            IconButton(
-              onPressed: onEditTags,
-              tooltip: l10n.mediaTagsTitle,
-              icon: const Icon(Icons.label_outline),
-              color: Colors.white,
-            ),
-            IconButton(
-              onPressed: busy ? null : onMoveToTrash,
-              tooltip: l10n.mediaMoveToTrash,
-              icon: const Icon(Icons.delete_outline),
-              color: Colors.white,
-              disabledColor: Colors.white38,
-            ),
+            if (onToggleFavorite != null)
+              IconButton(
+                onPressed: busy ? null : onToggleFavorite,
+                tooltip: isFavorite
+                    ? l10n.mediaRemoveFavorite
+                    : l10n.mediaAddFavorite,
+                icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
+                color: isFavorite ? Colors.redAccent : Colors.white,
+                disabledColor: Colors.white38,
+              ),
+            if (onEditTags != null)
+              IconButton(
+                onPressed: onEditTags,
+                tooltip: l10n.mediaTagsTitle,
+                icon: const Icon(Icons.label_outline),
+                color: Colors.white,
+              ),
+            if (onMoveToTrash != null)
+              IconButton(
+                onPressed: busy ? null : onMoveToTrash,
+                tooltip: l10n.mediaMoveToTrash,
+                icon: const Icon(Icons.delete_outline),
+                color: Colors.white,
+                disabledColor: Colors.white38,
+              ),
             IconButton(
               onPressed: onShowOriginal,
               tooltip: l10n.mediaShowOriginal,

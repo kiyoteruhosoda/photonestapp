@@ -8,6 +8,7 @@ import 'package:photonest/domain/repositories/auto_upload_settings_repository.da
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
 import 'package:photonest/domain/repositories/upload_history_repository.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 
 /// Why a sync pass ended, so the caller can tell "nothing to do" apart from
 /// "could not run".
@@ -17,6 +18,10 @@ enum SyncSkipReason {
 
   /// Nobody is signed in, so there is nowhere to upload to.
   notSignedIn,
+
+  /// The signed-in session holds no upload permission, so the server would
+  /// refuse every photo this pass sent.
+  notPermitted,
 
   /// Auto-upload is restricted to unmetered connections and the device is
   /// on a metered one (or offline).
@@ -99,8 +104,19 @@ final class SyncNewPhotosUseCase {
     if (!_settings.isEnabled()) {
       return const SyncReport.skippedBecause(SyncSkipReason.disabled);
     }
-    if (_sessions.load() == null) {
+    final session = _sessions.load();
+    if (session == null) {
       return const SyncReport.skippedBecause(SyncSkipReason.notSignedIn);
+    }
+    // Checked here rather than only in the UI: this pass runs unwatched — at
+    // launch, on every library change, and from the background engine — so a
+    // session that lost `media:upload` would keep sending photos the server
+    // can only refuse, recording each 403 as a failure the reader never asked
+    // for. The upload screen is hidden from such a session, which is exactly
+    // why the automatic path cannot rely on it.
+    if (!GrantedPermissions.of(session).allows(MediaPermission.uploadMedia)) {
+      _logger.warning('[AutoUpload] session may not upload — skipping');
+      return const SyncReport.skippedBecause(SyncSkipReason.notPermitted);
     }
     // Checked before library access so a pass that is going to be skipped
     // anyway never triggers a permission prompt. The background pass is

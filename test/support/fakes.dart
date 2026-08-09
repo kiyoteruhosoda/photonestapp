@@ -263,10 +263,33 @@ final class FakeBackupNotificationRepository
 // ─── PhotoNest fakes ───────────────────────────────────────────────────────
 
 /// A ready-made session for tests that just need to be "signed in".
+///
+/// Carries what the server's ordinary member role grants, because screens now
+/// drop the controls a session has no permission for: a thinner scope list
+/// here would silently stop testing the tag, favourite, trash and upload
+/// paths. Use [restrictedTestAuthSession] to test what a reader without them
+/// sees.
 final AuthSession testAuthSession = AuthSession(
   accessToken: 'access-token',
   refreshToken: 'refresh-token',
   email: 'user@example.com',
+  scopes: const [
+    'gui:view',
+    'album:view',
+    'media:view',
+    'media:upload',
+    'media:tag-manage',
+    'media:metadata-manage',
+    'media:delete',
+  ],
+);
+
+/// A session that may look at the library and nothing else — the read-only
+/// role the server hands out.
+final AuthSession restrictedTestAuthSession = AuthSession(
+  accessToken: 'access-token',
+  refreshToken: 'refresh-token',
+  email: 'reader@example.com',
   scopes: const ['gui:view', 'album:view', 'media:view'],
 );
 

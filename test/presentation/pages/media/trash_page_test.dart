@@ -87,5 +87,20 @@ void main() {
 
       expect(find.text('gone.jpg'), findsOneWidget);
     });
+
+    testWidgets('a reader who may not delete is offered no way back', (
+      tester,
+    ) async {
+      final scope = TestScope(
+        sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+        mediaLibraryRepository: FakeMediaLibraryRepository()
+          ..trashed = [testMediaItem(id: 9, filename: 'gone.jpg')],
+      );
+      await pumpInScope(tester, const TrashPage(), scope: scope);
+      await tester.pumpAndSettle();
+
+      expect(find.text('gone.jpg'), findsOneWidget);
+      expect(find.text(l10n.trashRestore), findsNothing);
+    });
   });
 }

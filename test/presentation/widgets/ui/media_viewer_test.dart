@@ -250,4 +250,21 @@ void main() {
 
     expect(find.byType(PageView), findsNothing);
   });
+
+  testWidgets('a reader without the permissions is offered no curation', (
+    tester,
+  ) async {
+    final scope = TestScope(
+      sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+    );
+    await openViewer(tester, items: photos(1), scope: scope);
+
+    expect(find.byIcon(Icons.favorite_border), findsNothing);
+    expect(find.byIcon(Icons.label_outline), findsNothing);
+    expect(find.byIcon(Icons.delete_outline), findsNothing);
+    // Looking is still what the viewer is for, so the read-only controls
+    // stay.
+    expect(find.byIcon(Icons.hd_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+  });
 }

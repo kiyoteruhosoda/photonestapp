@@ -110,6 +110,7 @@ import 'package:photonest/domain/value_objects/log_level.dart';
 import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/domain/value_objects/media_library_query.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/domain/value_objects/tag_id.dart';
 import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 import 'package:photonest/infrastructure/background/workmanager_background_sync_scheduler.dart';

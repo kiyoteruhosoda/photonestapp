@@ -1,4 +1,5 @@
 import 'package:photonest/domain/entities/media_library_page.dart';
+import 'package:photonest/domain/value_objects/media_library_query.dart';
 
 /// Boundary to the server's whole-library media listing.
 ///
@@ -12,5 +13,12 @@ abstract interface class MediaLibraryRepository {
   /// for the first window. Cursor (keyset) paging is used rather than an
   /// offset so that media added or removed mid-scroll cannot make the
   /// timeline skip or repeat items, and so deep positions stay cheap.
-  Future<MediaLibraryPage> findPage({String? cursor, int pageSize = 100});
+  ///
+  /// [query] narrows what the windows are cut from. Changing it invalidates
+  /// any cursor taken under the previous one.
+  Future<MediaLibraryPage> findPage({
+    String? cursor,
+    int pageSize = 100,
+    MediaLibraryQuery query = const MediaLibraryQuery(),
+  });
 }

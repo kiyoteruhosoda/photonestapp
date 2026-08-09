@@ -218,13 +218,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get homeListCardItem2 => 'Item 2';
 
-  // ─── Search tab ───────────────────────────────────────────────────────
+  // ─── Media search ─────────────────────────────────────────────────────
   @override
   String get searchFieldLabel => 'Search';
   @override
-  String get searchFieldHint => 'Enter keyword';
+  String get searchFieldHint => 'Filename, camera, caption or tag';
   @override
-  String get searchEmptyMessage => 'Enter a keyword to search';
+  String get searchNoResults => 'No photos match the current filters';
+  @override
+  String get searchClearFilters => 'Clear filters';
+  @override
+  String get searchFilterAll => 'All';
+  @override
+  String get searchFilterPhotos => 'Photos';
+  @override
+  String get searchFilterVideos => 'Videos';
+  @override
+  String get searchFilterFavorites => 'Favorites';
 
   // ─── Settings tab ─────────────────────────────────────────────────────
   @override

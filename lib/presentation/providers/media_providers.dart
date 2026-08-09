@@ -10,6 +10,7 @@ import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/entities/media_library_page.dart';
 import 'package:photonest/domain/entities/signed_media_url.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_library_query.dart';
 import 'package:photonest/presentation/providers/app_providers.dart';
 import 'package:photonest/presentation/providers/session_providers.dart';
 
@@ -151,6 +152,45 @@ final class LibraryMediaState {
   }
 }
 
+/// How the reader has narrowed the timeline (free text / kind / favourites).
+///
+/// Separate from [libraryMediaProvider] so that typing in the search field
+/// does not itself hold the loaded media: the notifier watches this and
+/// rebuilds from the first window whenever it changes.
+final NotifierProvider<LibraryMediaQueryNotifier, MediaLibraryQuery>
+libraryMediaQueryProvider =
+    NotifierProvider<LibraryMediaQueryNotifier, MediaLibraryQuery>(
+      LibraryMediaQueryNotifier.new,
+    );
+
+/// Holds the narrowing the reader has asked for.
+class LibraryMediaQueryNotifier extends Notifier<MediaLibraryQuery> {
+  @override
+  MediaLibraryQuery build() => const MediaLibraryQuery();
+
+  /// Sets the free-text search. Blank clears it.
+  void search(String text) {
+    if (state.text == text) return;
+    state = state.copyWith(text: text);
+  }
+
+  void filterByKind(MediaKindFilter kind) {
+    if (state.kind == kind) return;
+    state = state.copyWith(kind: kind);
+  }
+
+  void showFavoritesOnly(bool favoritesOnly) {
+    if (state.favoritesOnly == favoritesOnly) return;
+    state = state.copyWith(favoritesOnly: favoritesOnly);
+  }
+
+  /// Back to the plain chronological library.
+  void clear() {
+    if (state.isUnfiltered) return;
+    state = const MediaLibraryQuery();
+  }
+}
+
 /// The whole library in capture order, paged in as the timeline scrolls.
 final AsyncNotifierProvider<LibraryMediaNotifier, LibraryMediaState>
 libraryMediaProvider =
@@ -173,10 +213,13 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
     // Rebuilds when the signed-in identity changes, so a login to another
     // account or server never shows the previous identity's media.
     ref.watch(sessionIdentityProvider);
+    // ...and when the reader narrows the library: a cursor taken under the
+    // previous narrowing points into a different result set.
+    final query = ref.watch(libraryMediaQueryProvider);
     _generation++;
     final page = await ref
         .read(listLibraryMediaUseCaseProvider)
-        .execute(pageSize: libraryMediaPageSize);
+        .execute(pageSize: libraryMediaPageSize, query: query);
     return LibraryMediaState(media: page.items, nextCursor: page.nextCursor);
   }
 
@@ -205,7 +248,11 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
     try {
       page = await ref
           .read(listLibraryMediaUseCaseProvider)
-          .execute(cursor: current.nextCursor, pageSize: libraryMediaPageSize);
+          .execute(
+            cursor: current.nextCursor,
+            pageSize: libraryMediaPageSize,
+            query: ref.read(libraryMediaQueryProvider),
+          );
     } on Object {
       if (generation != _generation) return;
       state = AsyncValue.data(

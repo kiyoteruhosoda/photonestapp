@@ -204,13 +204,23 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get homeListCardItem2 => '項目 2';
 
-  // ─── Search tab ───────────────────────────────────────────────────────
+  // ─── Media search ─────────────────────────────────────────────────────
   @override
   String get searchFieldLabel => '検索';
   @override
-  String get searchFieldHint => 'キーワードを入力';
+  String get searchFieldHint => 'ファイル名・カメラ・キャプション・タグ';
   @override
-  String get searchEmptyMessage => 'キーワードを入力して検索してください';
+  String get searchNoResults => '条件に合う写真がありません';
+  @override
+  String get searchClearFilters => '条件をクリア';
+  @override
+  String get searchFilterAll => 'すべて';
+  @override
+  String get searchFilterPhotos => '写真';
+  @override
+  String get searchFilterVideos => '動画';
+  @override
+  String get searchFilterFavorites => 'お気に入り';
 
   // ─── Settings tab ─────────────────────────────────────────────────────
   @override

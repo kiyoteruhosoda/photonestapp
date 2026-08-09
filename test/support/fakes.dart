@@ -42,6 +42,7 @@ import 'package:photonest/domain/value_objects/app_theme_mode.dart';
 import 'package:photonest/domain/value_objects/log_level.dart';
 import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_library_query.dart';
 
 /// In-memory repository doubles.
 ///
@@ -439,6 +440,15 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
   /// cursor is null.
   final List<(String?, int)> requestedPages = <(String?, int)>[];
 
+  /// Narrowings requested, in order. Lets a test assert that the timeline
+  /// re-read the library when the reader changed the search.
+  final List<MediaLibraryQuery> requestedQueries = <MediaLibraryQuery>[];
+
+  /// When set, only media whose filename contains this fake's idea of a
+  /// match is answered — enough to tell "the search reached the server"
+  /// from "the list was filtered on the device".
+  bool Function(MediaItem item, MediaLibraryQuery query)? matches;
+
   /// When set, every request throws this instead of answering.
   AppError? failure;
 
@@ -454,21 +464,27 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
   Future<MediaLibraryPage> findPage({
     String? cursor,
     int pageSize = 100,
+    MediaLibraryQuery query = const MediaLibraryQuery(),
   }) async {
     requestedPages.add((cursor, pageSize));
+    requestedQueries.add(query);
     await gate?.call();
     final error = failure;
     if (error != null) throw error;
+    final predicate = matches;
+    final source = predicate == null
+        ? media
+        : media.where((item) => predicate(item, query)).toList(growable: false);
     final start = cursor == null
         ? 0
         : int.parse(cursor.substring(_cursorPrefix.length));
-    if (start >= media.length) {
+    if (start >= source.length) {
       return const MediaLibraryPage(items: <MediaItem>[], nextCursor: null);
     }
     final end = start + pageSize;
-    final hasNext = end < media.length;
+    final hasNext = end < source.length;
     return MediaLibraryPage(
-      items: media.sublist(start, hasNext ? end : media.length),
+      items: source.sublist(start, hasNext ? end : source.length),
       nextCursor: hasNext ? '$_cursorPrefix$end' : null,
     );
   }

@@ -3,6 +3,7 @@ import 'package:photonest/domain/entities/media_library_page.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_library_query.dart';
 import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 /// [MediaLibraryRepository] backed by the PhotoNest `GET /api/media`
@@ -21,6 +22,7 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
   Future<MediaLibraryPage> findPage({
     String? cursor,
     int pageSize = 100,
+    MediaLibraryQuery query = const MediaLibraryQuery(),
   }) async {
     final payload = await _client.getJson(
       '/media',
@@ -31,6 +33,12 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
         'order': 'desc',
         // Omitted on the first window; the server then starts from the top.
         'cursor': ?cursor,
+        // Absent filters are omitted rather than sent empty: the server
+        // treats a present-but-blank q as a match against '' and would
+        // return nothing.
+        'q': ?query.searchText,
+        'type': ?query.kind.queryValue,
+        if (query.favoritesOnly) 'favorite': '1',
       },
     );
     final items = payload['items'];

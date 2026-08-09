@@ -83,7 +83,12 @@ void main() {
 
       // Scroll towards the end. The load-more cell is built — and the next
       // page requested — as soon as it comes within the grid's build range.
-      final scrollable = find.byType(Scrollable).first;
+      // The timeline's scrollable is named explicitly: the search field above
+      // it has one of its own, and `Scrollable.first` would drag that instead.
+      final scrollable = find.descendant(
+        of: find.byType(CustomScrollView),
+        matching: find.byType(Scrollable),
+      );
       for (var i = 0; i < 60 && repository.requestedPages.length < 2; i++) {
         await tester.drag(scrollable, const Offset(0, -600));
         await tester.pump();

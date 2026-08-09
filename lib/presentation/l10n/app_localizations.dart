@@ -140,10 +140,15 @@ abstract class AppLocalizations {
   String get homeListCardSubtitle;
   String get homeListCardItem2;
 
-  // ─── Search tab ───────────────────────────────────────────────────────
+  // ─── Media search ─────────────────────────────────────────────────────
   String get searchFieldLabel;
   String get searchFieldHint;
-  String get searchEmptyMessage;
+  String get searchNoResults;
+  String get searchClearFilters;
+  String get searchFilterAll;
+  String get searchFilterPhotos;
+  String get searchFilterVideos;
+  String get searchFilterFavorites;
 
   // ─── Settings tab ─────────────────────────────────────────────────────
   String get settingsTitle;

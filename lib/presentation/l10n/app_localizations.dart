@@ -37,7 +37,6 @@ abstract class AppLocalizations {
   // ─── Navigation ───────────────────────────────────────────────────────
   String get appName;
   String get navHome;
-  String get navSearch;
   String get navSettings;
   String get navAlbums;
   String get navPhotos;
@@ -99,7 +98,6 @@ abstract class AppLocalizations {
   String get trashRestoreFailed;
 
   // ─── Upload ───────────────────────────────────────────────────────────
-  String get uploadTitle;
   String get uploadAutoTitle;
   String get uploadAutoSubtitle;
   String get uploadAutoDenied;
@@ -110,7 +108,6 @@ abstract class AppLocalizations {
   String get uploadPermissionRetry;
   String get uploadEmpty;
   String get uploadRecentSection;
-  String get uploadSelected;
   String uploadSelectedCount(int count);
   String get uploadSubmit;
   String uploadDone(int count);
@@ -141,18 +138,6 @@ abstract class AppLocalizations {
   String get drawerDebug;
   String get drawerLogs;
   String get drawerDeepLink;
-
-  // ─── Home tab ─────────────────────────────────────────────────────────
-  String get homeWelcomeTitle;
-  String get homeCardBody;
-  String get homeComponentsTitle;
-  String get homePrimaryButton;
-  String get homeSecondaryButton;
-  String get homeTextFieldLabel;
-  String get homeTextFieldHint;
-  String get homeListCardTitle;
-  String get homeListCardSubtitle;
-  String get homeListCardItem2;
 
   // ─── Media search ─────────────────────────────────────────────────────
   String get searchFieldLabel;
@@ -194,7 +179,6 @@ abstract class AppLocalizations {
   String get aboutPlatform;
   String get aboutPlatformValue;
   String get aboutDebugUnlocked;
-  String get aboutDebugAlreadyOn;
 
   // ─── Debug page ───────────────────────────────────────────────────────
   String get debugTitle;
@@ -281,8 +265,6 @@ abstract class AppLocalizations {
   String get deepLinkCopied;
 
   // ─── Licenses page ───────────────────────────────────────────────────
-  String get licensesTitle;
-  String get licensesDetails;
 
   // ─── Common ──────────────────────────────────────────────────────────
   String get commonRetry;
@@ -294,9 +276,7 @@ abstract class AppLocalizations {
   String get commonNotifications;
   String get commonNotFound;
   String get commonPageNotFound;
-  String get commonLoading;
   String get commonError;
-  String get commonEmpty;
 }
 
 class _AppLocalizationsDelegate

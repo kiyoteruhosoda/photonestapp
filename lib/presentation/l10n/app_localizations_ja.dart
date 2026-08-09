@@ -10,8 +10,6 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get navHome => 'ホーム';
   @override
-  String get navSearch => '検索';
-  @override
   String get navSettings => '設定';
   @override
   String get navAlbums => 'アルバム';
@@ -125,8 +123,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   // ─── Upload ───────────────────────────────────────────────────────────
   @override
-  String get uploadTitle => 'アップロード';
-  @override
   String get uploadAutoTitle => '新しい写真を自動アップロード';
   @override
   String get uploadAutoSubtitle => 'これから撮影した写真を自動的にアップロードします。';
@@ -146,8 +142,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get uploadEmpty => 'この端末に写真が見つかりません。';
   @override
   String get uploadRecentSection => '最近の写真';
-  @override
-  String get uploadSelected => '選択中';
   @override
   String uploadSelectedCount(int count) => '$count 件選択中';
   @override
@@ -205,30 +199,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get drawerLogs => 'ログ';
   @override
   String get drawerDeepLink => 'ディープリンク';
-
-  // ─── Home tab ─────────────────────────────────────────────────────────
-  @override
-  String get homeWelcomeTitle => 'ようこそ';
-  @override
-  String get homeCardBody =>
-      'このアプリはデジタル庁デザインシステム（DADS）に準拠しています。'
-      'カラートークン、タイポグラフィ、スペーシングを基盤とした一貫性のあるUIを提供します。';
-  @override
-  String get homeComponentsTitle => 'コンポーネント';
-  @override
-  String get homePrimaryButton => 'プライマリボタン';
-  @override
-  String get homeSecondaryButton => 'セカンダリボタン';
-  @override
-  String get homeTextFieldLabel => 'テキスト入力';
-  @override
-  String get homeTextFieldHint => 'ここに入力してください';
-  @override
-  String get homeListCardTitle => 'リストカード';
-  @override
-  String get homeListCardSubtitle => 'サブタイトル';
-  @override
-  String get homeListCardItem2 => '項目 2';
 
   // ─── Media search ─────────────────────────────────────────────────────
   @override
@@ -303,8 +273,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get aboutPlatformValue => 'Android / iOS';
   @override
   String get aboutDebugUnlocked => 'デバッグモードを有効にしました';
-  @override
-  String get aboutDebugAlreadyOn => 'デバッグモードは既に有効です';
 
   // ─── Debug page ───────────────────────────────────────────────────────
   @override
@@ -467,10 +435,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deepLinkCopied => 'クリップボードにコピーしました';
 
   // ─── Licenses page ───────────────────────────────────────────────────
-  @override
-  String get licensesTitle => 'ライセンス';
-  @override
-  String get licensesDetails => '詳細は各パッケージのライセンスファイルをご参照ください。';
 
   // ─── Common ──────────────────────────────────────────────────────────
   @override
@@ -492,9 +456,5 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get commonPageNotFound => 'ページが見つかりません';
   @override
-  String get commonLoading => '読み込み中...';
-  @override
   String get commonError => 'エラーが発生しました';
-  @override
-  String get commonEmpty => 'データがありません';
 }

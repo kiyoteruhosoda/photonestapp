@@ -10,8 +10,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get navHome => 'Home';
   @override
-  String get navSearch => 'Search';
-  @override
   String get navSettings => 'Settings';
   @override
   String get navAlbums => 'Albums';
@@ -131,8 +129,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   // ─── Upload ───────────────────────────────────────────────────────────
   @override
-  String get uploadTitle => 'Upload';
-  @override
   String get uploadAutoTitle => 'Auto-upload new photos';
   @override
   String get uploadAutoSubtitle =>
@@ -156,8 +152,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uploadEmpty => 'No photos found on this device.';
   @override
   String get uploadRecentSection => 'Recent photos';
-  @override
-  String get uploadSelected => 'Selected';
   @override
   String uploadSelectedCount(int count) =>
       count == 1 ? '1 selected' : '$count selected';
@@ -220,31 +214,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawerLogs => 'Logs';
   @override
   String get drawerDeepLink => 'Deep Links';
-
-  // ─── Home tab ─────────────────────────────────────────────────────────
-  @override
-  String get homeWelcomeTitle => 'Welcome';
-  @override
-  String get homeCardBody =>
-      'This app is built following the Digital Agency Design System (DADS). '
-      'It provides a consistent UI based on color tokens, typography, '
-      'and spacing.';
-  @override
-  String get homeComponentsTitle => 'Components';
-  @override
-  String get homePrimaryButton => 'Primary Button';
-  @override
-  String get homeSecondaryButton => 'Secondary Button';
-  @override
-  String get homeTextFieldLabel => 'Text Input';
-  @override
-  String get homeTextFieldHint => 'Enter text here';
-  @override
-  String get homeListCardTitle => 'List Card';
-  @override
-  String get homeListCardSubtitle => 'Subtitle text';
-  @override
-  String get homeListCardItem2 => 'Item 2';
 
   // ─── Media search ─────────────────────────────────────────────────────
   @override
@@ -319,8 +288,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutPlatformValue => 'Android / iOS';
   @override
   String get aboutDebugUnlocked => 'Debug mode enabled';
-  @override
-  String get aboutDebugAlreadyOn => 'Debug mode is already on';
 
   // ─── Debug page ───────────────────────────────────────────────────────
   @override
@@ -486,11 +453,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deepLinkCopied => 'Copied to clipboard';
 
   // ─── Licenses page ───────────────────────────────────────────────────
-  @override
-  String get licensesTitle => 'Licenses';
-  @override
-  String get licensesDetails =>
-      'Please refer to the package license file for details.';
 
   // ─── Common ──────────────────────────────────────────────────────────
   @override
@@ -514,9 +476,5 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get commonPageNotFound => 'Page Not Found';
   @override
-  String get commonLoading => 'Loading...';
-  @override
   String get commonError => 'An error occurred';
-  @override
-  String get commonEmpty => 'No data';
 }

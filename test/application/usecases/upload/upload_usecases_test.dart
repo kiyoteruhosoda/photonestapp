@@ -356,6 +356,26 @@ void main() {
       expect(report.skipped, SyncSkipReason.notSignedIn);
     });
 
+    test('skips when the session may not upload', () async {
+      settings
+        ..enabled = true
+        ..since = DateTime.utc(2026, 8, 1);
+      sessions = FakeSessionRepository(restrictedTestAuthSession);
+      library.photos = [
+        testLocalPhoto(localId: 'new', takenAt: DateTime.utc(2026, 8, 3)),
+      ];
+
+      final report = await syncUseCase().execute();
+
+      expect(report.skipped, SyncSkipReason.notPermitted);
+      // Nothing was sent and nothing was recorded as failed: the pass runs
+      // unwatched on every library change, so a session without the
+      // permission would otherwise fill the list with 403s the reader has no
+      // screen left to turn off.
+      expect(uploads.uploaded, isEmpty);
+      expect(await failures.list(), isEmpty);
+    });
+
     test('skips when the library access is denied', () async {
       settings.enabled = true;
       library.accessGranted = false;

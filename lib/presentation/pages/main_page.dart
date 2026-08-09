@@ -32,6 +32,21 @@ class _MainPageState extends ConsumerState<MainPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // A permission can go away under a reader who is already standing on the
+    // destination it opens — a role change lands at the next token refresh.
+    // The move off that destination is *recorded*, not just rendered: leaving
+    // `_selected` pointing at a hidden tab would snap the reader back to it if
+    // the permission returned before they chose somewhere else.
+    //
+    // Listened to rather than assigned during build, which cannot call
+    // setState; the listener fires after the frame the permission changed in,
+    // and the fallback below draws that frame.
+    ref.listen(grantedPermissionsProvider, (_, granted) {
+      if (_selected == _Tab.upload &&
+          !granted.allows(MediaPermission.uploadMedia)) {
+        setState(() => _selected = _Tab.photos);
+      }
+    });
     // Upload is a destination rather than a button, so a session without the
     // permission loses the whole tab: every control on that screen ends in a
     // call the server refuses, and a tab that can only fail is worse than no
@@ -67,9 +82,9 @@ class _MainPageState extends ConsumerState<MainPage> {
         selectedIcon: Icons.settings,
       ),
     ];
-    // A permission can go away under a reader who is already standing on the
-    // tab it opens — a role change lands at the next token refresh. Falling
-    // back keeps the bar's selection and the screen below it in step.
+    // Covers the frame between the permission changing and the listener
+    // above recording the move, and the case of a reader who was already on
+    // the hidden tab when this screen was first built.
     final selected = tabs.any((item) => item.tab == _selected)
         ? _selected
         : _Tab.photos;

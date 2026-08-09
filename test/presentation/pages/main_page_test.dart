@@ -159,6 +159,27 @@ void main() {
       expect(inBody(l10n.settingsTitle), findsOneWidget);
     });
 
+    testWidgets('losing the permission while on Upload moves off it for good', (
+      tester,
+    ) async {
+      final scope = TestScope();
+      await pumpInScope(tester, const MainPage(), scope: scope);
+      await selectTab(tester, 2);
+      expect(find.text(l10n.uploadAutoTitle), findsOneWidget);
+
+      // A role change lands at the next token refresh.
+      await scope.sessionRepository.save(restrictedTestAuthSession);
+      await tester.pumpAndSettle();
+      expect(find.textContaining(l10n.photosEmpty), findsOneWidget);
+
+      // Getting the permission back must not snap the reader back to a tab
+      // they were moved off — the move was recorded, not just rendered.
+      await scope.sessionRepository.save(testAuthSession);
+      await tester.pumpAndSettle();
+      expect(find.textContaining(l10n.photosEmpty), findsOneWidget);
+      expect(find.byType(NavigationDestination), findsNWidgets(4));
+    });
+
     testWidgets('a reader who may not delete has no Trash entry', (
       tester,
     ) async {

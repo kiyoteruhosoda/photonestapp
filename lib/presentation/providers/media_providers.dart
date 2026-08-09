@@ -13,6 +13,7 @@ import 'package:photonest/domain/entities/media_library_page.dart';
 import 'package:photonest/domain/entities/signed_media_url.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/domain/value_objects/media_library_query.dart';
+import 'package:photonest/presentation/providers/album_providers.dart';
 import 'package:photonest/presentation/providers/app_providers.dart';
 import 'package:photonest/presentation/providers/session_providers.dart';
 
@@ -219,19 +220,25 @@ mediaCurationProvider =
       MediaCurationNotifier.new,
     );
 
-/// What the curation controls need to render: which item is mid-change, and
+/// What the curation controls need to render: which items are mid-change, and
 /// the last failure to report.
 final class MediaCurationState {
-  const MediaCurationState({this.busyId, this.lastFailure});
+  const MediaCurationState({
+    this.busyIds = const <MediaId>{},
+    this.lastFailure,
+  });
 
-  /// The media a request is in flight for, or null when idle. The control
-  /// for that item disables itself so a double tap cannot send twice.
-  final MediaId? busyId;
+  /// The media requests are in flight for. Tracked per item rather than as
+  /// one global flag: the trash lists many rows at once, and a single flag
+  /// would either disable every other Restore button or — worse — leave them
+  /// enabled while the notifier rejects them, reporting a failure that never
+  /// reached the server.
+  final Set<MediaId> busyIds;
 
   /// The most recent failure, for the caller to show and then clear.
   final Object? lastFailure;
 
-  bool isBusy(MediaId id) => busyId == id;
+  bool isBusy(MediaId id) => busyIds.contains(id);
 }
 
 /// Runs the curation calls and writes the result into the loaded timeline.
@@ -256,6 +263,16 @@ class MediaCurationNotifier extends Notifier<MediaCurationState> {
     final result = await _run(item.id, () async {
       await ref.read(curateMediaUseCaseProvider).moveToTrash(item.id);
       _removeFromTimeline(item.id);
+      // The viewer is shared: this media may also be sitting in an album's
+      // grid, which would keep listing it and would hand it back to the
+      // viewer on the next tap. Every loaded album is re-read rather than
+      // patched — the notifier cannot reach into a family's instances, and
+      // a deletion has to change those grids anyway.
+      //
+      // Only deletions do this. A favourite mark is not drawn on a tile, so
+      // invalidating for one would reset a half-scrolled album grid to its
+      // first page in exchange for nothing visible.
+      ref.invalidate(albumDetailProvider);
       return true;
     });
     return result ?? false;
@@ -275,23 +292,40 @@ class MediaCurationNotifier extends Notifier<MediaCurationState> {
   /// Clears the last failure once the screen has shown it.
   void acknowledgeFailure() {
     if (state.lastFailure == null) return;
-    state = MediaCurationState(busyId: state.busyId);
+    state = MediaCurationState(busyIds: state.busyIds);
   }
 
+  /// Runs one curation call, marking [id] busy for its duration.
+  ///
+  /// Requests for *different* media run side by side — each control disables
+  /// only itself, so rejecting the others would report a failure the server
+  /// never saw. A second request for the *same* item is refused, which is
+  /// what the disabled control already prevents in the UI.
   Future<T?> _run<T>(MediaId id, Future<T> Function() action) async {
-    if (state.busyId != null) return null;
-    state = MediaCurationState(busyId: id);
+    if (state.isBusy(id)) return null;
+    state = MediaCurationState(
+      busyIds: {...state.busyIds, id},
+      lastFailure: state.lastFailure,
+    );
     try {
       final result = await action();
-      state = const MediaCurationState();
+      state = MediaCurationState(
+        busyIds: _without(id),
+        lastFailure: state.lastFailure,
+      );
       return result;
     } on Object catch (error) {
       // The failure is state, not an exception to the caller: the screen
       // shows it and the item stays as it was.
-      state = MediaCurationState(lastFailure: error);
+      state = MediaCurationState(busyIds: _without(id), lastFailure: error);
       return null;
     }
   }
+
+  Set<MediaId> _without(MediaId id) => {
+    for (final busy in state.busyIds)
+      if (busy != id) busy,
+  };
 
   void _replaceInTimeline(MediaId id, MediaItem Function(MediaItem) update) {
     _updateTimeline(
@@ -423,33 +457,124 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
 
 // ─── Trash ─────────────────────────────────────────────────────────────────
 
+/// What the trash screen renders: the deletions read so far, plus how far
+/// along the paging is.
+final class TrashedMediaState {
+  const TrashedMediaState({
+    required this.media,
+    required this.nextCursor,
+    this.loadingMore = false,
+    this.loadMoreFailed = false,
+  });
+
+  /// Trashed media accumulated across the windows read so far.
+  final List<MediaItem> media;
+
+  /// Where the next window starts, or null once the trash is fully read.
+  final String? nextCursor;
+
+  bool get hasMore => nextCursor != null;
+
+  /// True while the next window is being fetched.
+  final bool loadingMore;
+
+  /// True when the most recent load-more attempt failed; the tail offers
+  /// the retry.
+  final bool loadMoreFailed;
+
+  /// [nextCursor] goes through a wrapper so that clearing it (reaching the
+  /// end) is expressible — a bare null would mean "keep the old value".
+  TrashedMediaState copyWith({
+    List<MediaItem>? media,
+    ({String? value})? nextCursor,
+    bool? loadingMore,
+    bool? loadMoreFailed,
+  }) {
+    return TrashedMediaState(
+      media: media ?? this.media,
+      nextCursor: nextCursor == null ? this.nextCursor : nextCursor.value,
+      loadingMore: loadingMore ?? this.loadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
+    );
+  }
+}
+
 /// Media in the trash, newest deletion first.
 ///
-/// `autoDispose` on purpose, unlike the library timeline: the trash is opened
-/// deliberately and rarely, and holding a list of media that is about to be
-/// purged would only go stale. Leaving the screen forgets it, so reopening
-/// asks the server again.
-final AsyncNotifierProvider<TrashedMediaNotifier, List<MediaItem>>
+/// `autoDispose` unlike the library timeline: the trash is opened
+/// deliberately and rarely, and it goes stale from underneath — the server
+/// purges on a schedule, another device restores, and deleting from the
+/// timeline adds to it. Forgetting it when the screen closes means reopening
+/// always asks the server rather than showing a list that quietly predates
+/// the last deletion.
+final AsyncNotifierProvider<TrashedMediaNotifier, TrashedMediaState>
 trashedMediaProvider =
-    AsyncNotifierProvider<TrashedMediaNotifier, List<MediaItem>>(
+    AsyncNotifierProvider.autoDispose<TrashedMediaNotifier, TrashedMediaState>(
       TrashedMediaNotifier.new,
     );
 
-/// Reads the trash and drops restored media from it.
-class TrashedMediaNotifier extends AsyncNotifier<List<MediaItem>> {
+/// Reads the trash, pages it in, and drops restored media from it.
+class TrashedMediaNotifier extends AsyncNotifier<TrashedMediaState> {
+  /// Bumped by every (re)build, so a window still in flight when the list
+  /// restarts is discarded instead of appending to the fresh state.
+  int _generation = 0;
+
   @override
-  Future<List<MediaItem>> build() async {
+  Future<TrashedMediaState> build() async {
     ref.watch(sessionIdentityProvider);
+    _generation++;
     final page = await ref
         .read(listTrashedMediaUseCaseProvider)
         .execute(pageSize: libraryMediaPageSize);
-    return page.items;
+    return TrashedMediaState(media: page.items, nextCursor: page.nextCursor);
   }
 
   /// Re-reads the trash from the first window.
   Future<void> reload() async {
-    state = const AsyncValue<List<MediaItem>>.loading();
+    state = const AsyncValue<TrashedMediaState>.loading();
     state = await AsyncValue.guard(build);
+  }
+
+  /// Fetches the next window and appends it.
+  ///
+  /// A trash with more than one window's worth of media is ordinary after a
+  /// bulk delete, and the older items are exactly the ones about to be
+  /// purged — being unable to scroll to them is being unable to rescue them.
+  Future<void> loadMore() async {
+    final current = state.value;
+    if (current == null || current.loadingMore || !current.hasMore) return;
+    final generation = _generation;
+    state = AsyncValue.data(
+      current.copyWith(loadingMore: true, loadMoreFailed: false),
+    );
+
+    final MediaLibraryPage page;
+    try {
+      page = await ref
+          .read(listTrashedMediaUseCaseProvider)
+          .execute(cursor: current.nextCursor, pageSize: libraryMediaPageSize);
+    } on Object {
+      if (generation != _generation) return;
+      state = AsyncValue.data(
+        current.copyWith(loadingMore: false, loadMoreFailed: true),
+      );
+      return;
+    }
+    if (generation != _generation) return;
+    // Appending by id keeps the list stable when media was restored or
+    // purged between reads — a duplicate would render the same row twice.
+    final known = current.media.map((MediaItem item) => item.id).toSet();
+    state = AsyncValue.data(
+      current.copyWith(
+        media: [
+          ...current.media,
+          ...page.items.where((item) => !known.contains(item.id)),
+        ],
+        nextCursor: (value: page.nextCursor),
+        loadingMore: false,
+        loadMoreFailed: false,
+      ),
+    );
   }
 
   /// Drops [id] from the loaded trash after a successful restore, so the
@@ -457,9 +582,13 @@ class TrashedMediaNotifier extends AsyncNotifier<List<MediaItem>> {
   void forget(MediaId id) {
     final current = state.value;
     if (current == null) return;
-    state = AsyncValue.data([
-      for (final item in current)
-        if (item.id != id) item,
-    ]);
+    state = AsyncValue.data(
+      current.copyWith(
+        media: [
+          for (final item in current.media)
+            if (item.id != id) item,
+        ],
+      ),
+    );
   }
 }

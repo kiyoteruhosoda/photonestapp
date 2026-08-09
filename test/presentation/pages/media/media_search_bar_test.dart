@@ -152,6 +152,32 @@ void main() {
 
       expect(lastQuery(repository).isUnfiltered, isTrue);
       expect(find.byType(MediaTile), findsOneWidget);
+      // The clear came from the empty view, not the field's own button —
+      // the field still has to end up empty, or the next keystroke would
+      // send the text that matched nothing all over again.
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        isEmpty,
+      );
+    });
+
+    testWidgets('a narrowing set from elsewhere shows up in the field', (
+      tester,
+    ) async {
+      final repository = FakeMediaLibraryRepository(
+        media: [testMediaItem(id: 1)],
+      );
+      final scope = TestScope(mediaLibraryRepository: repository);
+      await pumpInScope(tester, const Scaffold(body: MediaTab()), scope: scope);
+      await tester.pumpAndSettle();
+
+      scope.container.read(libraryMediaQueryProvider.notifier).search('beach');
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'beach',
+      );
     });
 
     testWidgets('an empty library still says the library is empty', (

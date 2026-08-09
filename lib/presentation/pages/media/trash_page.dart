@@ -25,22 +25,85 @@ class TrashPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.trashTitle)),
       body: switch (trashed) {
-        AsyncLoading<List<MediaItem>>() => const AppLoadingView(),
-        AsyncError<List<MediaItem>>(:final error) => AppErrorView(
+        AsyncLoading<TrashedMediaState>() => const AppLoadingView(),
+        AsyncError<TrashedMediaState>(:final error) => AppErrorView(
           message: describeLoadError(error, l10n),
           onRetry: () =>
               unawaited(ref.read(trashedMediaProvider.notifier).reload()),
         ),
-        AsyncData<List<MediaItem>>(value: final items) when items.isEmpty =>
+        AsyncData<TrashedMediaState>(value: final value)
+            when value.media.isEmpty =>
           AppEmptyView(message: l10n.trashEmpty, icon: Icons.delete_outline),
-        AsyncData<List<MediaItem>>(value: final items) => RefreshIndicator(
-          onRefresh: ref.read(trashedMediaProvider.notifier).reload,
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (context, index) => _TrashRow(item: items[index]),
-          ),
+        AsyncData<TrashedMediaState>(value: final value) => _TrashList(
+          state: value,
         ),
       },
+    );
+  }
+}
+
+/// The scrolling list, with the next window read as it reaches the end.
+class _TrashList extends ConsumerWidget {
+  const _TrashList({required this.state});
+
+  final TrashedMediaState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // One extra row while windows remain: building it is also the trigger,
+    // so the lazy list only reads on once the reader is near the end.
+    final tailRows = state.hasMore ? 1 : 0;
+    return RefreshIndicator(
+      onRefresh: ref.read(trashedMediaProvider.notifier).reload,
+      child: ListView.builder(
+        itemCount: state.media.length + tailRows,
+        itemBuilder: (context, index) {
+          if (index >= state.media.length) {
+            return _LoadMoreRow(state: state);
+          }
+          return _TrashRow(item: state.media[index]);
+        },
+      ),
+    );
+  }
+}
+
+/// The row after the last deletion while windows remain: a spinner while the
+/// next one loads, a retry after a failure.
+class _LoadMoreRow extends ConsumerWidget {
+  const _LoadMoreRow({required this.state});
+
+  final TrashedMediaState state;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    if (state.loadMoreFailed) {
+      return ListTile(
+        leading: const Icon(Icons.refresh),
+        title: Text(l10n.commonRetry),
+        onTap: () =>
+            unawaited(ref.read(trashedMediaProvider.notifier).loadMore()),
+      );
+    }
+    if (!state.loadingMore) {
+      // Reading during build is what makes reaching the end fetch the next
+      // window; the notifier ignores a second call while one is running.
+      unawaited(
+        Future<void>.microtask(
+          () => ref.read(trashedMediaProvider.notifier).loadMore(),
+        ),
+      );
+    }
+    return const Padding(
+      padding: EdgeInsets.all(AppSpacing.lg),
+      child: Center(
+        child: SizedBox(
+          width: AppSpacing.lg,
+          height: AppSpacing.lg,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
     );
   }
 }

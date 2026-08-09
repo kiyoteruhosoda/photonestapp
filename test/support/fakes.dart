@@ -763,8 +763,13 @@ final class FakeMediaCurationRepository implements MediaCurationRepository {
   /// stands in for another device having changed it in between.
   bool? settleFavoriteAt;
 
+  /// When set, awaited before each call is answered — lets a test hold one
+  /// request in flight and start another for a different media item.
+  Future<void> Function()? gate;
+
   @override
   Future<bool> setFavorite(MediaId id, {required bool favorite}) async {
+    await gate?.call();
     _failIfAsked();
     final settled = settleFavoriteAt ?? favorite;
     favorites[id.value] = settled;
@@ -773,12 +778,14 @@ final class FakeMediaCurationRepository implements MediaCurationRepository {
 
   @override
   Future<void> moveToTrash(MediaId id) async {
+    await gate?.call();
     _failIfAsked();
     trashed.add(id);
   }
 
   @override
   Future<void> restore(MediaId id) async {
+    await gate?.call();
     _failIfAsked();
     restored.add(id);
   }

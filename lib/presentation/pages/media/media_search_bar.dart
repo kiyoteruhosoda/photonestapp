@@ -51,6 +51,8 @@ class _MediaSearchBarState extends ConsumerState<MediaSearchBar> {
     _debounce?.cancel();
     _debounce = Timer(mediaSearchDebounce, () {
       if (!mounted) return;
+      // What is sent is exactly what the field holds, so the sync above
+      // finds them equal and leaves the caret alone.
       ref.read(libraryMediaQueryProvider.notifier).search(value);
     });
   }
@@ -73,6 +75,18 @@ class _MediaSearchBarState extends ConsumerState<MediaSearchBar> {
     final l10n = AppLocalizations.of(context);
     final query = ref.watch(libraryMediaQueryProvider);
     final notifier = ref.read(libraryMediaQueryProvider.notifier);
+
+    // The narrowing can also be cleared from elsewhere — the no-results view
+    // offers it, since that is where the reader is looking when nothing
+    // matched. Without this the field would keep showing the old text while
+    // the full library is back on screen, and the next keystroke would send
+    // that stale text again.
+    if (query.text != _controller.text) {
+      _controller.value = TextEditingValue(
+        text: query.text,
+        selection: TextSelection.collapsed(offset: query.text.length),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(

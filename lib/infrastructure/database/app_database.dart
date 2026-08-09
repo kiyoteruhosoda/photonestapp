@@ -15,7 +15,7 @@ final class AppDatabase {
   static const String fileName = 'flutterbase.db';
 
   /// Bump this together with a new `if (from < n)` branch in [_upgrade].
-  static const int schemaVersion = 8;
+  static const int schemaVersion = 9;
 
   /// Table remembering which device photos were already uploaded.
   static const String uploadedPhotosTable = 'uploaded_photos';
@@ -35,6 +35,9 @@ final class AppDatabase {
 
   /// Table remembering which device photos failed to upload, and why.
   static const String uploadFailuresTable = 'upload_failures';
+
+  /// Table holding the resume point of chunked uploads still in flight.
+  static const String uploadResumptionsTable = 'upload_resumptions';
 
   /// Opens the database, creating or migrating the schema as needed.
   ///
@@ -65,6 +68,7 @@ final class AppDatabase {
     await db.execute(_createBackupNotifications);
     await db.execute(_createAlbumSnapshots);
     await db.execute(_createUploadFailures);
+    await db.execute(_createUploadResumptions);
   }
 
   /// `local_id` is the platform's asset identifier; `account_key` names the
@@ -161,6 +165,25 @@ CREATE TABLE $uploadFailuresTable (
 )
 ''';
 
+  /// One row per chunked upload the server has part-received. `temp_file_id`
+  /// and `upload_session_id` together address that half-written file; neither
+  /// can be recomputed, so losing the row means re-sending the whole file.
+  /// `file_size` guards against appending to bytes that belong to a
+  /// different file after the asset changed. The row is deleted once the
+  /// upload commits, so the table only holds uploads still in flight.
+  static const String _createUploadResumptions =
+      '''
+CREATE TABLE $uploadResumptionsTable (
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  file_size INTEGER NOT NULL,
+  upload_session_id TEXT NOT NULL,
+  temp_file_id TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
+)
+''';
+
   /// Applies the migrations between two schema versions.
   ///
   /// Written as a fall-through ladder — `if (from < 2) { … }`, then
@@ -190,6 +213,9 @@ CREATE TABLE $uploadFailuresTable (
     }
     if (from < 8) {
       await db.execute(_createUploadFailures);
+    }
+    if (from < 9) {
+      await db.execute(_createUploadResumptions);
     }
   }
 }

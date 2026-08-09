@@ -421,4 +421,71 @@ CREATE TABLE ${AppDatabase.mediaThumbnailsTable} (
 
     expect(await second.query(AppDatabase.uploadedPhotosTable), hasLength(1));
   });
+
+  test('creates the upload_resumptions table for resumable uploads', () async {
+    final columns = await db.rawQuery(
+      'PRAGMA table_info(${AppDatabase.uploadResumptionsTable})',
+    );
+    expect(
+      columns.map((row) => row['name']),
+      containsAll(<String>[
+        'account_key',
+        'local_id',
+        'file_name',
+        'file_size',
+        'upload_session_id',
+        'temp_file_id',
+      ]),
+    );
+  });
+
+  test('upgrading a v8 database adds the upload_resumptions table', () async {
+    final path = '${await databaseFactory.getDatabasesPath()}/migrate-v8.db';
+    await databaseFactory.deleteDatabase(path);
+
+    final v8 = await databaseFactory.openDatabase(
+      path,
+      options: OpenDatabaseOptions(
+        version: 8,
+        onCreate: (db, version) async {
+          await db.execute('''
+CREATE TABLE ${AppDatabase.uploadedPhotosTable} (
+  account_key TEXT NOT NULL,
+  local_id TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  uploaded_at TEXT NOT NULL,
+  PRIMARY KEY (account_key, local_id)
+)
+''');
+        },
+      ),
+    );
+    // A photo recorded before the upgrade must still be there afterwards.
+    await v8.insert(AppDatabase.uploadedPhotosTable, <String, Object?>{
+      'account_key': 'server|user',
+      'local_id': 'photo-1',
+      'file_name': 'kept.jpg',
+      'uploaded_at': DateTime.utc(2026).toIso8601String(),
+    });
+    await v8.close();
+
+    final migrated = await AppDatabase.open(path: path);
+    addTearDown(() async {
+      await migrated.close();
+      await databaseFactory.deleteDatabase(path);
+    });
+
+    expect(await migrated.getVersion(), AppDatabase.schemaVersion);
+    final tables = await migrated.query(
+      'sqlite_master',
+      columns: <String>['name'],
+      where: 'type = ?',
+      whereArgs: <Object?>['table'],
+    );
+    expect(
+      tables.map((row) => row['name']),
+      contains(AppDatabase.uploadResumptionsTable),
+    );
+    expect(await migrated.query(AppDatabase.uploadedPhotosTable), hasLength(1));
+  });
 }

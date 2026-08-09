@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
-import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
-import 'package:flutterbase/infrastructure/infrastructure_module.dart';
+import 'package:photonest/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/infrastructure/infrastructure_module.dart';
 import 'package:workmanager/workmanager.dart';
 
 /// WorkManager's entry into the app while it is closed.

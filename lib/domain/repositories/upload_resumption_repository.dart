@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/upload_resumption.dart';
+import 'package:photonest/domain/entities/upload_resumption.dart';
 
 /// Remembers the in-flight chunked uploads of the signed-in account, so an
 /// upload interrupted by a lost connection — or by the OS killing the app

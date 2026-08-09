@@ -1,6 +1,6 @@
-import 'package:flutterbase/domain/entities/media_item.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// An album as listed by the PhotoNest server.
 ///

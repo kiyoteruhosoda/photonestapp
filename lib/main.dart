@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/app/bootstrap/app_widget.dart';
-import 'package:flutterbase/app/di/provider_overrides.dart';
-import 'package:flutterbase/app/di/service_locator.dart';
-import 'package:flutterbase/presentation/licenses/app_license_registry.dart';
+import 'package:photonest/app/bootstrap/app_widget.dart';
+import 'package:photonest/app/di/provider_overrides.dart';
+import 'package:photonest/app/di/service_locator.dart';
+import 'package:photonest/presentation/licenses/app_license_registry.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

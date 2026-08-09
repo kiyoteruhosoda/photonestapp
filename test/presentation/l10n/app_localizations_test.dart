@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_ja.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/l10n/app_localizations_ja.dart';
 
 /// One accessor per string on [AppLocalizations].
 ///

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
 
 void main() {
   group('AlbumId', () {

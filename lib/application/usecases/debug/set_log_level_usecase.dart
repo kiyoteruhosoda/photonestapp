@@ -1,6 +1,6 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/repositories/debug_settings_repository.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 /// Persists the minimum log level and applies it to the active [AppLogger].
 final class SetLogLevelUseCase {

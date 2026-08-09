@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/domain/entities/backup_notification.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
-import 'package:flutterbase/presentation/providers/notification_providers.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/domain/entities/backup_notification.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/l10n/error_descriptions.dart';
+import 'package:photonest/presentation/providers/notification_providers.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
 /// The notification list behind the header's bell button.
 ///

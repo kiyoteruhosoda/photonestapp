@@ -1,4 +1,4 @@
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
 
 /// English localisations.
 class AppLocalizationsEn extends AppLocalizations {

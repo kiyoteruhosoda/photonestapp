@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutterbase/domain/entities/local_photo.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
-import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
+import 'package:photonest/domain/repositories/upload_failure_repository.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// [UploadFailureRepository] backed by SQLite, scoped to the signed-in

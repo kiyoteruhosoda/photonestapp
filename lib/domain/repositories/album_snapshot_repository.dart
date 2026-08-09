@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
 
 /// Local, persistent snapshot of the album metadata the server last
 /// returned: the album list, and each detail page that was fetched.

@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
 
 /// Remembers which device photos have already been uploaded **to the
 /// signed-in account**.

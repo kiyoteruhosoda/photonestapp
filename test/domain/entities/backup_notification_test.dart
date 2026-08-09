@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/backup_notification.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/domain/entities/backup_notification.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 void main() {
   BackupNotification build({

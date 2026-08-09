@@ -1,4 +1,4 @@
-import 'package:flutterbase/application/ports/external_link_launcher.dart';
+import 'package:photonest/application/ports/external_link_launcher.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// [ExternalLinkLauncher] backed by the `url_launcher` plugin.

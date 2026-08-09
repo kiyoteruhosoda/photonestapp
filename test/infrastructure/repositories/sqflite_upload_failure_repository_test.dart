@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
-import 'package:flutterbase/infrastructure/repositories/sqflite_upload_failure_repository.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
+import 'package:photonest/infrastructure/repositories/sqflite_upload_failure_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../support/fakes.dart';

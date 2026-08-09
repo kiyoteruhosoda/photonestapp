@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/auth/login_page.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/auth/login_page.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/test_harness.dart';

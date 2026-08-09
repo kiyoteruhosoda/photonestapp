@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
+import 'package:photonest/domain/repositories/upload_failure_repository.dart';
 
 /// Forgets the recorded upload failures.
 ///

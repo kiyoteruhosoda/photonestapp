@@ -1,5 +1,5 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutterbase/application/ports/network_connection_gateway.dart';
+import 'package:photonest/application/ports/network_connection_gateway.dart';
 
 /// [NetworkConnectionGateway] backed by the `connectivity_plus` plugin.
 ///

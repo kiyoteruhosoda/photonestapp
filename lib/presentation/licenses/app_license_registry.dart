@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/shared/app_config.dart';
 
 /// Registers additional in-app license notices with [LicenseRegistry].
 ///

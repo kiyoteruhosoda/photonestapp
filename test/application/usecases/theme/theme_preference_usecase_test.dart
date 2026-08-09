@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
-import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
-import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
-import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
+import 'package:photonest/application/usecases/theme/get_theme_preference_usecase.dart';
+import 'package:photonest/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:photonest/domain/repositories/theme_preference_repository.dart';
+import 'package:photonest/domain/value_objects/app_theme_mode.dart';
 
 // ─── Fake repository ─────────────────────────────────────────────────────
 

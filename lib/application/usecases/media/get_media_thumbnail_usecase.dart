@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
-import 'package:flutterbase/domain/repositories/media_thumbnail_repository.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// Fetches a server-side thumbnail for a media item, reading and feeding the
 /// persistent cache.

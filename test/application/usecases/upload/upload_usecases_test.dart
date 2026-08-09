@@ -1,18 +1,18 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/recording_app_logger.dart';

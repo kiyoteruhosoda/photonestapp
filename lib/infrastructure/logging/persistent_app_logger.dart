@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/entities/log_entry.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/entities/log_entry.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 /// [AppLogger] implementation that writes to the console and to rotating
 /// log files under `<documents>/logs/`.

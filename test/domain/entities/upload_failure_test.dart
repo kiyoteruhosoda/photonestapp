@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
 
 import '../../support/fakes.dart';
 

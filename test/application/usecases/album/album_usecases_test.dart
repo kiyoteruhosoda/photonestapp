@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
-import 'package:flutterbase/application/usecases/album/list_albums_usecase.dart';
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/application/usecases/album/get_album_usecase.dart';
+import 'package:photonest/application/usecases/album/list_albums_usecase.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/recording_app_logger.dart';

@@ -2,7 +2,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_secure_storage/test/test_flutter_secure_storage_platform.dart';
 import 'package:flutter_secure_storage_platform_interface/flutter_secure_storage_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/infrastructure/repositories/secure_storage_session_repository.dart';
+import 'package:photonest/infrastructure/repositories/secure_storage_session_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fakes.dart';

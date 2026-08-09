@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/shared/app_config.dart';
-import 'package:flutterbase/shared/build_info.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/shared/app_config.dart';
+import 'package:photonest/shared/build_info.dart';
 
 /// Opens the built-in [showLicensePage] with the app's branding applied.
 ///

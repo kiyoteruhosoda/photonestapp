@@ -2,20 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/domain/value_objects/app_language.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/navigation/app_routes.dart';
-import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
-import 'package:flutterbase/presentation/pages/media/media_tab.dart';
-import 'package:flutterbase/presentation/pages/upload/upload_tab.dart';
-import 'package:flutterbase/presentation/providers/notification_providers.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
-import 'package:flutterbase/presentation/providers/settings_providers.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
-import 'package:flutterbase/shared/app_config.dart';
 import 'package:go_router/go_router.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/navigation/app_routes.dart';
+import 'package:photonest/presentation/pages/albums/albums_tab.dart';
+import 'package:photonest/presentation/pages/media/media_tab.dart';
+import 'package:photonest/presentation/pages/upload/upload_tab.dart';
+import 'package:photonest/presentation/providers/notification_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
+import 'package:photonest/presentation/providers/settings_providers.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/shared/app_config.dart';
 
 /// Main screen with bottom navigation.
 class MainPage extends ConsumerStatefulWidget {

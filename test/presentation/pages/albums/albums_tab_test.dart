@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/albums/albums_tab.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/test_harness.dart';

@@ -2,15 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
-import 'package:flutterbase/presentation/navigation/app_routes.dart';
-import 'package:flutterbase/presentation/providers/album_providers.dart';
-import 'package:flutterbase/presentation/providers/media_providers.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/l10n/error_descriptions.dart';
+import 'package:photonest/presentation/navigation/app_routes.dart';
+import 'package:photonest/presentation/providers/album_providers.dart';
+import 'package:photonest/presentation/providers/media_providers.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
 /// The album grid shown as the home tab of [MainPage].
 ///

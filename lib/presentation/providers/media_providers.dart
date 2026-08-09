@@ -1,17 +1,17 @@
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/usecases/media/get_media_original_usecase.dart';
-import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
-import 'package:flutterbase/application/usecases/media/get_media_thumbnail_usecase.dart';
-import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
-import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
-import 'package:flutterbase/domain/entities/media_item.dart';
-import 'package:flutterbase/domain/entities/media_library_page.dart';
-import 'package:flutterbase/domain/entities/signed_media_url.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
+import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
+import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
+import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
+import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
+import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/domain/entities/media_library_page.dart';
+import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 //

@@ -26,23 +26,51 @@ App Links は「どれか 1 つが欠けても静かに失敗する」仕組み�
 公開する URL のパスと、アプリ内ルートのパスは**同一の文字列**です。
 `AppRoutes` が唯一の定義元で、ルーターもリンク生成もそこを読みます。
 
-| ルート | 画面 | App Link |
-|---|---|---|
-| `/` | メイン | `https://<host>/` |
-| `/albums/:id` | アルバム詳細 | `https://<host>/albums/42` |
-| `/link` | ディープリンク診断 | `https://<host>/link?ref=email` |
-| `/about` `/debug` `/logs` | システム画面 | 同上 |
+ホストは `photonest.nolumia.com`＝**PhotoNest サーバー自身**です。同じ URL を
+Web の SPA も配信するため、アプリを入れている端末ではアプリが、入れていない
+端末ではブラウザが同じアルバムを開きます。
+
+| ルート | 画面 | App Link | 検証済みリンクとして要求するか |
+|---|---|---|---|
+| `/albums/:id` | アルバム詳細 | `https://<host>/albums/42` | する（`pathAdvancedPattern="/albums/[0-9]+"`） |
+| `/link` | ディープリンク診断 | `https://<host>/link?ref=email` | する（`path="/link"`） |
+| `/` `/login` `/about` `/debug` `/logs` `/notifications` | メイン・システム画面 | — | しない |
+
+### なぜ全パスを要求しないのか
+
+`android:host` だけを書いた intent filter は、**そのホストの URL をすべて**
+アプリに渡します。このホストは SPA と共用なので、それでは `/admin/users` や
+`/media` のような Web 専用ページまでアプリが横取りし、`NotFoundPage` を
+出してしまいます。そのため `AndroidManifest.xml` ではアプリが実際に
+ルートを持つパスだけを列挙しています。
+
+パス指定は **`android:pathAdvancedPattern`（API 31 以上）** を使います。
+パス全体を正規表現で照合するため、`/albums/42` だけを取り、その下にある
+SPA 専用のスライドショー（`/albums/42/slideshow`）やアルバム一覧
+（`/albums`）はブラウザに残せます。前方一致の `android:pathPrefix` では
+これらまで巻き込みます。
+
+**`minSdk` を 31 未満に下げるときは、このパス指定も書き換えてください。**
+API 30 以下の端末は知らない属性を「無視」します。エラーにはならず、
+`<data>` に残るのは scheme と host だけになり、filter がホスト全体へ
+静かに広がります。`android/app/build.gradle` の `minSdk` に同じ注意書きが
+あります。
 
 ホスト名とスキームは `lib/shared/app_config.dart` の
 `appLinkHost` / `appLinkScheme` / `customLinkScheme` にあります。
 **`AndroidManifest.xml` の `android:host` と必ず一致させてください。**
 食い違うと、リンクは検証に失敗してブラウザで開きます。
 
+`AppConfig.appLink()` は任意のパスから URL を組み立てられるので、
+**intent filter が要求していないパスの URL も作れます**。その URL は
+（検証済みリンクではないので）ブラウザで開きます。アプリで開かせたい
+パスを増やすときは、manifest の `pathPrefix` も足してください。
+
 ### カスタムスキームは 3 スラッシュ
 
-`flutterbase:///albums/1` のように、**authority を空**にしてください。
+`photonest:///albums/1` のように、**authority を空**にしてください。
 Android の Flutter embedding は受け取った URI の *path* からアプリ内ルートを
-組み立て、authority を捨てます。`flutterbase://albums/1` と書くと
+組み立て、authority を捨てます。`photonest://albums/1` と書くと
 ルートは `/1` になり、どのルートにも一致しません。
 `AppConfig.customLink()` はこの形を生成します。
 
@@ -71,31 +99,50 @@ https://<appLinkHost>/.well-known/assetlinks.json
 を取得し、APK の署名証明書のフィンガープリントと突き合わせます。
 一致した場合のみ、リンクがブラウザではなくこのアプリで開きます。
 
-雛形は `docs/deep_links/assetlinks.json` にあります。
+配信する内容は `docs/deep_links/assetlinks.json` にあります。
+`package_name`（`com.nolumia.photonest`）と debug 署名のフィンガープリントは
+記入済みで、**release 署名のフィンガープリントだけが未記入**です。
 
-1. フィンガープリントを取得する（debug / release の両方を登録する）
+1. release のフィンガープリントを取得する
 
    ```bash
-   # デバッグ用（リポジトリ同梱の共有キーストア）
-   keytool -list -v -keystore android/app/debug.keystore \
-     -alias androiddebugkey -storepass android -keypass android \
-     | grep SHA256
-
    # リリース用（android/key.properties の storeFile）
    keytool -list -v -keystore <release.jks> -alias <alias> | grep SHA256
    ```
 
-2. `docs/deep_links/assetlinks.json` の `package_name` と
-   `sha256_cert_fingerprints` を書き換える。
-   `package_name` は `android/app/build.gradle` の `applicationId` です。
+   **Play App Signing を使う場合は、この鍵ではなく Play Console の
+   「アプリの署名鍵の証明書」に表示される SHA-256 を登録します。**
+   アップロード鍵の指紋を入れても検証は通りません（Play が再署名した
+   APK の署名は別物のため）。
 
-3. ドメインの `https://<host>/.well-known/assetlinks.json` として、
+   debug 側は同梱の共有キーストア（`android/app/debug.keystore`）のもので、
+   記入済みです。取り直す場合は次のとおり。
+
+   ```bash
+   keytool -list -v -keystore android/app/debug.keystore \
+     -alias androiddebugkey -storepass android -keypass android \
+     | grep SHA256
+   ```
+
+2. `docs/deep_links/assetlinks.json` の
+   `REPLACE:WITH:YOUR:RELEASE:KEYSTORE:SHA256:FINGERPRINT` を 1 で取得した
+   値に置き換える。`package_name` は `android/app/build.gradle` の
+   `applicationId` と一致している必要があり、
+   `test/android/android_manifest_test.dart` がずれを検出します。
+
+3. PhotoNest サーバー（`photonest.nolumia.com`）から
+   `https://photonest.nolumia.com/.well-known/assetlinks.json` として、
    `Content-Type: application/json` で配信する。リダイレクト不可。
+
+   サーバー側は環境変数 `ANDROID_APP_LINK_ASSETLINKS`（または管理画面の
+   「Android App Links」設定）に**このファイルの中身をそのまま**入れると
+   配信されます。未設定なら 404 を返します。手順は PhotoNest サーバー側の
+   `docs/OPERATIONS.md`「Android App Links」を参照してください。
 
 4. 端末に再インストールして検証を走らせ、結果を確認する。
 
    ```bash
-   adb shell pm get-app-links com.example.flutterbase
+   adb shell pm get-app-links com.nolumia.photonest
    ```
 
    `verified` と表示されれば成功です。`legacy_failure` などが出る場合は
@@ -110,12 +157,12 @@ https://<appLinkHost>/.well-known/assetlinks.json
 # App Link（検証済みなら実機のブラウザからも同じ挙動）
 adb shell am start -a android.intent.action.VIEW \
   -c android.intent.category.BROWSABLE \
-  -d "https://flutterbase.example.com/albums/1"
+  -d "https://photonest.nolumia.com/albums/1"
 
 # カスタムスキーム（検証不要）
 adb shell am start -a android.intent.action.VIEW \
   -c android.intent.category.BROWSABLE \
-  -d "flutterbase:///link?ref=email"
+  -d "photonest:///link?ref=email"
 ```
 
 同じコマンドはアプリ内の `/link` 画面にも表示され、コピーできます。

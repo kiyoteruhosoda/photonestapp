@@ -1,8 +1,8 @@
-import 'package:flutterbase/application/usecases/media/save_media_original_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
+import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
+import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
 
 /// Maps a typed load error onto a localised, user-facing message.
 ///

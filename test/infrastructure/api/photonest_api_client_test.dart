@@ -1,10 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 import '../../support/fakes.dart';
 import '../../support/recording_app_logger.dart';

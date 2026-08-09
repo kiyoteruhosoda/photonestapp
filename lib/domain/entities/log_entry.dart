@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 /// A single immutable log entry.
 final class LogEntry {

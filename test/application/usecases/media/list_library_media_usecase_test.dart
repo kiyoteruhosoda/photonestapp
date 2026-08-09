@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/media/list_library_media_usecase.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/recording_app_logger.dart';

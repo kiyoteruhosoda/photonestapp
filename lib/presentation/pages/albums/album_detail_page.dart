@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
-import 'package:flutterbase/presentation/providers/album_providers.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/l10n/error_descriptions.dart';
+import 'package:photonest/presentation/providers/album_providers.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
 /// One album's media grid, paged in from the server as it scrolls. The
 /// route's deep-link target.

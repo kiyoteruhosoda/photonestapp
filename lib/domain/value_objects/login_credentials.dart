@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 /// Schemes a PhotoNest server URL may use.
 const Set<String> allowedServerSchemes = {'http', 'https'};

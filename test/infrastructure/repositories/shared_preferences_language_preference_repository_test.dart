@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/value_objects/app_language.dart';
-import 'package:flutterbase/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
+import 'package:photonest/infrastructure/repositories/shared_preferences_language_preference_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

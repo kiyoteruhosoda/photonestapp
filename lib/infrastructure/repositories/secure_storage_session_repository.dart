@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// [SessionRepository] backed by the platform keystore

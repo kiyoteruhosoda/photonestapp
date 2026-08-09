@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
 
 /// Reads a preview of a device photo for the upload screen's grid.
 final class GetLocalThumbnailUseCase {

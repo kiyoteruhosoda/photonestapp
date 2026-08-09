@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/app_logger.dart';
 
 /// Message shown when a provider that the composition root is supposed to
 /// override is read without an override in place.

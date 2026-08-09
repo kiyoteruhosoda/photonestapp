@@ -1,10 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/usecases/notification/get_unread_notification_count_usecase.dart';
-import 'package:flutterbase/application/usecases/notification/list_backup_notifications_usecase.dart';
-import 'package:flutterbase/application/usecases/notification/mark_notifications_read_usecase.dart';
-import 'package:flutterbase/application/usecases/notification/watch_backup_notifications_usecase.dart';
-import 'package:flutterbase/domain/entities/backup_notification.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:photonest/application/usecases/notification/get_unread_notification_count_usecase.dart';
+import 'package:photonest/application/usecases/notification/list_backup_notifications_usecase.dart';
+import 'package:photonest/application/usecases/notification/mark_notifications_read_usecase.dart';
+import 'package:photonest/application/usecases/notification/watch_backup_notifications_usecase.dart';
+import 'package:photonest/domain/entities/backup_notification.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 //

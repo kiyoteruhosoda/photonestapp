@@ -1,10 +1,10 @@
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/media_item.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/album_repository.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
-import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/album_repository.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 /// [AlbumRepository] backed by the PhotoNest `/api/albums` endpoints.
 final class ApiAlbumRepository implements AlbumRepository {

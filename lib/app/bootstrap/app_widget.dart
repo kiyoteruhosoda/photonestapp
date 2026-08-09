@@ -3,16 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/app/bootstrap/app_router.dart';
-import 'package:flutterbase/app/di/service_locator.dart';
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
-import 'package:flutterbase/presentation/providers/settings_providers.dart';
-import 'package:flutterbase/presentation/providers/upload_providers.dart';
-import 'package:flutterbase/presentation/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
+import 'package:photonest/app/bootstrap/app_router.dart';
+import 'package:photonest/app/di/service_locator.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/services/auto_upload_coordinator.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
+import 'package:photonest/presentation/providers/settings_providers.dart';
+import 'package:photonest/presentation/providers/upload_providers.dart';
+import 'package:photonest/presentation/theme/app_theme.dart';
 
 /// Root widget.
 ///

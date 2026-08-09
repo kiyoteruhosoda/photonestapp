@@ -8,16 +8,15 @@
     <uses-permission
         android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED"/>
     <!-- Android 12 and below (API <= 32) have no READ_MEDIA_* permissions;
-         photo library access needs the legacy storage-read permission there. -->
+         photo library access needs the legacy storage-read permission there.
+         Still reachable: minSdk 31 and 32 fall in this range. -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32"/>
     <!-- Saving a server original back into the gallery ("save to this
-         device"). Android 10+ files new media through MediaStore without a
-         permission; API 28 and below need this one. -->
-    <uses-permission
-        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28"/>
+         device") needs no write permission: Android 10+ files new media
+         through MediaStore, and minSdk 31 puts every supported device above
+         that line. -->
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"
@@ -52,28 +51,54 @@
                  must match the routes in
                  presentation/navigation/app_routes.dart. See
                  docs/DEEP_LINKS.md for generating assetlinks.json and for
-                 verifying with adb. -->
+                 verifying with adb.
+
+                 The host also serves the PhotoNest web SPA, so the paths are
+                 listed explicitly instead of claiming the whole domain: an
+                 unscoped filter would make this app intercept every web URL
+                 (/admin/..., /media, /sessions, ...) and answer it with the
+                 not-found screen. Only the paths the app actually routes are
+                 claimed. minSdk is 24, so pathAdvancedPattern (API 31+) is
+                 claimed. minSdk is 31, which is what makes
+                 android:pathAdvancedPattern (API 31+) usable here: it matches
+                 the whole path against a real regex, so the filter can claim
+                 album detail without also claiming the SPA-only pages under
+                 it. Do not lower minSdk without rewriting these paths — an
+                 API 30 device ignores the attribute it does not know and the
+                 filter silently widens to every URL on the host. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
+                <!-- Album detail: /albums/42, and nothing else under
+                     /albums. The SPA-only album list (/albums) and
+                     slideshow (/albums/42/slideshow) stay in the browser
+                     because the pattern has to match the entire path. -->
                 <data
                     android:scheme="https"
-                    android:host="flutterbase.example.com"/>
+                    android:host="photonest.nolumia.com"
+                    android:pathAdvancedPattern="/albums/[0-9]+"/>
+                <!-- Deep-link diagnostics screen; no SPA route collides.
+                     Query strings are not part of path matching, so
+                     /link?ref=email matches this too. -->
+                <data
+                    android:scheme="https"
+                    android:host="photonest.nolumia.com"
+                    android:path="/link"/>
             </intent-filter>
 
             <!-- ── Custom scheme fallback ───────────────────────────────
                  Unverified: any app may register the same scheme, so this
                  is for local testing and for entry points you control —
                  never for a link a stranger can send. Links must use the
-                 empty-authority form (flutterbase:///albums/1), because
+                 empty-authority form (photonest:///albums/1), because
                  Flutter's Android embedding builds the in-app route from
                  the URI path and drops the authority. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="flutterbase"/>
+                <data android:scheme="photonest"/>
             </intent-filter>
 
             <!-- Hands the launch intent's URI to the Flutter framework as the

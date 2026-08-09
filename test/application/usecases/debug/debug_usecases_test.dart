@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/debug/get_debug_settings_usecase.dart';
-import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.dart';
-import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
-import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/application/usecases/debug/get_debug_settings_usecase.dart';
+import 'package:photonest/application/usecases/debug/set_debug_mode_usecase.dart';
+import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart';
+import 'package:photonest/domain/repositories/debug_settings_repository.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 import '../../../support/recording_app_logger.dart';
 

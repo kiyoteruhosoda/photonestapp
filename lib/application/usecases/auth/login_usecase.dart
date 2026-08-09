@@ -1,9 +1,9 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
-import 'package:flutterbase/domain/repositories/auth_repository.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
-import 'package:flutterbase/domain/value_objects/login_credentials.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
+import 'package:photonest/domain/repositories/auth_repository.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
+import 'package:photonest/domain/value_objects/login_credentials.dart';
 
 /// Signs the user in and persists the resulting session.
 final class LoginUseCase {

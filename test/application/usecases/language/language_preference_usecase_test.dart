@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
-import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
-import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
-import 'package:flutterbase/domain/value_objects/app_language.dart';
+import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
+import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
 
 final class _FakeLanguagePreferenceRepository
     implements LanguagePreferenceRepository {

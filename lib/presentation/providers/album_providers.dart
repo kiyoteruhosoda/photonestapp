@@ -2,13 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // `AsyncNotifierProviderFamily` — the type the family expression above
 // evaluates to — lives in Riverpod's `misc.dart`.
 import 'package:flutter_riverpod/misc.dart';
-import 'package:flutterbase/application/usecases/album/get_album_usecase.dart';
-import 'package:flutterbase/application/usecases/album/list_albums_usecase.dart';
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/media_item.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
+import 'package:photonest/application/usecases/album/get_album_usecase.dart';
+import 'package:photonest/application/usecases/album/list_albums_usecase.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 //

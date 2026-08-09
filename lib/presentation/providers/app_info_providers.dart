@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/usecases/app_info/get_app_info_usecase.dart';
-import 'package:flutterbase/domain/entities/app_info.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:photonest/application/usecases/app_info/get_app_info_usecase.dart';
+import 'package:photonest/domain/entities/app_info.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
 
 final Provider<GetAppInfoUseCase> getAppInfoUseCaseProvider =
     Provider<GetAppInfoUseCase>((ref) {

@@ -1,7 +1,7 @@
-import 'package:flutterbase/domain/entities/app_info.dart';
-import 'package:flutterbase/domain/repositories/app_info_repository.dart';
-import 'package:flutterbase/shared/build_info.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:photonest/domain/entities/app_info.dart';
+import 'package:photonest/domain/repositories/app_info_repository.dart';
+import 'package:photonest/shared/build_info.dart';
 
 /// Retrieves app version from [PackageInfo] and build metadata from
 /// [BuildInfo].

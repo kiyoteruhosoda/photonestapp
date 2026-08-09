@@ -3,6 +3,43 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-09 — テンプレートの識別子を実 ID に置き換え、App Links を実ドメインへ
+
+- Progress #6・#1。どちらも「所有ドメイン未定」で保留していた項目で、
+  `nolumia.com` に決まったことで同時に解けた。
+- `applicationId` を `com.example.flutterbase` から **`com.nolumia.photonest`**
+  へ変更（`com.example.*` は Play Console が拒否する）。Dart パッケージ名も
+  `flutterbase` → `photonest` になり、`package:` の import 全部と Kotlin の
+  パッケージ・ディレクトリが追随した（`scripts/rename_app.sh`）。
+  `pubspec.yaml` の `description` は手で直した。
+- `tool/check_architecture.dart` の既定 `--package` も `photonest` にした。
+  ここはレイヤー所属を `package:<name>/...` の import から判定するため、
+  古い名前のままだと**どの import も認識されず、検査していない木を
+  「違反なし」と報告する**。CI は `--package` を渡さないので既定値が効く。
+- App Link のホストを `flutterbase.example.com`（実在しない）から
+  **`photonest.nolumia.com`** へ。PhotoNest サーバー自身＝ SPA と同じホストを
+  使うので、アプリを入れている端末はアプリで、入れていない端末はブラウザで
+  同じアルバムが開く。カスタムスキームも `flutterbase://` → `photonest://`。
+- **intent filter でパスを絞った。** ホストが SPA と共用になったため、
+  `android:host` だけの filter ではそのホストの URL を全部アプリが横取りし、
+  `/admin/users` のような Web 専用ページまで `NotFoundPage` になっていた。
+  アプリがルートを持つ `/albums/{数字}` と `/link` だけを要求する。
+- そのために **`minSdk` を 24 から 31 へ引き上げた。** パスを厳密に絞れる
+  `android:pathAdvancedPattern` が API 31 以上のため。前方一致の
+  `pathPrefix` では SPA 専用のスライドショー（`/albums/42/slideshow`）まで
+  巻き込む。API 30 以下の端末はこの属性を「無視」する——エラーにはならず
+  filter がホスト全体へ静かに広がるので、`minSdk` とパス指定は必ず一緒に
+  動かすこと。テスト（`test/android/android_manifest_test.dart`）で
+  「autoVerify filter の全 `<data>` がパス属性を持つこと」と
+  「`pathAdvancedPattern` を使うなら `minSdk >= 31`」を固定した。
+  2026-08-07 に 36 → 24 へ下げた判断を部分的に戻す形になる。
+- `minSdk` が 31 になったことで `WRITE_EXTERNAL_STORAGE`
+  （`maxSdkVersion="28"`）はどの端末でも付与されなくなったため削除した。
+  ギャラリーへの保存は Android 10+ の MediaStore 経由のみになる。
+- `docs/deep_links/assetlinks.json` に実 `package_name` と debug 署名の
+  指紋を記入。**release 署名の指紋は未記入**（鍵を持つ人が埋める）。
+  配信はサーバー側の新設定 `ANDROID_APP_LINK_ASSETLINKS` が行う。
+
 ## 2026-08-09 — 自動バックアップを再開可能な分割アップロードに載せ替える
 
 - photonest Progress F11a。送信は `POST /api/upload/prepare` の単発

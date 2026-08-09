@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/backup_notification.dart';
+import 'package:photonest/domain/entities/backup_notification.dart';
 
 /// Stores backup notifications on this device.
 ///

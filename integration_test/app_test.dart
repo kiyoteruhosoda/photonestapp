@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/app/bootstrap/app_widget.dart';
-import 'package:flutterbase/app/di/provider_overrides.dart';
-import 'package:flutterbase/app/di/service_locator.dart';
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/albums/albums_tab.dart';
-import 'package:flutterbase/presentation/pages/auth/login_page.dart';
-import 'package:flutterbase/presentation/pages/media/media_tab.dart';
-import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:photonest/app/bootstrap/app_widget.dart';
+import 'package:photonest/app/di/provider_overrides.dart';
+import 'package:photonest/app/di/service_locator.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/albums/albums_tab.dart';
+import 'package:photonest/presentation/pages/auth/login_page.dart';
+import 'package:photonest/presentation/pages/media/media_tab.dart';
+import 'package:photonest/presentation/pages/system/deep_link_page.dart';
 
 const l10n = AppLocalizationsEn();
 

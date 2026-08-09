@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
 
 /// Restores the persisted session at startup, if there is one.
 ///

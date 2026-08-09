@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/notifications/notifications_page.dart';
-import 'package:flutterbase/presentation/providers/notification_providers.dart';
-import 'package:flutterbase/presentation/widgets/ui/app_state_views.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/notifications/notifications_page.dart';
+import 'package:photonest/presentation/providers/notification_providers.dart';
+import 'package:photonest/presentation/widgets/ui/app_state_views.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/test_harness.dart';

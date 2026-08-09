@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/media/get_media_playback_usecase.dart';
-import 'package:flutterbase/domain/entities/signed_media_url.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
+import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 import '../../../support/fakes.dart';
 

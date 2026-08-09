@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// One photo or video held by the server, as its listing endpoints report
 /// it.

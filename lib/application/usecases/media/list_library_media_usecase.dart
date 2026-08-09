@@ -1,6 +1,6 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/entities/media_library_page.dart';
-import 'package:flutterbase/domain/repositories/media_library_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/entities/media_library_page.dart';
+import 'package:photonest/domain/repositories/media_library_repository.dart';
 
 /// Reads one page of the whole media library, newest capture first.
 ///

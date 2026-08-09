@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:photonest/domain/repositories/auto_upload_settings_repository.dart';
 
 /// Whether automatic upload of new photos is switched on.
 final class GetAutoUploadEnabledUseCase {

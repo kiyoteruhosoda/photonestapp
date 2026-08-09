@@ -32,8 +32,8 @@
 # Prerequisites: flutter on PATH and a working Android SDK.
 set -euo pipefail
 
-log() { printf '[flutterbase] %s\n' "$*" >&2; }
-die() { printf '[flutterbase][error] %s\n' "$*" >&2; exit 1; }
+log() { printf '[photonest] %s\n' "$*" >&2; }
+die() { printf '[photonest][error] %s\n' "$*" >&2; exit 1; }
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$repo_root"

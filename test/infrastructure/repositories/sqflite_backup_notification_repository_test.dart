@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
-import 'package:flutterbase/infrastructure/repositories/sqflite_backup_notification_repository.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
+import 'package:photonest/infrastructure/repositories/sqflite_backup_notification_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {

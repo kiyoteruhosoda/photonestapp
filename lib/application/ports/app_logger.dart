@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/log_entry.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/domain/entities/log_entry.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 
 /// Outbound logging port.
 ///

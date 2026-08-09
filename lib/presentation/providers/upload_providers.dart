@@ -2,21 +2,21 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
-import 'package:flutterbase/application/usecases/upload/dismiss_upload_failures_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/get_local_thumbnail_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/list_upload_candidates_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/list_upload_failures_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/watch_upload_failures_usecase.dart';
-import 'package:flutterbase/domain/entities/local_photo.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
+import 'package:photonest/application/services/auto_upload_coordinator.dart';
+import 'package:photonest/application/usecases/upload/dismiss_upload_failures_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_upload_failures_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/application/usecases/upload/watch_upload_failures_usecase.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 

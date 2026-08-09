@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/media_original_repository.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/media_original_repository.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// Why a "save to this device" attempt did not produce a file.
 enum SaveMediaFailure {

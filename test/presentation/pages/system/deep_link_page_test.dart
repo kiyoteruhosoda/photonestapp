@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_ja.dart';
-import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/l10n/app_localizations_ja.dart';
+import 'package:photonest/presentation/pages/system/deep_link_page.dart';
+import 'package:photonest/shared/app_config.dart';
 
 import '../../../support/test_harness.dart';
 

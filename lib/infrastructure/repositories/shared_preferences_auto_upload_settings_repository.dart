@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:photonest/domain/repositories/auto_upload_settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// [AutoUploadSettingsRepository] backed by [SharedPreferences].

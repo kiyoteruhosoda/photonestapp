@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/presentation/navigation/app_routes.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/presentation/navigation/app_routes.dart';
+import 'package:photonest/shared/app_config.dart';
 
 void main() {
   group('AppRoutes', () {

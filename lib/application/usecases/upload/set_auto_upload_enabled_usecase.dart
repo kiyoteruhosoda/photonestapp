@@ -1,7 +1,7 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/background_sync_scheduler.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/repositories/auto_upload_settings_repository.dart';
 
 /// Switches automatic upload on or off, keeping the platform's background
 /// schedule aligned: on registers the periodic sync that runs while the app

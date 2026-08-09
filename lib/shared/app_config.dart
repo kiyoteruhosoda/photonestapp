@@ -34,16 +34,21 @@ class AppConfig {
   /// `android/app/src/main/AndroidManifest.xml`. Change both together, or
   /// verification silently fails and links open in the browser instead.
   /// See `docs/DEEP_LINKS.md`.
-  static const String appLinkHost = 'flutterbase.example.com';
+  ///
+  /// This is the PhotoNest server itself, which also serves the web SPA, so
+  /// an album link opens in the app when it is installed and in the browser
+  /// when it is not. The manifest claims only the paths the app routes —
+  /// [appLink] can build a URL the filter does not cover.
+  static const String appLinkHost = 'photonest.nolumia.com';
 
   /// Scheme of the verified App Link. Android only verifies `https`.
   static const String appLinkScheme = 'https';
 
-  /// Unverified fallback scheme, e.g. `flutterbase://albums/1`.
+  /// Unverified fallback scheme, e.g. `photonest://albums/1`.
   ///
   /// Any app may claim a custom scheme, so this is for local testing and for
   /// platforms without App Links — never for links a stranger can send.
-  static const String customLinkScheme = 'flutterbase';
+  static const String customLinkScheme = 'photonest';
 
   /// The verified `https` link that opens [path] inside the app.
   static Uri appLink(String path) =>
@@ -51,9 +56,9 @@ class AppConfig {
 
   /// The custom-scheme equivalent of [appLink].
   ///
-  /// Produces the three-slash form (`flutterbase:///albums/1`) on purpose.
+  /// Produces the three-slash form (`photonest:///albums/1`) on purpose.
   /// Android's Flutter embedding builds the in-app route from the incoming
-  /// URI's *path* and discards its authority, so `flutterbase://albums/1`
+  /// URI's *path* and discards its authority, so `photonest://albums/1`
   /// would arrive as the route `/1` — with an empty authority the whole
   /// `/albums/1` survives and matches the same route the App Link does.
   static Uri customLink(String path) => Uri.parse('$customLinkScheme://$path');

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/app_info.dart';
+import 'package:photonest/domain/entities/app_info.dart';
 
 AppInfo buildAppInfo({String version = '1.2.3', bool isDebug = false}) =>
     AppInfo(

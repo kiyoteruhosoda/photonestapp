@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/services.dart';
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/domain/entities/local_photo.dart';
 import 'package:path/path.dart' as p;
 import 'package:photo_manager/photo_manager.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
 
 /// [PhotoLibraryGateway] backed by the `photo_manager` plugin.
 ///

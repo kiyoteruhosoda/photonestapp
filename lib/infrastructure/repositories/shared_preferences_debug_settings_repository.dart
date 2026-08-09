@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/repositories/debug_settings_repository.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
+import 'package:photonest/domain/repositories/debug_settings_repository.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// [DebugSettingsRepository] backed by [SharedPreferences].

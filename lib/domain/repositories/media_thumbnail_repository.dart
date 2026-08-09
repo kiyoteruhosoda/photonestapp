@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// Thumbnail sizes the PhotoNest server can produce.
 const Set<int> allowedThumbnailSizes = {256, 512, 1024, 2048};

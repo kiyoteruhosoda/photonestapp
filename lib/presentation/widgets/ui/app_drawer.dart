@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/theme/theme.dart';
 
 /// DADS-compliant side drawer menu.
 class AppDrawer extends StatelessWidget {

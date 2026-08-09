@@ -16,6 +16,13 @@ import 'package:photonest/presentation/theme/theme.dart';
 /// land after a newer one.
 const Duration tagSearchDebounce = Duration(milliseconds: 350);
 
+/// How much of the sheet the chosen-tag chips may take before they scroll.
+///
+/// Roughly three rows of chips. Past that the picker below is what the
+/// reader needs to see — the chips are a record of what is already chosen,
+/// and scrolling them costs less than losing the search field.
+const double _chosenTagsMaxHeight = 132;
+
 /// Opens the tag editor for [id] as a bottom sheet.
 ///
 /// Returns the tags the server settled on when the reader saved, or null when
@@ -207,23 +214,30 @@ class _EditorBody extends ConsumerWidget {
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.pageMargin,
+          // Bounded and scrollable: a media item with many tags — or a few
+          // long ones on a narrow screen — would otherwise grow the chips
+          // until they pushed the search field and Save off the sheet, and
+          // adding tags is exactly how a reader reaches that state.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: _chosenTagsMaxHeight),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.pageMargin,
+              ),
+              child: chosen.isEmpty
+                  ? Text(l10n.mediaTagsNoneOnMedia)
+                  : Wrap(
+                      spacing: AppSpacing.xs,
+                      runSpacing: AppSpacing.xs,
+                      children: [
+                        for (final tag in chosen)
+                          InputChip(
+                            label: Text(tag.name),
+                            onDeleted: saving ? null : () => onToggle(tag),
+                          ),
+                      ],
+                    ),
             ),
-            child: chosen.isEmpty
-                ? Text(l10n.mediaTagsNoneOnMedia)
-                : Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: [
-                      for (final tag in chosen)
-                        InputChip(
-                          label: Text(tag.name),
-                          onDeleted: saving ? null : () => onToggle(tag),
-                        ),
-                    ],
-                  ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(

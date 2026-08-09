@@ -11,6 +11,10 @@ import '../../../support/test_harness.dart';
 
 const AppLocalizationsEn l10n = AppLocalizationsEn();
 
+/// A phone-sized surface, for the cases that only go wrong when the sheet is
+/// narrow enough to make the chips wrap.
+const Size phoneSurface = Size(400, 800);
+
 /// A page whose only job is to open the editor, the way the media viewer
 /// does.
 ///
@@ -68,11 +72,13 @@ void main() {
   Future<_EditorHostState> openEditor(
     WidgetTester tester, {
     FakeMediaTagRepository? tags,
+    Size surfaceSize = tallSurface,
   }) async {
     await pumpInScope(
       tester,
       const _EditorHost(),
       scope: TestScope(mediaTagRepository: tags ?? seededTags()),
+      surfaceSize: surfaceSize,
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -169,6 +175,40 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tags.replacements.single.$2, isEmpty);
+    });
+
+    testWidgets('many chosen tags scroll rather than pushing Save away', (
+      tester,
+    ) async {
+      final many = [
+        for (var i = 1; i <= 40; i++)
+          testTag(id: i, name: 'A rather long tag name number $i'),
+      ];
+      await openEditor(
+        tester,
+        tags: FakeMediaTagRepository()
+          ..library = many
+          ..byMedia[10] = many,
+        // A phone, not the roomy default surface: this only goes wrong when
+        // the chips have to wrap, which is exactly the narrow case.
+        surfaceSize: phoneSurface,
+      );
+
+      // Bounded and scrollable, so the chips cannot grow without limit...
+      final chips = tester.getSize(
+        find.ancestor(
+          of: find.byType(InputChip).first,
+          matching: find.byType(SingleChildScrollView),
+        ),
+      );
+      expect(chips.height, lessThanOrEqualTo(140));
+      // ...and the controls the reader needs stay on the sheet rather than
+      // being pushed off the bottom of the screen.
+      expect(tester.takeException(), isNull);
+      final save = tester.getRect(find.text(l10n.mediaTagsSave));
+      final search = tester.getRect(find.byType(TextField));
+      expect(save.bottom, lessThan(phoneSurface.height));
+      expect(search.bottom, lessThan(phoneSurface.height));
     });
 
     testWidgets('typing narrows the picker after the debounce', (tester) async {

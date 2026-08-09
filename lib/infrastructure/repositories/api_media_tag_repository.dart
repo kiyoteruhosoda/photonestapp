@@ -27,16 +27,13 @@ final class ApiMediaTagRepository implements MediaTagRepository {
         'limit': '$limit',
       },
     );
-    return _tagsFrom(payload['items'], 'Tag list response had no items.');
+    return _tagsFrom(payload['items'], 'Tag list response');
   }
 
   @override
   Future<List<Tag>> findByMedia(MediaId id) async {
     final payload = await _client.getJson('/media/${id.value}');
-    return _tagsFrom(
-      payload['tags'],
-      'Media detail response had no tags field.',
-    );
+    return _tagsFrom(payload['tags'], 'Media detail response');
   }
 
   @override
@@ -44,26 +41,35 @@ final class ApiMediaTagRepository implements MediaTagRepository {
     final payload = await _client.putJson('/media/${id.value}/tags', {
       'tag_ids': [for (final tagId in tagIds) tagId.value],
     });
-    return _tagsFrom(payload['tags'], 'Tag update response carried no tags.');
+    return _tagsFrom(payload['tags'], 'Tag update response');
   }
 
-  /// Reads a tag array, rejecting anything else.
+  /// Reads a whole tag array, rejecting anything it does not understand.
   ///
   /// An absent array is a failure rather than an empty list: "this media has
   /// no tags" and "the server answered with a shape we do not understand"
   /// look identical to the editor, and quietly reading the second as the
   /// first would let a save wipe the tags it never managed to read.
-  static List<Tag> _tagsFrom(Object? raw, String failure) {
-    if (raw is! List) throw InfrastructureError(failure);
-    return raw
-        .whereType<Map<String, dynamic>>()
-        .map(_tagFrom)
-        .toList(growable: false);
+  ///
+  /// One malformed *entry* fails the whole array for the same reason.
+  /// Skipping it would hand the editor a subset dressed up as the complete
+  /// current state, and the next save — which replaces the whole set — would
+  /// delete the tag that was skipped.
+  static List<Tag> _tagsFrom(Object? raw, String subject) {
+    if (raw is! List) {
+      throw InfrastructureError('$subject carried no tag array.');
+    }
+    return <Tag>[for (final entry in raw) _tagFrom(entry, subject)];
   }
 
-  static Tag _tagFrom(Map<String, dynamic> json) {
+  static Tag _tagFrom(Object? raw, String subject) {
+    final id = raw is Map<String, dynamic> ? raw['id'] : null;
+    if (id is! int) {
+      throw InfrastructureError('$subject carried a tag without an id.');
+    }
+    final json = raw! as Map<String, dynamic>;
     return Tag(
-      id: TagId(json['id'] as int),
+      id: TagId(id),
       name: json['name'] as String? ?? '',
       attribute: TagAttribute.tryParse(json['attr'] as String?),
     );

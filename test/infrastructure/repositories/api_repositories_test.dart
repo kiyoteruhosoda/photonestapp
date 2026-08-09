@@ -1247,6 +1247,44 @@ void main() {
       expect(jsonDecode(requests.single.body), {'tag_ids': <int>[]});
     });
 
+    test('a malformed entry fails the whole array, not just itself', () async {
+      // Skipping the bad entry would hand the editor a subset dressed up as
+      // the complete current state, and the next save — a whole-set
+      // replacement — would delete the tag that was skipped.
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'tags': [
+              {'id': 1, 'name': 'Kyoto', 'attr': 'place'},
+              'Osaka',
+            ],
+          }),
+        ),
+      );
+
+      await expectLater(
+        repository.findByMedia(MediaId(10)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test('an entry without a usable id is rejected too', () async {
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'tags': [
+              {'name': 'Kyoto', 'attr': 'place'},
+            ],
+          }),
+        ),
+      );
+
+      await expectLater(
+        repository.findByMedia(MediaId(10)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
     test(
       'a response without a tag array is a failure, not an empty set',
       () async {

@@ -105,26 +105,27 @@ const int libraryMediaPageSize = 100;
 final class LibraryMediaState {
   const LibraryMediaState({
     required this.media,
-    required this.hasMore,
-    this.pagesLoaded = 1,
+    required this.nextCursor,
     this.loadingMore = false,
     this.loadMoreFailed = false,
   });
 
   /// Media accumulated across the pages read so far, newest capture first.
   ///
-  /// May be shorter than `pagesLoaded × page size`: the library is written
-  /// to while it is being read, so overlapping pages are deduplicated on
-  /// append.
+  /// May be shorter than the number of pages read × page size: the library
+  /// is written to while it is being read, so overlapping pages are
+  /// deduplicated on append.
   final List<MediaItem> media;
 
-  /// Whether the server said it holds media beyond what [media] covers.
-  final bool hasMore;
+  /// Where the next window starts, or null once everything is loaded.
+  ///
+  /// Cursor (keyset) paging rather than an offset: media is written to the
+  /// library while it is being read, and an offset would make the timeline
+  /// skip or repeat items around every insert or delete.
+  final String? nextCursor;
 
-  /// How many pages have been fetched. The next request is always
-  /// `pagesLoaded + 1` — deriving the page from [media]'s length would
-  /// re-request the same page forever once deduplication shortened it.
-  final int pagesLoaded;
+  /// Whether the server holds media beyond what [media] covers.
+  bool get hasMore => nextCursor != null;
 
   /// True while the next page is being fetched.
   final bool loadingMore;
@@ -133,17 +134,17 @@ final class LibraryMediaState {
   /// offers the retry.
   final bool loadMoreFailed;
 
+  /// [nextCursor] is passed through a wrapper so that clearing it (reaching
+  /// the end) is expressible — a bare null would mean "keep the old value".
   LibraryMediaState copyWith({
     List<MediaItem>? media,
-    bool? hasMore,
-    int? pagesLoaded,
+    ({String? value})? nextCursor,
     bool? loadingMore,
     bool? loadMoreFailed,
   }) {
     return LibraryMediaState(
       media: media ?? this.media,
-      hasMore: hasMore ?? this.hasMore,
-      pagesLoaded: pagesLoaded ?? this.pagesLoaded,
+      nextCursor: nextCursor == null ? this.nextCursor : nextCursor.value,
       loadingMore: loadingMore ?? this.loadingMore,
       loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
     );
@@ -175,8 +176,8 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
     _generation++;
     final page = await ref
         .read(listLibraryMediaUseCaseProvider)
-        .execute(page: 1, pageSize: libraryMediaPageSize);
-    return LibraryMediaState(media: page.items, hasMore: _holdsMore(page));
+        .execute(pageSize: libraryMediaPageSize);
+    return LibraryMediaState(media: page.items, nextCursor: page.nextCursor);
   }
 
   /// Re-reads the library from the first page, e.g. after a pull-to-refresh.
@@ -200,12 +201,11 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
       current.copyWith(loadingMore: true, loadMoreFailed: false),
     );
 
-    final nextPage = current.pagesLoaded + 1;
     final MediaLibraryPage page;
     try {
       page = await ref
           .read(listLibraryMediaUseCaseProvider)
-          .execute(page: nextPage, pageSize: libraryMediaPageSize);
+          .execute(cursor: current.nextCursor, pageSize: libraryMediaPageSize);
     } on Object {
       if (generation != _generation) return;
       state = AsyncValue.data(
@@ -223,8 +223,7 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
           ...current.media,
           ...page.items.where((item) => !known.contains(item.id)),
         ],
-        hasMore: _holdsMore(page),
-        pagesLoaded: nextPage,
+        nextCursor: (value: page.nextCursor),
         loadingMore: false,
         // `current` was captured before the flag was cleared, so a retry
         // that succeeded would otherwise keep showing the retry tile.
@@ -232,10 +231,4 @@ class LibraryMediaNotifier extends AsyncNotifier<LibraryMediaState> {
       ),
     );
   }
-
-  /// A short page is the server saying "no more", whatever `hasNext` claims —
-  /// the flag is computed per request and drifts while media is deleted
-  /// mid-paging, and trusting a stale one would request empty pages forever.
-  static bool _holdsMore(MediaLibraryPage page) =>
-      page.hasNext && page.items.length >= libraryMediaPageSize;
 }

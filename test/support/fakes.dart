@@ -435,8 +435,9 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
 
   List<MediaItem> media;
 
-  /// Pages requested, in order, as (page, pageSize).
-  final List<(int, int)> requestedPages = <(int, int)>[];
+  /// Pages requested, in order, as (cursor, pageSize). The first window's
+  /// cursor is null.
+  final List<(String?, int)> requestedPages = <(String?, int)>[];
 
   /// When set, every request throws this instead of answering.
   AppError? failure;
@@ -445,20 +446,30 @@ final class FakeMediaLibraryRepository implements MediaLibraryRepository {
   /// page mid-flight and restart the timeline underneath it.
   Future<void> Function()? gate;
 
+  /// The cursor is the offset of the next item, spelled the way the server
+  /// spells it: opaque to the caller, meaningful only here.
+  static const String _cursorPrefix = 'after:';
+
   @override
-  Future<MediaLibraryPage> findPage({int page = 1, int pageSize = 100}) async {
-    requestedPages.add((page, pageSize));
+  Future<MediaLibraryPage> findPage({
+    String? cursor,
+    int pageSize = 100,
+  }) async {
+    requestedPages.add((cursor, pageSize));
     await gate?.call();
     final error = failure;
     if (error != null) throw error;
-    final start = (page - 1) * pageSize;
+    final start = cursor == null
+        ? 0
+        : int.parse(cursor.substring(_cursorPrefix.length));
     if (start >= media.length) {
-      return const MediaLibraryPage(items: <MediaItem>[], hasNext: false);
+      return const MediaLibraryPage(items: <MediaItem>[], nextCursor: null);
     }
     final end = start + pageSize;
+    final hasNext = end < media.length;
     return MediaLibraryPage(
-      items: media.sublist(start, end < media.length ? end : media.length),
-      hasNext: end < media.length,
+      items: media.sublist(start, hasNext ? end : media.length),
+      nextCursor: hasNext ? '$_cursorPrefix$end' : null,
     );
   }
 }

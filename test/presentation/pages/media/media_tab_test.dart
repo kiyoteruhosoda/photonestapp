@@ -65,7 +65,8 @@ void main() {
       // The load-more cell sits far below the fold, so only the first page
       // has been asked for. Building it eagerly would chain straight through
       // the whole library at startup.
-      expect(repository.requestedPages, [(1, libraryMediaPageSize)]);
+      // The first window carries no cursor.
+      expect(repository.requestedPages, [(null, libraryMediaPageSize)]);
     });
 
     testWidgets('scrolling to the end pages the next window in', (
@@ -89,10 +90,11 @@ void main() {
       }
       await tester.pumpAndSettle();
 
-      expect(repository.requestedPages, [
-        (1, libraryMediaPageSize),
-        (2, libraryMediaPageSize),
-      ]);
+      expect(repository.requestedPages, hasLength(2));
+      expect(repository.requestedPages.first, (null, libraryMediaPageSize));
+      // The second window follows the cursor the first one handed back.
+      expect(repository.requestedPages.last.$1, isNotNull);
+      expect(repository.requestedPages.last.$2, libraryMediaPageSize);
     });
 
     testWidgets('media is grouped under the day it was captured', (

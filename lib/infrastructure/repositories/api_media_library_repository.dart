@@ -18,15 +18,19 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
   final PhotoNestApiClient _client;
 
   @override
-  Future<MediaLibraryPage> findPage({int page = 1, int pageSize = 100}) async {
+  Future<MediaLibraryPage> findPage({
+    String? cursor,
+    int pageSize = 100,
+  }) async {
     final payload = await _client.getJson(
       '/media',
       query: {
-        'page': '$page',
         'pageSize': '$pageSize',
         // Newest capture first — the order the timeline reads in. Sent
         // explicitly rather than relying on the server's default.
         'order': 'desc',
+        // Omitted on the first window; the server then starts from the top.
+        'cursor': ?cursor,
       },
     );
     final items = payload['items'];
@@ -38,12 +42,16 @@ final class ApiMediaLibraryRepository implements MediaLibraryRepository {
           .whereType<Map<String, dynamic>>()
           .map(_mediaItemFrom)
           .toList(growable: false),
-      // The server always reports this. A missing or unexpected value reads
-      // as "no more": an optimistic default would keep requesting empty
-      // pages forever, and the caller's short-page check is the second guard
-      // against stopping one page early.
-      hasNext: _isTrue(payload['hasNext']),
+      // The server sends a cursor only when more media follows, so anything
+      // that is not a non-empty string reads as "no more". An optimistic
+      // default would keep requesting the same window forever.
+      nextCursor: _cursorFrom(payload['nextCursor']),
     );
+  }
+
+  static String? _cursorFrom(Object? raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    return raw;
   }
 
   static MediaItem _mediaItemFrom(Map<String, dynamic> json) {

@@ -61,10 +61,13 @@ final class PhotoNestApiClient {
   Future<Map<String, dynamic>> getJson(
     String path, {
     Map<String, String>? query,
+    Map<String, String>? headers,
   }) async {
     final response = await _sendWithRetry(
       authenticated: true,
-      build: () => http.Request('GET', _resolve(path, query)),
+      build: () =>
+          http.Request('GET', _resolve(path, query))
+            ..headers.addAll(headers ?? const {}),
     );
     return _decodeJson(response);
   }
@@ -92,25 +95,29 @@ final class PhotoNestApiClient {
     return response.bodyBytes;
   }
 
-  /// POSTs one file as `multipart/form-data` and decodes the JSON response.
+  /// PUTs one byte range as the raw request body and decodes the JSON
+  /// response.
   ///
-  /// [buildFile] is async (and called once per attempt) because a file part
-  /// streaming from disk has to be reopened for the post-refresh retry.
-  ///
-  /// [onBytes] observes the request body as it leaves, so a caller can show
-  /// how far a large file has got. It restarts from zero when the request is
-  /// retried after a token refresh — the bytes really are being sent again.
-  Future<Map<String, dynamic>> postMultipart(
+  /// [openBody] is a factory (called once per attempt) because a stream can
+  /// only be listened to once: the post-refresh retry has to re-read the
+  /// same range from disk. [contentLength] is that range's length, which the
+  /// server needs up front and which [onBytes] reports progress against.
+  Future<Map<String, dynamic>> putStream(
     String path, {
-    required Future<http.MultipartFile> Function() buildFile,
+    required Stream<List<int>> Function() openBody,
+    required int contentLength,
     Map<String, String>? headers,
     void Function(int sent, int total)? onBytes,
   }) async {
     final response = await _sendWithRetry(
       authenticated: true,
-      build: () async => _ObservedMultipartRequest(_resolve(path), onBytes)
-        ..headers.addAll(headers ?? const {})
-        ..files.add(await buildFile()),
+      build: () => _ObservedStreamRequest(
+        'PUT',
+        _resolve(path),
+        openBody(),
+        contentLength,
+        onBytes,
+      )..headers.addAll(headers ?? const {}),
     );
     return _decodeJson(response);
   }
@@ -295,26 +302,35 @@ final class PhotoNestApiClient {
   }
 }
 
-/// A multipart request that reports its body as it is consumed.
+/// A request whose body is a caller-supplied stream, reported as it is
+/// consumed.
 ///
-/// `http` offers no progress hook, but it does finalise the body into a
-/// stream just before sending, so counting the chunks that pass through is
-/// enough. The total is the request's own `contentLength`, which multipart
-/// always knows.
-final class _ObservedMultipartRequest extends http.MultipartRequest {
-  _ObservedMultipartRequest(Uri url, this._onBytes) : super('POST', url);
+/// This is what keeps a chunked upload off the heap: the body is read from
+/// the file range as the socket drains it, so the memory cost is a buffer
+/// rather than the chunk.
+final class _ObservedStreamRequest extends http.BaseRequest {
+  _ObservedStreamRequest(
+    super.method,
+    super.url,
+    this._body,
+    int length,
+    this._onBytes,
+  ) {
+    contentLength = length;
+  }
 
+  final Stream<List<int>> _body;
   final void Function(int sent, int total)? _onBytes;
 
   @override
   http.ByteStream finalize() {
-    final stream = super.finalize();
+    super.finalize();
     final report = _onBytes;
-    if (report == null) return stream;
-    final total = contentLength;
+    final total = contentLength ?? 0;
+    if (report == null) return http.ByteStream(_body);
     var sent = 0;
     return http.ByteStream(
-      stream.transform(
+      _body.transform(
         StreamTransformer<List<int>, List<int>>.fromHandlers(
           handleData: (chunk, sink) {
             sent += chunk.length;

@@ -24,6 +24,7 @@ import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_resumption_repository.dart';
 import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
 import 'package:flutterbase/infrastructure/background/workmanager_background_sync_scheduler.dart';
 import 'package:flutterbase/infrastructure/database/app_database.dart';
@@ -51,6 +52,7 @@ import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_
 import 'package:flutterbase/infrastructure/repositories/sqflite_sync_lease_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_failure_repository.dart';
 import 'package:flutterbase/infrastructure/repositories/sqflite_upload_history_repository.dart';
+import 'package:flutterbase/infrastructure/repositories/sqflite_upload_resumption_repository.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -85,6 +87,7 @@ final class InfrastructureModule {
     required this.photoUploads,
     required this.uploadHistory,
     required this.uploadFailures,
+    required this.uploadResumptions,
     required this.syncLease,
     required this.autoUploadSettings,
     required this.photoLibrary,
@@ -138,6 +141,14 @@ final class InfrastructureModule {
       'session: ${sessions.load() == null ? 'none' : 'restored'})',
     );
 
+    // Shared instance: the upload repository consults it, and the module
+    // exposes the same one so a caller can clear a stale resume point.
+    final uploadResumptions = SqfliteUploadResumptionRepository(
+      database,
+      sessions,
+      apiEndpoints,
+    );
+
     return InfrastructureModule._(
       appLogger: logger,
       debugSettings: debugSettings,
@@ -166,7 +177,11 @@ final class InfrastructureModule {
       mediaLibrary: ApiMediaLibraryRepository(apiClient),
       mediaOriginals: ApiMediaOriginalRepository(apiClient),
       mediaPlayback: ApiMediaPlaybackRepository(apiClient),
-      photoUploads: ApiPhotoUploadRepository(apiClient),
+      photoUploads: ApiPhotoUploadRepository(
+        apiClient,
+        uploadResumptions,
+        logger,
+      ),
       uploadHistory: SqfliteUploadHistoryRepository(
         database,
         sessions,
@@ -177,6 +192,7 @@ final class InfrastructureModule {
         sessions,
         apiEndpoints,
       ),
+      uploadResumptions: uploadResumptions,
       syncLease: SqfliteSyncLeaseRepository(database),
       autoUploadSettings: SharedPreferencesAutoUploadSettingsRepository(
         preferences,
@@ -209,6 +225,7 @@ final class InfrastructureModule {
   final PhotoUploadRepository photoUploads;
   final UploadHistoryRepository uploadHistory;
   final UploadFailureRepository uploadFailures;
+  final UploadResumptionRepository uploadResumptions;
   final SyncLeaseRepository syncLease;
   final AutoUploadSettingsRepository autoUploadSettings;
   final PhotoLibraryGateway photoLibrary;

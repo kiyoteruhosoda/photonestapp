@@ -3,6 +3,37 @@
 完了した重要な変更の短い要約を、新しいものから並べます。
 詳しい経緯が必要なものは `docs/history/`、設計判断は `docs/adr/` にあります。
 
+## 2026-08-09 — 自動バックアップを再開可能な分割アップロードに載せ替える
+
+- photonest Progress F11a。送信は `POST /api/upload/prepare` の単発
+  multipart で、回線が切れると常に先頭から送り直しだった。動画 1 本が
+  数分〜数十分かかるため、不安定な回線では最後まで終わらないことがある。
+- サーバーの分割アップロードへ切り替えた。`POST /api/upload/chunks` で
+  ファイル名・サイズ・Content-Type を申告して `tempFileId` を受け取り、
+  `PUT /api/upload/chunks/{tempFileId}` に `Content-Range` を付けて
+  4 MiB ずつ追記し、全部届いたら `POST /api/upload/commit` で確定する。
+  3 つの呼び出しはこれまでどおり同じ `X-Upload-Session` を運ぶ。
+  単発の `POST /api/upload/prepare` は使わなくなったため、API クライアント
+  からも multipart 送信を外した。
+- 中断からの再開は 2 段構え。(a) 送信中に切れた場合は
+  `GET /api/upload/chunks/{tempFileId}` で受信済みバイト数を問い合わせ、
+  その続きから送り直す（同じ理由で 409 `offset_mismatch` /
+  `upload_busy` も問い合わせで解決する）。同一チャンクの再試行は 3 回まで
+  で、進捗が出ないまま回り続けることはない。(b) プロセスが落ちた場合に
+  備え、再開キー（アップロードセッション ID・`tempFileId`・宣言サイズ）を
+  `upload_resumptions` テーブル（schema v9、サーバー+アカウント単位で分離）
+  に残す。バックグラウンドパスは OS に殺されて終わるのが普通で、メモリ上の
+  記録では意味がないため。記録は最初のチャンクを送る**前**に書く。
+- 記録が実体と食い違う場合は素直にやり直す。ファイル名・サイズが変わって
+  いれば（再エンコード等）別物として最初から送り直し、サーバーが
+  `upload_not_found` を返す（一時ファイルが掃除された）場合は申告からやり直す。
+  コミットに成功したら記録を消す。
+- 進捗（`onBytes`）はチャンク単位ではなくファイル全体に対して報告する。
+  再開したアップロードのバーは 0 からではなく続きから伸びる。
+- Domain に `UploadResumption` と `UploadResumptionRepository` を追加し、
+  `SqfliteUploadResumptionRepository` が実装する。読み書きはファイル全体を
+  メモリに載せず、送信する範囲だけをディスクから読む。
+
 ## 2026-08-08 — アップロード進捗のバイト単位化と失敗の永続化
 
 - 旧 Progress #23。(a) 進捗が枚数単位で、大きい動画 1 本の間はバーが

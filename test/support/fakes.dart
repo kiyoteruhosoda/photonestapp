@@ -13,6 +13,7 @@ import 'package:flutterbase/domain/entities/media_item.dart';
 import 'package:flutterbase/domain/entities/media_library_page.dart';
 import 'package:flutterbase/domain/entities/signed_media_url.dart';
 import 'package:flutterbase/domain/entities/upload_failure.dart';
+import 'package:flutterbase/domain/entities/upload_resumption.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/repositories/album_repository.dart';
 import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
@@ -34,6 +35,7 @@ import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
 import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
 import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
+import 'package:flutterbase/domain/repositories/upload_resumption_repository.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/app_language.dart';
 import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
@@ -880,6 +882,29 @@ final class FakeUploadHistoryRepository implements UploadHistoryRepository {
   Future<void> markUploaded(LocalPhoto photo, DateTime uploadedAt) async {
     marked.add(photo);
     _uploaded.add(photo.localId);
+  }
+}
+
+/// In-memory [UploadResumptionRepository].
+final class FakeUploadResumptionRepository
+    implements UploadResumptionRepository {
+  final Map<String, UploadResumption> stored = <String, UploadResumption>{};
+
+  /// Ids passed to [clear], in order.
+  final List<String> cleared = <String>[];
+
+  @override
+  Future<UploadResumption?> find(String localId) async => stored[localId];
+
+  @override
+  Future<void> save(UploadResumption resumption) async {
+    stored[resumption.localId] = resumption;
+  }
+
+  @override
+  Future<void> clear(String localId) async {
+    cleared.add(localId);
+    stored.remove(localId);
   }
 }
 

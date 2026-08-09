@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutterbase/domain/entities/upload_resumption.dart';
 import 'package:flutterbase/domain/errors/app_error.dart';
 import 'package:flutterbase/domain/value_objects/album_id.dart';
 import 'package:flutterbase/domain/value_objects/login_credentials.dart';
@@ -517,66 +518,469 @@ void main() {
   });
 
   group('ApiPhotoUploadRepository', () {
-    test('prepares then commits under one upload session', () async {
-      final apiClient = client((request) async {
-        if (request.url.path == '/api/upload/prepare') {
-          return json({
-            'tempFileId': 'tmp-1',
-            'fileName': 'IMG_0001.jpg',
-            'fileSize': 3,
-            'status': 'analyzed',
-          });
-        }
-        expect(request.url.path, '/api/upload/commit');
-        expect(jsonDecode(request.body), {
-          'files': [
-            {'tempFileId': 'tmp-1'},
-          ],
-        });
-        return json({
-          'uploaded': [
-            {'tempFileId': 'tmp-1', 'status': 'success'},
-          ],
-        });
-      });
-      final repository = ApiPhotoUploadRepository(
-        apiClient,
-        random: Random(42),
-      );
+    late FakeUploadResumptionRepository resumptions;
 
-      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2, 3]));
-
-      expect(requests, hasLength(2));
-      final prepare = requests[0];
-      final commit = requests[1];
-      expect(
-        prepare.headers['Content-Type'],
-        startsWith('multipart/form-data'),
-      );
-      // The same generated session id must accompany both calls.
-      final sessionId = prepare.headers['X-Upload-Session'];
-      expect(sessionId, isNotNull);
-      expect(sessionId, hasLength(32));
-      expect(commit.headers['X-Upload-Session'], sessionId);
-      // The multipart body carries the file part with an image content type.
-      final body = utf8.decode(prepare.bodyBytes, allowMalformed: true);
-      expect(body, contains('name="file"'));
-      expect(body, contains('filename="IMG_0001.jpg"'));
-      expect(body, contains('content-type: image/jpeg'));
+    setUp(() {
+      resumptions = FakeUploadResumptionRepository();
     });
 
-    test('a commit rejection surfaces the server message', () async {
-      final apiClient = client((request) async {
-        if (request.url.path == '/api/upload/prepare') {
-          return json({'tempFileId': 'tmp-1'});
-        }
-        return json({
-          'uploaded': [
-            {'tempFileId': 'tmp-1', 'status': 'error', 'message': 'corrupt'},
-          ],
-        });
+    /// The payload every chunked-upload call answers with.
+    http.Response chunkState({
+      String tempFileId = 'tmp-1',
+      required int uploadedBytes,
+      required int fileSize,
+    }) {
+      return json({
+        'tempFileId': tempFileId,
+        'fileName': 'IMG_0001.jpg',
+        'fileSize': fileSize,
+        'uploadedBytes': uploadedBytes,
+        'status': uploadedBytes >= fileSize ? 'analyzed' : 'uploading',
+        'completed': uploadedBytes >= fileSize,
       });
-      final repository = ApiPhotoUploadRepository(apiClient);
+    }
+
+    http.Response commitOk() => json({
+      'uploaded': [
+        {'tempFileId': 'tmp-1', 'status': 'success'},
+      ],
+    });
+
+    ApiPhotoUploadRepository repositoryOn(
+      PhotoNestApiClient apiClient, {
+      int chunkSize = ApiPhotoUploadRepository.defaultChunkSize,
+    }) {
+      return ApiPhotoUploadRepository(
+        apiClient,
+        resumptions,
+        RecordingAppLogger(),
+        random: Random(42),
+        chunkSize: chunkSize,
+      );
+    }
+
+    /// Handles the whole happy path for a [fileSize]-byte file sent in
+    /// [chunkSize] steps, recording the bytes each append carried.
+    PhotoNestApiClient happyServer({
+      required int fileSize,
+      required int chunkSize,
+      required List<List<int>> appended,
+    }) {
+      var received = 0;
+      return client((request) async {
+        switch (request.url.path) {
+          case '/api/upload/chunks':
+            return chunkState(uploadedBytes: 0, fileSize: fileSize);
+          case '/api/upload/chunks/tmp-1':
+            if (request.method == 'GET') {
+              return chunkState(uploadedBytes: received, fileSize: fileSize);
+            }
+            appended.add(request.bodyBytes);
+            received += request.bodyBytes.length;
+            return chunkState(uploadedBytes: received, fileSize: fileSize);
+          default:
+            expect(request.url.path, '/api/upload/commit');
+            return commitOk();
+        }
+      });
+    }
+
+    test('announces, appends every range in order, then commits', () async {
+      final appended = <List<int>>[];
+      final repository = repositoryOn(
+        happyServer(fileSize: 5, chunkSize: 2, appended: appended),
+        chunkSize: 2,
+      );
+
+      await repository.upload(
+        testLocalPhoto(),
+        Uint8List.fromList([1, 2, 3, 4, 5]),
+      );
+
+      // announce + 3 appends + commit
+      expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+        'POST /api/upload/chunks',
+        'PUT /api/upload/chunks/tmp-1',
+        'PUT /api/upload/chunks/tmp-1',
+        'PUT /api/upload/chunks/tmp-1',
+        'POST /api/upload/commit',
+      ]);
+      expect(appended, [
+        [1, 2],
+        [3, 4],
+        [5],
+      ]);
+      // Every range says where it sits in the whole file.
+      expect(requests[1].headers['Content-Range'], 'bytes 0-1/5');
+      expect(requests[2].headers['Content-Range'], 'bytes 2-3/5');
+      expect(requests[3].headers['Content-Range'], 'bytes 4-4/5');
+    });
+
+    test('announces the file name, size and content type', () async {
+      final repository = repositoryOn(
+        happyServer(fileSize: 2, chunkSize: 8, appended: <List<int>>[]),
+      );
+
+      await repository.upload(
+        testLocalPhoto(fileName: 'clip.mp4', isVideo: true),
+        Uint8List.fromList([1, 2]),
+      );
+
+      expect(jsonDecode(requests.first.body), {
+        'fileName': 'clip.mp4',
+        'fileSize': 2,
+        'contentType': 'video/mp4',
+      });
+    });
+
+    test('every call carries the same generated upload session', () async {
+      final repository = repositoryOn(
+        happyServer(fileSize: 2, chunkSize: 8, appended: <List<int>>[]),
+      );
+
+      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2]));
+
+      final session = requests.first.headers['X-Upload-Session'];
+      expect(session, isNotNull);
+      expect(session, hasLength(32));
+      for (final request in requests) {
+        expect(request.headers['X-Upload-Session'], session);
+      }
+    });
+
+    test(
+      'progress is reported against the whole file, not the chunk',
+      () async {
+        final repository = repositoryOn(
+          happyServer(fileSize: 5, chunkSize: 2, appended: <List<int>>[]),
+          chunkSize: 2,
+        );
+        final progress = <(int, int)>[];
+
+        await repository.upload(
+          testLocalPhoto(),
+          Uint8List.fromList([1, 2, 3, 4, 5]),
+          onBytes: (sent, total) => progress.add((sent, total)),
+        );
+
+        expect(progress, [(2, 5), (4, 5), (5, 5)]);
+      },
+    );
+
+    test(
+      'the resume point is recorded before the first byte goes out',
+      () async {
+        final repository = repositoryOn(
+          client((request) async {
+            if (request.url.path == '/api/upload/chunks') {
+              return chunkState(uploadedBytes: 0, fileSize: 4);
+            }
+            // The append never answers — the connection died.
+            throw http.ClientException('connection closed');
+          }),
+        );
+
+        await expectLater(
+          repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2, 3, 4])),
+          throwsA(isA<NetworkUnreachableError>()),
+        );
+
+        final stored = resumptions.stored['asset-1'];
+        expect(stored, isNotNull);
+        expect(stored!.tempFileId, 'tmp-1');
+        expect(stored.fileSize, 4);
+        expect(
+          stored.uploadSessionId,
+          requests.first.headers['X-Upload-Session'],
+        );
+      },
+    );
+
+    test(
+      'a recorded upload continues from the bytes the server holds',
+      () async {
+        await resumptions.save(
+          UploadResumption(
+            localId: 'asset-1',
+            fileName: 'IMG_0001.jpg',
+            fileSize: 5,
+            uploadSessionId: 'session-1',
+            tempFileId: 'tmp-1',
+          ),
+        );
+        final appended = <List<int>>[];
+        final repository = repositoryOn(
+          client((request) async {
+            if (request.method == 'GET') {
+              return chunkState(uploadedBytes: 3, fileSize: 5);
+            }
+            if (request.url.path == '/api/upload/commit') return commitOk();
+            appended.add(request.bodyBytes);
+            return chunkState(uploadedBytes: 5, fileSize: 5);
+          }),
+        );
+        final progress = <(int, int)>[];
+
+        await repository.upload(
+          testLocalPhoto(),
+          Uint8List.fromList([1, 2, 3, 4, 5]),
+          onBytes: (sent, total) => progress.add((sent, total)),
+        );
+
+        // No new announcement: the stored session and temp file are reused.
+        expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+          'GET /api/upload/chunks/tmp-1',
+          'PUT /api/upload/chunks/tmp-1',
+          'POST /api/upload/commit',
+        ]);
+        expect(requests.first.headers['X-Upload-Session'], 'session-1');
+        // Only the tail is re-sent, and the bar starts where it left off.
+        expect(appended, [
+          [4, 5],
+        ]);
+        expect(progress, [(5, 5)]);
+        // Committed, so the record is gone.
+        expect(resumptions.stored, isEmpty);
+      },
+    );
+
+    test('a resume point for a different file is discarded', () async {
+      await resumptions.save(
+        UploadResumption(
+          localId: 'asset-1',
+          fileName: 'IMG_0001.jpg',
+          // The asset was re-encoded: same id, different size.
+          fileSize: 99,
+          uploadSessionId: 'session-1',
+          tempFileId: 'stale',
+        ),
+      );
+      final repository = repositoryOn(
+        happyServer(fileSize: 2, chunkSize: 8, appended: <List<int>>[]),
+      );
+
+      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2]));
+
+      expect(requests.first.url.path, '/api/upload/chunks');
+      expect(requests.first.method, 'POST');
+      expect(resumptions.cleared, contains('asset-1'));
+    });
+
+    test('an upload the server forgot is started over', () async {
+      await resumptions.save(
+        UploadResumption(
+          localId: 'asset-1',
+          fileName: 'IMG_0001.jpg',
+          fileSize: 2,
+          uploadSessionId: 'session-1',
+          tempFileId: 'gone',
+        ),
+      );
+      final repository = repositoryOn(
+        client((request) async {
+          if (request.url.path == '/api/upload/chunks/gone') {
+            return json({
+              'detail': {
+                'error': 'upload_not_found',
+                'message': 'Upload not found',
+              },
+            }, status: 404);
+          }
+          if (request.url.path == '/api/upload/chunks') {
+            return chunkState(uploadedBytes: 0, fileSize: 2);
+          }
+          if (request.url.path == '/api/upload/commit') return commitOk();
+          return chunkState(uploadedBytes: 2, fileSize: 2);
+        }),
+      );
+
+      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2]));
+
+      expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+        'GET /api/upload/chunks/gone',
+        'POST /api/upload/chunks',
+        'PUT /api/upload/chunks/tmp-1',
+        'POST /api/upload/commit',
+      ]);
+    });
+
+    test('an append that finds the file gone re-announces it once', () async {
+      var announcements = 0;
+      final repository = repositoryOn(
+        client((request) async {
+          if (request.url.path == '/api/upload/chunks') {
+            announcements++;
+            return chunkState(uploadedBytes: 0, fileSize: 2);
+          }
+          if (request.url.path == '/api/upload/commit') return commitOk();
+          if (announcements == 1) {
+            // The temp file was swept up between announcing and appending.
+            return json({
+              'detail': {'error': 'upload_not_found', 'message': 'gone'},
+            }, status: 404);
+          }
+          return chunkState(uploadedBytes: 2, fileSize: 2);
+        }),
+      );
+
+      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2]));
+
+      expect(announcements, 2);
+      expect(requests.last.url.path, '/api/upload/commit');
+    });
+
+    test(
+      'an offset mismatch is answered by asking where the server is',
+      () async {
+        final appended = <List<int>>[];
+        var refused = false;
+        final repository = repositoryOn(
+          client((request) async {
+            if (request.url.path == '/api/upload/chunks') {
+              return chunkState(uploadedBytes: 0, fileSize: 4);
+            }
+            if (request.url.path == '/api/upload/commit') return commitOk();
+            if (request.method == 'GET') {
+              // Two bytes had in fact already landed.
+              return chunkState(uploadedBytes: 2, fileSize: 4);
+            }
+            if (!refused) {
+              refused = true;
+              return json({
+                'detail': {
+                  'error': 'offset_mismatch',
+                  'message':
+                      'Chunk offset does not match the received size (2)',
+                  'uploadedBytes': 2,
+                },
+              }, status: 409);
+            }
+            appended.add(request.bodyBytes);
+            return chunkState(uploadedBytes: 4, fileSize: 4);
+          }),
+        );
+
+        await repository.upload(
+          testLocalPhoto(),
+          Uint8List.fromList([1, 2, 3, 4]),
+        );
+
+        // The retry sends the tail the server was actually missing.
+        expect(appended, [
+          [3, 4],
+        ]);
+        expect(requests.map((r) => '${r.method} ${r.url.path}'), [
+          'POST /api/upload/chunks',
+          'PUT /api/upload/chunks/tmp-1',
+          'GET /api/upload/chunks/tmp-1',
+          'PUT /api/upload/chunks/tmp-1',
+          'POST /api/upload/commit',
+        ]);
+      },
+    );
+
+    test('a dropped connection resumes from what actually landed', () async {
+      var appends = 0;
+      final appended = <List<int>>[];
+      final repository = repositoryOn(
+        client((request) async {
+          if (request.url.path == '/api/upload/chunks') {
+            return chunkState(uploadedBytes: 0, fileSize: 4);
+          }
+          if (request.url.path == '/api/upload/commit') return commitOk();
+          if (request.method == 'GET') {
+            return chunkState(uploadedBytes: 1, fileSize: 4);
+          }
+          appends++;
+          if (appends == 1) {
+            // The socket died after one byte had reached the server.
+            throw http.ClientException('connection reset');
+          }
+          appended.add(request.bodyBytes);
+          return chunkState(uploadedBytes: 4, fileSize: 4);
+        }),
+      );
+
+      await repository.upload(
+        testLocalPhoto(),
+        Uint8List.fromList([1, 2, 3, 4]),
+      );
+
+      expect(appended, [
+        [2, 3, 4],
+      ]);
+      expect(requests[2].method, 'GET');
+      expect(requests[3].headers['Content-Range'], 'bytes 1-3/4');
+    });
+
+    test(
+      'an unreachable server fails the upload but keeps the resume point',
+      () async {
+        final repository = repositoryOn(
+          client((request) async {
+            if (request.url.path == '/api/upload/chunks') {
+              return chunkState(uploadedBytes: 0, fileSize: 2);
+            }
+            throw http.ClientException('no route to host');
+          }),
+        );
+
+        await expectLater(
+          repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2])),
+          throwsA(isA<NetworkUnreachableError>()),
+        );
+
+        // The record survives so the next pass can carry on.
+        expect(resumptions.stored['asset-1'], isNotNull);
+      },
+    );
+
+    test(
+      'an append that never advances gives up instead of spinning',
+      () async {
+        final repository = repositoryOn(
+          client((request) async {
+            if (request.url.path == '/api/upload/chunks') {
+              return chunkState(uploadedBytes: 0, fileSize: 4);
+            }
+            // The server keeps answering "still nothing received".
+            return chunkState(uploadedBytes: 0, fileSize: 4);
+          }),
+        );
+
+        await expectLater(
+          repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2, 3, 4])),
+          throwsA(
+            isA<InfrastructureError>().having(
+              (error) => error.code,
+              'code',
+              'upload_stalled',
+            ),
+          ),
+        );
+      },
+    );
+
+    test('a commit rejection surfaces the server message', () async {
+      final repository = repositoryOn(
+        client((request) async {
+          if (request.url.path == '/api/upload/chunks') {
+            return chunkState(uploadedBytes: 0, fileSize: 1);
+          }
+          if (request.url.path == '/api/upload/commit') {
+            return json({
+              'uploaded': [
+                {
+                  'tempFileId': 'tmp-1',
+                  'status': 'error',
+                  'message': 'corrupt',
+                },
+              ],
+            });
+          }
+          return chunkState(uploadedBytes: 1, fileSize: 1);
+        }),
+      );
 
       await expectLater(
         repository.upload(testLocalPhoto(), Uint8List.fromList([1])),
@@ -590,58 +994,27 @@ void main() {
       );
     });
 
-    test('a prepare response without a file id is an error', () async {
-      final repository = ApiPhotoUploadRepository(
-        client((request) async => json({'status': 'analyzed'})),
+    test('an announcement without a file id is an error', () async {
+      final repository = repositoryOn(
+        client((request) async => json({'status': 'uploading'})),
       );
+
       await expectLater(
         repository.upload(testLocalPhoto(), Uint8List.fromList([1])),
         throwsA(isA<InfrastructureError>()),
       );
     });
 
-    test('a video upload carries a video content type', () async {
-      final repository = ApiPhotoUploadRepository(
-        client((request) async {
-          if (request.url.path.endsWith('/upload/prepare')) {
-            return json({'tempFileId': 't1'});
-          }
-          return json({
-            'uploaded': [
-              {'status': 'success'},
-            ],
-          });
-        }),
-        random: Random(1),
-      );
-
-      await repository.upload(
-        testLocalPhoto(fileName: 'clip.mp4', isVideo: true),
-        Uint8List.fromList([1, 2]),
-      );
-
-      final prepare = requests.first;
-      expect(prepare.body, contains('content-type: video/mp4'));
-    });
-
-    test('uploadFromPath streams the file with its content type', () async {
+    test('uploadFromPath streams the file range by range', () async {
       final directory = await Directory.systemTemp.createTemp('upload-test');
       addTearDown(() => directory.delete(recursive: true));
       final file = File('${directory.path}/clip.mp4');
-      await file.writeAsBytes([1, 2, 3, 4]);
+      await file.writeAsBytes([1, 2, 3, 4, 5]);
 
-      final repository = ApiPhotoUploadRepository(
-        client((request) async {
-          if (request.url.path.endsWith('/upload/prepare')) {
-            return json({'tempFileId': 't1'});
-          }
-          return json({
-            'uploaded': [
-              {'status': 'success'},
-            ],
-          });
-        }),
-        random: Random(1),
+      final appended = <List<int>>[];
+      final repository = repositoryOn(
+        happyServer(fileSize: 5, chunkSize: 2, appended: appended),
+        chunkSize: 2,
       );
 
       await repository.uploadFromPath(
@@ -649,15 +1022,20 @@ void main() {
         file.path,
       );
 
-      final prepare = requests.first;
-      expect(prepare.body, contains('content-type: video/mp4'));
-      expect(prepare.bodyBytes, containsAllInOrder([1, 2, 3, 4]));
+      expect(appended, [
+        [1, 2],
+        [3, 4],
+        [5],
+      ]);
+      expect(jsonDecode(requests.first.body), {
+        'fileName': 'clip.mp4',
+        'fileSize': 5,
+        'contentType': 'video/mp4',
+      });
     });
 
     test('uploadFromPath maps a vanished file to missing_file', () async {
-      final repository = ApiPhotoUploadRepository(
-        client((request) async => json({'tempFileId': 't1'})),
-      );
+      final repository = repositoryOn(client((request) async => json({})));
 
       await expectLater(
         repository.uploadFromPath(
@@ -675,12 +1053,27 @@ void main() {
       expect(requests, isEmpty);
     });
 
+    test('an empty file is refused before anything is announced', () async {
+      final repository = repositoryOn(client((request) async => json({})));
+
+      await expectLater(
+        repository.upload(testLocalPhoto(), Uint8List(0)),
+        throwsA(
+          isA<InfrastructureError>().having(
+            (error) => error.code,
+            'code',
+            'upload_failed',
+          ),
+        ),
+      );
+      expect(requests, isEmpty);
+    });
+
     test(
       'an unsupported extension is refused before any network call', //
       () async {
-        final repository = ApiPhotoUploadRepository(
-          client((request) async => json({})),
-        );
+        final repository = repositoryOn(client((request) async => json({})));
+
         await expectLater(
           repository.upload(
             testLocalPhoto(fileName: 'notes.txt'),

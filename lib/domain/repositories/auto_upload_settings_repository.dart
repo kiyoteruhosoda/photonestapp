@@ -17,8 +17,20 @@ abstract interface class AutoUploadSettingsRepository {
   /// data allowance without them ever choosing to.
   bool isUnmeteredOnly();
 
+  /// Device album ids automatic upload is limited to.
+  ///
+  /// Empty means the whole library — the default, and what an install that
+  /// predates this setting keeps. Ids of albums that no longer exist stay
+  /// in the set: an album can come back (a removable card remounted), and
+  /// silently dropping the choice would widen the target behind the user's
+  /// back.
+  Set<String> backupAlbumIds();
+
   /// Turns automatic upload on or off.
   Future<void> setEnabled(bool enabled);
+
+  /// Limits automatic upload to [albumIds], or lifts the limit when empty.
+  Future<void> setBackupAlbumIds(Set<String> albumIds);
 
   /// Restricts automatic upload to unmetered connections, or lifts the
   /// restriction.

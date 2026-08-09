@@ -160,6 +160,24 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get uploadAutoUnmeteredSubtitle => 'モバイル通信では自動アップロードせず、Wi-Fi 接続を待ちます。';
   @override
+  String get uploadAutoAlbumsTitle => 'バックアップする対象';
+  @override
+  String get uploadAutoAlbumsAll => 'この端末のすべて';
+  @override
+  String uploadAutoAlbumsCount(int count) => '$count 個のアルバム';
+  @override
+  String get uploadAutoAlbumsDialogTitle => 'バックアップする対象';
+  @override
+  String get uploadAutoAlbumsAllOption => 'この端末のすべて';
+  @override
+  String get uploadAutoAlbumsAllOptionSubtitle => 'スクリーンショット・保存した画像・動画も含まれます。';
+  @override
+  String get uploadAutoAlbumsEmpty => 'この端末にアルバムが見つかりません。';
+  @override
+  String get uploadAutoAlbumsPickOne => 'アルバムを 1 つ以上選んでください。';
+  @override
+  String uploadAutoAlbumsItemCount(int count) => '$count 件';
+  @override
   String get uploadPermissionTitle => '写真へのアクセスがありません';
   @override
   String get uploadPermissionBody => '写真をアップロードするには、写真ライブラリへのアクセスを許可してください。';
@@ -470,6 +488,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get commonClose => '閉じる';
   @override
   String get commonCancel => 'キャンセル';
+  @override
+  String get commonSave => '保存';
   @override
   String get commonErrorNetwork => 'サーバーに接続できませんでした。通信環境を確認して再試行してください。';
   @override

@@ -119,6 +119,15 @@ abstract class AppLocalizations {
   String get uploadAutoDenied;
   String get uploadAutoUnmeteredTitle;
   String get uploadAutoUnmeteredSubtitle;
+  String get uploadAutoAlbumsTitle;
+  String get uploadAutoAlbumsAll;
+  String uploadAutoAlbumsCount(int count);
+  String get uploadAutoAlbumsDialogTitle;
+  String get uploadAutoAlbumsAllOption;
+  String get uploadAutoAlbumsAllOptionSubtitle;
+  String get uploadAutoAlbumsEmpty;
+  String get uploadAutoAlbumsPickOne;
+  String uploadAutoAlbumsItemCount(int count);
   String get uploadPermissionTitle;
   String get uploadPermissionBody;
   String get uploadPermissionRetry;
@@ -286,6 +295,7 @@ abstract class AppLocalizations {
   String get commonRetry;
   String get commonClose;
   String get commonCancel;
+  String get commonSave;
   String get commonErrorNetwork;
   String get commonErrorSessionExpired;
   String get commonMenu;

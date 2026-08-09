@@ -34,11 +34,14 @@ import 'package:photonest/application/usecases/theme/set_theme_preference_usecas
 import 'package:photonest/application/usecases/upload/dismiss_upload_failures_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_device_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_failures_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/watch_upload_failures_usecase.dart';
 import 'package:photonest/presentation/providers/album_providers.dart';
@@ -122,6 +125,15 @@ List<Override> buildProviderOverrides() {
     ),
     setAutoUploadUnmeteredOnlyUseCaseProvider.overrideWithValue(
       sl<SetAutoUploadUnmeteredOnlyUseCase>(),
+    ),
+    getBackupAlbumsUseCaseProvider.overrideWithValue(
+      sl<GetBackupAlbumsUseCase>(),
+    ),
+    setBackupAlbumsUseCaseProvider.overrideWithValue(
+      sl<SetBackupAlbumsUseCase>(),
+    ),
+    listDeviceAlbumsUseCaseProvider.overrideWithValue(
+      sl<ListDeviceAlbumsUseCase>(),
     ),
     autoUploadCoordinatorProvider.overrideWithValue(
       sl<AutoUploadCoordinator>(),

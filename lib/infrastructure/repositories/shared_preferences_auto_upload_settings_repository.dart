@@ -17,6 +17,7 @@ final class SharedPreferencesAutoUploadSettingsRepository
   static const String _enabledKey = 'autoUpload.enabled';
   static const String _sinceKey = 'autoUpload.since';
   static const String _unmeteredOnlyKey = 'autoUpload.unmeteredOnly';
+  static const String _backupAlbumIdsKey = 'autoUpload.backupAlbumIds';
 
   @override
   bool isEnabled() => _preferences.getBool(_enabledKey) ?? false;
@@ -26,6 +27,16 @@ final class SharedPreferencesAutoUploadSettingsRepository
   // also covers installs that predate this setting.
   @override
   bool isUnmeteredOnly() => _preferences.getBool(_unmeteredOnlyKey) ?? true;
+
+  // Absent means "never narrowed", which is the whole library. Stored as a
+  // string list so the platform does the escaping — album ids are opaque
+  // and may contain anything a separator-joined string would mangle.
+  @override
+  Set<String> backupAlbumIds() {
+    final stored = _preferences.getStringList(_backupAlbumIdsKey);
+    if (stored == null) return const <String>{};
+    return stored.where((id) => id.isNotEmpty).toSet();
+  }
 
   @override
   DateTime? enabledSince() {
@@ -50,5 +61,16 @@ final class SharedPreferencesAutoUploadSettingsRepository
   @override
   Future<void> setUnmeteredOnly(bool unmeteredOnly) async {
     await _preferences.setBool(_unmeteredOnlyKey, unmeteredOnly);
+  }
+
+  @override
+  Future<void> setBackupAlbumIds(Set<String> albumIds) async {
+    // Removed rather than written empty so "never narrowed" and "narrowed
+    // back to everything" read the same on the next launch.
+    if (albumIds.isEmpty) {
+      await _preferences.remove(_backupAlbumIdsKey);
+      return;
+    }
+    await _preferences.setStringList(_backupAlbumIdsKey, albumIds.toList());
   }
 }

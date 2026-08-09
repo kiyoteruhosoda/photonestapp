@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:photonest/domain/entities/device_album.dart';
 import 'package:photonest/domain/entities/local_photo.dart';
 
 /// Application port to the device's photo library.
@@ -14,16 +15,28 @@ abstract interface class PhotoLibraryGateway {
   /// repeatedly — the platform only prompts when it has to.
   Future<bool> ensureAccess();
 
+  /// The albums the device's gallery groups the library into.
+  ///
+  /// The synthetic "everything" bucket the platform also reports is left
+  /// out: "back up the whole library" is the absence of a choice, not one
+  /// album among the others.
+  Future<List<DeviceAlbum>> albums();
+
   /// Photos taken strictly after [since], newest first — the [page]-th
   /// window of [limit] photos.
   ///
   /// Pass null to list the most recent photos regardless of age. A caller
   /// that must see *every* matching photo keeps advancing [page] until a
   /// batch comes back shorter than [limit].
+  ///
+  /// [albumId] narrows the query to one album from [albums]; null spans the
+  /// whole library. An album that has since been deleted answers empty
+  /// rather than failing — a stale selection must not stop a sync pass.
   Future<List<LocalPhoto>> photosTakenAfter(
     DateTime? since, {
     int limit = 100,
     int page = 0,
+    String? albumId,
   });
 
   /// The photo's original encoded bytes, or null when the asset has

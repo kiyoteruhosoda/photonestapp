@@ -4,12 +4,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:photonest/application/usecases/notification/record_backup_result_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/get_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/get_local_thumbnail_usecase.dart';
+import 'package:photonest/application/usecases/upload/list_device_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/list_upload_candidates_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_enabled_usecase.dart';
 import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_only_usecase.dart';
+import 'package:photonest/application/usecases/upload/set_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/domain/entities/device_album.dart';
 import 'package:photonest/domain/entities/upload_failure.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/domain/value_objects/log_level.dart';
@@ -566,6 +570,124 @@ void main() {
       expect(report.skipped, isNull);
       expect(report.uploadedCount, 0);
       expect(report.result, isNotNull);
+    });
+  });
+
+  group('SyncNewPhotosUseCase — backup target albums', () {
+    setUp(() {
+      settings
+        ..enabled = true
+        ..since = DateTime.utc(2026, 8, 1);
+    });
+
+    test('an empty selection reads the whole library in one pass', () async {
+      library.photos = [
+        testLocalPhoto(localId: 'photo-0', takenAt: DateTime.utc(2026, 8, 5)),
+      ];
+      library.bytesById['photo-0'] = Uint8List.fromList([1]);
+
+      final report = await syncUseCase().execute();
+
+      expect(report.uploadedCount, 1);
+      // Null is the platform's "everything" bucket: the default must not
+      // turn into one query per album.
+      expect(library.queriedAlbumIds, everyElement(isNull));
+    });
+
+    test('a narrowed selection reads only the chosen albums', () async {
+      settings.albumIds = {'camera'};
+      // Present in the whole-library view but in no selected album — the
+      // screenshot that used to go up unasked.
+      library.photos = [
+        testLocalPhoto(localId: 'shot', takenAt: DateTime.utc(2026, 8, 5)),
+      ];
+      library.photosByAlbum['camera'] = [
+        testLocalPhoto(localId: 'photo-0', takenAt: DateTime.utc(2026, 8, 5)),
+      ];
+      library.bytesById['photo-0'] = Uint8List.fromList([1]);
+      library.bytesById['shot'] = Uint8List.fromList([2]);
+
+      final report = await syncUseCase().execute();
+
+      expect(report.uploadedCount, 1);
+      expect(uploads.uploaded.single.$1.localId, 'photo-0');
+      expect(library.queriedAlbumIds, everyElement('camera'));
+    });
+
+    test('a photo in two selected albums is sent once', () async {
+      settings.albumIds = {'camera', 'favourites'};
+      final shared = testLocalPhoto(
+        localId: 'photo-0',
+        takenAt: DateTime.utc(2026, 8, 5),
+      );
+      library.photosByAlbum['camera'] = [shared];
+      library.photosByAlbum['favourites'] = [shared];
+      library.bytesById['photo-0'] = Uint8List.fromList([1]);
+
+      final report = await syncUseCase().execute();
+
+      // The history is only written once the pass is over, so nothing but
+      // the pass itself can catch the duplicate.
+      expect(report.uploadedCount, 1);
+      expect(uploads.uploaded, hasLength(1));
+    });
+
+    test('an album that no longer exists does not stop the pass', () async {
+      settings.albumIds = {'gone', 'camera'};
+      library.photosByAlbum['camera'] = [
+        testLocalPhoto(localId: 'photo-0', takenAt: DateTime.utc(2026, 8, 5)),
+      ];
+      library.bytesById['photo-0'] = Uint8List.fromList([1]);
+
+      final report = await syncUseCase().execute();
+
+      expect(report.uploadedCount, 1);
+    });
+  });
+
+  group('ListDeviceAlbumsUseCase', () {
+    test('reports denied access without listing albums', () async {
+      library.accessGranted = false;
+
+      final result = await ListDeviceAlbumsUseCase(library, settings).execute();
+
+      expect(result.accessGranted, isFalse);
+      expect(result.albums, isEmpty);
+      expect(result.selectedIds, isEmpty);
+    });
+
+    test('lists the biggest album first with the current choice', () async {
+      library.deviceAlbums = [
+        DeviceAlbum(id: 'screenshots', name: 'Screenshots', itemCount: 12),
+        DeviceAlbum(id: 'camera', name: 'Camera', itemCount: 640),
+      ];
+      settings.albumIds = {'camera'};
+
+      final result = await ListDeviceAlbumsUseCase(library, settings).execute();
+
+      expect(result.accessGranted, isTrue);
+      expect(result.albums.map((album) => album.id), ['camera', 'screenshots']);
+      expect(result.selectedIds, {'camera'});
+    });
+  });
+
+  group('SetBackupAlbumsUseCase', () {
+    test('persists the chosen albums without naming them in the log', () async {
+      await SetBackupAlbumsUseCase(settings, logger).execute({'camera'});
+
+      expect(settings.savedAlbumIds.single, {'camera'});
+      expect(
+        logger.messagesAt(LogLevel.info).join(),
+        isNot(contains('camera')),
+      );
+    });
+
+    test('an empty choice reads back as the whole library', () async {
+      settings.albumIds = {'camera'};
+
+      await SetBackupAlbumsUseCase(settings, logger).execute(const <String>{});
+
+      expect(GetBackupAlbumsUseCase(settings).execute(), isEmpty);
     });
   });
 

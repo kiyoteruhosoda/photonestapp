@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:photonest/domain/entities/device_album.dart';
 import 'package:photonest/domain/entities/upload_failure.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/presentation/l10n/app_localizations_en.dart';
@@ -231,6 +232,82 @@ void main() {
     expect(tester.widget<SwitchListTile>(unmeteredSwitch).value, isFalse);
     // The background schedule was re-registered without the restriction.
     expect(scope.backgroundSyncScheduler.scheduledUnmeteredOnly.last, isFalse);
+  });
+
+  testWidgets('the backup target reads as the whole device until narrowed', (
+    tester,
+  ) async {
+    final scope = TestScope();
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+    final targetRow = find.widgetWithText(ListTile, l10n.uploadAutoAlbumsTitle);
+
+    expect(find.text(l10n.uploadAutoAlbumsAll), findsOneWidget);
+    // Auto-upload is off, so the target cannot be changed yet.
+    expect(tester.widget<ListTile>(targetRow).onTap, isNull);
+  });
+
+  testWidgets('narrowing the backup target to one album saves the choice', (
+    tester,
+  ) async {
+    final scope = TestScope(
+      photoLibrary: FakePhotoLibraryGateway(
+        deviceAlbums: [
+          DeviceAlbum(id: 'camera', name: 'Camera', itemCount: 640),
+          DeviceAlbum(id: 'screenshots', name: 'Screenshots', itemCount: 12),
+        ],
+      ),
+    );
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+
+    await tester.tap(find.widgetWithText(SwitchListTile, l10n.uploadAutoTitle));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, l10n.uploadAutoAlbumsTitle));
+    await tester.pumpAndSettle();
+
+    // Turning "everything" off with nothing ticked is not a choice that can
+    // be saved — it would silently mean "everything" again.
+    await tester.tap(
+      find.widgetWithText(SwitchListTile, l10n.uploadAutoAlbumsAllOption),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.uploadAutoAlbumsPickOne), findsOneWidget);
+    expect(
+      tester
+          .widget<TextButton>(find.widgetWithText(TextButton, l10n.commonSave))
+          .onPressed,
+      isNull,
+    );
+
+    await tester.tap(find.widgetWithText(CheckboxListTile, 'Camera'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, l10n.commonSave));
+    await tester.pumpAndSettle();
+
+    expect(scope.autoUploadSettingsRepository.albumIds, {'camera'});
+    expect(find.text(l10n.uploadAutoAlbumsCount(1)), findsOneWidget);
+  });
+
+  testWidgets('dismissing the backup target chooser changes nothing', (
+    tester,
+  ) async {
+    final scope = TestScope(
+      photoLibrary: FakePhotoLibraryGateway(
+        deviceAlbums: [
+          DeviceAlbum(id: 'camera', name: 'Camera', itemCount: 640),
+        ],
+      ),
+    );
+    await pumpInScope(tester, const Scaffold(body: UploadTab()), scope: scope);
+
+    await tester.tap(find.widgetWithText(SwitchListTile, l10n.uploadAutoTitle));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, l10n.uploadAutoAlbumsTitle));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextButton, l10n.uploadCancel));
+    await tester.pumpAndSettle();
+
+    expect(scope.autoUploadSettingsRepository.savedAlbumIds, isEmpty);
+    expect(find.text(l10n.uploadAutoAlbumsAll), findsOneWidget);
   });
 
   testWidgets('a failure recorded before this run is still listed', (

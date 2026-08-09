@@ -47,6 +47,22 @@ void main() {
       expect(repository.isUnmeteredOnly(), isTrue);
     });
 
+    test('defaults to the whole library, and round-trips a choice', () async {
+      final repository = SharedPreferencesAutoUploadSettingsRepository(
+        await preferences(),
+      );
+      // Nothing saved — including installs that predate the setting — is
+      // the whole library, which is what those installs were already doing.
+      expect(repository.backupAlbumIds(), isEmpty);
+
+      await repository.setBackupAlbumIds({'camera', 'favourites'});
+      expect(repository.backupAlbumIds(), {'camera', 'favourites'});
+
+      // Back to everything reads the same as never having chosen.
+      await repository.setBackupAlbumIds(const <String>{});
+      expect(repository.backupAlbumIds(), isEmpty);
+    });
+
     test(
       'the first enable stamps "since" once and keeps it forever', //
       () async {

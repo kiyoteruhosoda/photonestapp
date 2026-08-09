@@ -160,19 +160,38 @@ final class SyncNewPhotosUseCase {
   Future<SyncReport> _runPass() async {
     final since = _settings.enabledSince();
     final uploaded = await _history.uploadedLocalIds();
+    // An empty selection means the whole library — queried as a single
+    // pass over the platform's "everything" bucket rather than as every
+    // album, so the default costs exactly what it did before.
+    final selectedAlbumIds = _settings.backupAlbumIds();
+    final targets = selectedAlbumIds.isEmpty
+        ? const <String?>[null]
+        : selectedAlbumIds.toList();
+
     // Page through the whole window after `since`: the library answers
     // newest-first, so stopping at the first page would revisit the same
     // already-uploaded photos forever once more than one page had
     // accumulated, and the older ones would never be examined.
     final pending = <LocalPhoto>[];
-    for (var page = 0; ; page++) {
-      final batch = await _library.photosTakenAfter(
-        since,
-        limit: pageSize,
-        page: page,
-      );
-      pending.addAll(batch.where((photo) => !uploaded.contains(photo.localId)));
-      if (batch.length < pageSize) break;
+    // The same asset can sit in more than one selected album, and would
+    // otherwise be sent twice within a single pass — the upload history is
+    // only written once the pass is over, so it cannot catch that.
+    final seen = <String>{};
+    for (final albumId in targets) {
+      for (var page = 0; ; page++) {
+        final batch = await _library.photosTakenAfter(
+          since,
+          limit: pageSize,
+          page: page,
+          albumId: albumId,
+        );
+        for (final photo in batch) {
+          if (uploaded.contains(photo.localId)) continue;
+          if (!seen.add(photo.localId)) continue;
+          pending.add(photo);
+        }
+        if (batch.length < pageSize) break;
+      }
     }
     if (pending.isEmpty) {
       return const SyncReport(

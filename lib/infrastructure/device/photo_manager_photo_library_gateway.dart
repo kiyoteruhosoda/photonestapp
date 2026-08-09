@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 import 'package:photo_manager/photo_manager.dart';
 import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/entities/device_album.dart';
 import 'package:photonest/domain/entities/local_photo.dart';
 
 /// [PhotoLibraryGateway] backed by the `photo_manager` plugin.
@@ -31,32 +32,67 @@ final class PhotoManagerPhotoLibraryGateway implements PhotoLibraryGateway {
   }
 
   @override
+  Future<List<DeviceAlbum>> albums() async {
+    final paths = await PhotoManager.getAssetPathList(
+      // Photos and videos alike: the upload pipeline handles both, so the
+      // chooser must show the albums holding either.
+      type: RequestType.common,
+      filterOption: _filterOptions(null),
+    );
+    final albums = <DeviceAlbum>[];
+    for (final path in paths) {
+      // The platform reports a synthetic album holding everything. Offering
+      // it beside the real ones would give the reader two ways to say the
+      // same thing; "all albums" is modelled as an empty selection instead.
+      if (path.isAll) continue;
+      albums.add(
+        DeviceAlbum(
+          id: path.id,
+          name: path.name,
+          itemCount: await path.assetCountAsync,
+        ),
+      );
+    }
+    return albums;
+  }
+
+  @override
   Future<List<LocalPhoto>> photosTakenAfter(
     DateTime? since, {
     int limit = 100,
     int page = 0,
+    String? albumId,
   }) async {
     final paths = await PhotoManager.getAssetPathList(
-      onlyAll: true,
-      // Photos and videos alike: the upload pipeline handles both, so the
-      // library view must list both.
+      onlyAll: albumId == null,
       type: RequestType.common,
-      filterOption: FilterOptionGroup(
-        imageOption: const FilterOption(needTitle: true),
-        videoOption: const FilterOption(needTitle: true),
-        createTimeCond: DateTimeCond(
-          min: since?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0),
-          max: DateTime.now(),
-        ),
-        orders: const [
-          OrderOption(type: OrderOptionType.createDate, asc: false),
-        ],
-      ),
+      filterOption: _filterOptions(since),
     );
-    if (paths.isEmpty) return const <LocalPhoto>[];
+    // A selected album can disappear between passes (deleted, or on a card
+    // that is no longer mounted). Answering empty leaves the rest of the
+    // selection working instead of failing the whole pass.
+    final matching = albumId == null
+        ? paths
+        : paths.where((candidate) => candidate.id == albumId).toList();
+    if (matching.isEmpty) return const <LocalPhoto>[];
+    final path = matching.first;
 
-    final assets = await paths.first.getAssetListPaged(page: page, size: limit);
+    final assets = await path.getAssetListPaged(page: page, size: limit);
     return assets.map(_localPhotoOf).toList();
+  }
+
+  /// Query shape shared by the album list and the photo pages, so a photo
+  /// that shows up in one is the same photo the other counts.
+  static FilterOptionGroup _filterOptions(DateTime? since) {
+    return FilterOptionGroup(
+      imageOption: const FilterOption(needTitle: true),
+      videoOption: const FilterOption(needTitle: true),
+      createTimeCond: DateTimeCond(
+        min: since?.toLocal() ?? DateTime.fromMillisecondsSinceEpoch(0),
+        max: DateTime.now(),
+      ),
+      orders: const [OrderOption(type: OrderOptionType.createDate, asc: false)],
+    );
   }
 
   @override

@@ -9,6 +9,7 @@ import 'package:photonest/application/usecases/auth/watch_session_usecase.dart';
 import 'package:photonest/domain/entities/auth_session.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/domain/value_objects/login_credentials.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/presentation/providers/app_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
@@ -212,6 +213,19 @@ class SessionNotifier extends Notifier<SessionState> {
     state = SessionState(session: stored, lastServerUrl: state.lastServerUrl);
   }
 }
+
+/// What the signed-in session is allowed to do to server media.
+///
+/// Screens watch this to decide whether to offer a control at all. The
+/// alternative — offering everything and letting the server answer 403 — is
+/// what this replaces: the reader would pick tags, press save, and only then
+/// be told they were never allowed to.
+final Provider<GrantedPermissions> grantedPermissionsProvider =
+    Provider<GrantedPermissions>((ref) {
+      return GrantedPermissions.of(
+        ref.watch(sessionProvider.select((state) => state.session)),
+      );
+    });
 
 /// Whose data the server-backed caches belong to.
 ///

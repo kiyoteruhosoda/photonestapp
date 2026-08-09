@@ -124,6 +124,58 @@ void main() {
     });
   });
 
+  group('MainPage — permissions', () {
+    /// A signed-in reader who may look at the library but not upload to it.
+    TestScope readOnlyScope() => TestScope(
+      sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+    );
+
+    testWidgets('a reader who may not upload has no Upload destination', (
+      tester,
+    ) async {
+      await pumpInScope(tester, const MainPage(), scope: readOnlyScope());
+
+      expect(find.byType(NavigationDestination), findsNWidgets(3));
+      expect(find.text(l10n.navUpload), findsNothing);
+    });
+
+    testWidgets('the drawer drops Upload with it', (tester) async {
+      await pumpInScope(tester, const MainPage(), scope: readOnlyScope());
+      await openDrawer(tester);
+
+      expect(inDrawer(l10n.navUpload), findsNothing);
+      expect(inDrawer(l10n.navPhotos), findsOneWidget);
+      expect(inDrawer(l10n.navSettings), findsOneWidget);
+    });
+
+    testWidgets('the destinations left still open their own screens', (
+      tester,
+    ) async {
+      await pumpInScope(tester, const MainPage(), scope: readOnlyScope());
+
+      // Settings has moved from index 3 to index 2 — the bar is keyed by
+      // destination, so what is tapped is what opens.
+      await selectTab(tester, 2);
+      expect(inBody(l10n.settingsTitle), findsOneWidget);
+    });
+
+    testWidgets('a reader who may not delete has no Trash entry', (
+      tester,
+    ) async {
+      await pumpInScope(tester, const MainPage(), scope: readOnlyScope());
+      await selectTab(tester, 2);
+      await scrollToTop(tester);
+      for (var attempt = 0; attempt < 30; attempt++) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -120));
+        await tester.pumpAndSettle();
+      }
+
+      expect(find.text(l10n.trashTitle), findsNothing);
+      // The rows below it are still reachable, so the whole list was seen.
+      expect(find.text(l10n.settingsAbout), findsOneWidget);
+    });
+  });
+
   group('MainPage — tabs', () {
     testWidgets('Upload tab shows the auto-upload switch', (tester) async {
       await pumpInScope(tester, const MainPage());

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:photonest/domain/value_objects/app_language.dart';
 import 'package:photonest/domain/value_objects/log_level.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/navigation/app_routes.dart';
 import 'package:photonest/presentation/pages/albums/albums_tab.dart';
@@ -26,39 +27,58 @@ class MainPage extends ConsumerStatefulWidget {
 }
 
 class _MainPageState extends ConsumerState<MainPage> {
-  int _selectedIndex = 0;
+  _Tab _selected = _Tab.photos;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    // Upload is a destination rather than a button, so a session without the
+    // permission loses the whole tab: every control on that screen ends in a
+    // call the server refuses, and a tab that can only fail is worse than no
+    // tab. Its absence is also why the bar is keyed by [_Tab] and not by a
+    // position — the indices below it shift when it goes.
+    final canUpload = ref
+        .watch(grantedPermissionsProvider)
+        .allows(MediaPermission.uploadMedia);
     final tabs = <_TabItem>[
       _TabItem(
+        tab: _Tab.photos,
         label: l10n.navPhotos,
         icon: Icons.photo_library_outlined,
         selectedIcon: Icons.photo_library,
       ),
       _TabItem(
+        tab: _Tab.albums,
         label: l10n.navAlbums,
         icon: Icons.photo_album_outlined,
         selectedIcon: Icons.photo_album,
       ),
+      if (canUpload)
+        _TabItem(
+          tab: _Tab.upload,
+          label: l10n.navUpload,
+          icon: Icons.cloud_upload_outlined,
+          selectedIcon: Icons.cloud_upload,
+        ),
       _TabItem(
-        label: l10n.navUpload,
-        icon: Icons.cloud_upload_outlined,
-        selectedIcon: Icons.cloud_upload,
-      ),
-      _TabItem(
+        tab: _Tab.settings,
         label: l10n.navSettings,
         icon: Icons.settings_outlined,
         selectedIcon: Icons.settings,
       ),
     ];
+    // A permission can go away under a reader who is already standing on the
+    // tab it opens — a role change lands at the next token refresh. Falling
+    // back keeps the bar's selection and the screen below it in step.
+    final selected = tabs.any((item) => item.tab == _selected)
+        ? _selected
+        : _Tab.photos;
     return PopScope(
       // Allow pop only when already on Home tab; otherwise switch to Home.
-      canPop: _selectedIndex == 0,
+      canPop: selected == _Tab.photos,
       onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
-          setState(() => _selectedIndex = 0);
+          setState(() => _selected = _Tab.photos);
         }
       },
       child: Scaffold(
@@ -106,42 +126,16 @@ class _MainPageState extends ConsumerState<MainPage> {
               appName: l10n.appName,
               headerSubtitle: AppConfig.appTagline,
               items: [
-                AppDrawerItem(
-                  label: l10n.navPhotos,
-                  icon: Icons.photo_library_outlined,
-                  isSelected: _selectedIndex == 0,
-                  onTap: () {
-                    setState(() => _selectedIndex = 0);
-                    Navigator.of(context).pop();
-                  },
-                ),
-                AppDrawerItem(
-                  label: l10n.navAlbums,
-                  icon: Icons.photo_album_outlined,
-                  isSelected: _selectedIndex == 1,
-                  onTap: () {
-                    setState(() => _selectedIndex = 1);
-                    Navigator.of(context).pop();
-                  },
-                ),
-                AppDrawerItem(
-                  label: l10n.navUpload,
-                  icon: Icons.cloud_upload_outlined,
-                  isSelected: _selectedIndex == 2,
-                  onTap: () {
-                    setState(() => _selectedIndex = 2);
-                    Navigator.of(context).pop();
-                  },
-                ),
-                AppDrawerItem(
-                  label: l10n.navSettings,
-                  icon: Icons.settings_outlined,
-                  isSelected: _selectedIndex == 3,
-                  onTap: () {
-                    setState(() => _selectedIndex = 3);
-                    Navigator.of(context).pop();
-                  },
-                ),
+                for (final item in tabs)
+                  AppDrawerItem(
+                    label: item.label,
+                    icon: item.icon,
+                    isSelected: item.tab == selected,
+                    onTap: () {
+                      setState(() => _selected = item.tab);
+                      Navigator.of(context).pop();
+                    },
+                  ),
                 const AppDrawerItem.divider(),
               ],
               bottomItems: [
@@ -179,11 +173,11 @@ class _MainPageState extends ConsumerState<MainPage> {
             );
           },
         ),
-        body: _buildTabContent(),
+        body: _buildTabContent(selected),
         bottomNavigationBar: NavigationBar(
-          selectedIndex: _selectedIndex,
+          selectedIndex: tabs.indexWhere((item) => item.tab == selected),
           onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
+              setState(() => _selected = tabs[index].tab),
           destinations: tabs
               .map(
                 (tab) => NavigationDestination(
@@ -198,13 +192,12 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
-  Widget _buildTabContent() {
-    return switch (_selectedIndex) {
-      0 => const MediaTab(),
-      1 => const AlbumsTab(),
-      2 => const UploadTab(),
-      3 => const _SettingsContent(),
-      _ => const MediaTab(),
+  Widget _buildTabContent(_Tab tab) {
+    return switch (tab) {
+      _Tab.photos => const MediaTab(),
+      _Tab.albums => const AlbumsTab(),
+      _Tab.upload => const UploadTab(),
+      _Tab.settings => const _SettingsContent(),
     };
   }
 
@@ -397,12 +390,19 @@ class _SettingsContent extends ConsumerWidget {
             ],
           ),
         const SizedBox(height: AppSpacing.lg),
-        AppListCard(
-          title: l10n.trashTitle,
-          leading: const Icon(Icons.delete_outline),
-          onTap: () => unawaited(context.push<void>(AppRoutes.trash)),
-        ),
-        const SizedBox(height: AppSpacing.sm),
+        // The trash is only reachable for a session that may delete: the
+        // server guards restore with the same permission, so for anyone else
+        // the screen lists media it can do nothing with.
+        if (ref
+            .watch(grantedPermissionsProvider)
+            .allows(MediaPermission.trashMedia)) ...[
+          AppListCard(
+            title: l10n.trashTitle,
+            leading: const Icon(Icons.delete_outline),
+            onTap: () => unawaited(context.push<void>(AppRoutes.trash)),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         AppListCard(
           title: l10n.settingsDeepLink,
           leading: const Icon(Icons.link_outlined),
@@ -607,13 +607,22 @@ class _LogLevelTile extends StatelessWidget {
   }
 }
 
+/// A destination of the main screen.
+///
+/// Named rather than numbered because the set is not fixed: [upload] is only
+/// there for a session allowed to upload, and a position would then mean a
+/// different screen depending on who is signed in.
+enum _Tab { photos, albums, upload, settings }
+
 class _TabItem {
   const _TabItem({
+    required this.tab,
     required this.label,
     required this.icon,
     required this.selectedIcon,
   });
 
+  final _Tab tab;
   final String label;
   final IconData icon;
   final IconData selectedIcon;

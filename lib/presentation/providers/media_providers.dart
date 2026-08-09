@@ -2,6 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
+import 'package:photonest/application/usecases/media/edit_media_tags_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
@@ -11,6 +12,7 @@ import 'package:photonest/application/usecases/media/save_media_original_usecase
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/entities/media_library_page.dart';
 import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/entities/tag.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/domain/value_objects/media_library_query.dart';
 import 'package:photonest/presentation/providers/album_providers.dart';
@@ -63,6 +65,13 @@ final Provider<CurateMediaUseCase> curateMediaUseCaseProvider =
       );
     });
 
+final Provider<EditMediaTagsUseCase> editMediaTagsUseCaseProvider =
+    Provider<EditMediaTagsUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('editMediaTagsUseCaseProvider'),
+      );
+    });
+
 final Provider<ListLibraryMediaUseCase> listLibraryMediaUseCaseProvider =
     Provider<ListLibraryMediaUseCase>((ref) {
       throw UnimplementedError(
@@ -111,6 +120,41 @@ final mediaOriginalSourceProvider = FutureProvider.autoDispose
     .family<SignedMediaUrl, MediaId>((ref, id) {
       ref.watch(sessionIdentityProvider);
       return ref.read(getMediaOriginalUseCaseProvider).execute(id);
+    });
+
+// ─── Tags ──────────────────────────────────────────────────────────────────
+
+/// How many tags the editor asks for at a time.
+///
+/// The picker is a list the reader scans, not a catalogue: a library with
+/// hundreds of tags is narrowed by typing rather than by scrolling past all
+/// of them.
+const int tagSuggestionLimit = 30;
+
+/// The tags on one media item, as the server currently holds them.
+///
+/// `autoDispose`, and read when the editor opens rather than carried on the
+/// listed media: the listing endpoint does not report tags, and another
+/// device can change them while a photo sits on screen. Keeping the answer
+/// after the editor closes would let the next open show a set the server no
+/// longer has — and saving from that stale set would silently undo the other
+/// device's change.
+final mediaTagsProvider = FutureProvider.autoDispose.family<List<Tag>, MediaId>(
+  (ref, id) {
+    // Tags belong to a library, so a change of identity invalidates them.
+    ref.watch(sessionIdentityProvider);
+    return ref.read(editMediaTagsUseCaseProvider).tagsOf(id);
+  },
+);
+
+/// Tags in the library whose name contains the query, for the editor's
+/// picker. An empty query asks for the first page of what exists.
+final tagSuggestionsProvider = FutureProvider.autoDispose
+    .family<List<Tag>, String>((ref, query) {
+      ref.watch(sessionIdentityProvider);
+      return ref
+          .read(editMediaTagsUseCaseProvider)
+          .suggest(query: query, limit: tagSuggestionLimit);
     });
 
 // ─── Library timeline ──────────────────────────────────────────────────────

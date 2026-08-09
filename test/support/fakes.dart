@@ -12,6 +12,7 @@ import 'package:photonest/domain/entities/local_photo.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/entities/media_library_page.dart';
 import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/entities/tag.dart';
 import 'package:photonest/domain/entities/upload_failure.dart';
 import 'package:photonest/domain/entities/upload_resumption.dart';
 import 'package:photonest/domain/errors/app_error.dart';
@@ -28,6 +29,7 @@ import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
+import 'package:photonest/domain/repositories/media_tag_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
@@ -45,6 +47,7 @@ import 'package:photonest/domain/value_objects/log_level.dart';
 import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/domain/value_objects/media_library_query.dart';
+import 'package:photonest/domain/value_objects/tag_id.dart';
 
 /// In-memory repository doubles.
 ///
@@ -788,6 +791,73 @@ final class FakeMediaCurationRepository implements MediaCurationRepository {
     await gate?.call();
     _failIfAsked();
     restored.add(id);
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// Builds one library tag.
+Tag testTag({int id = 1, String name = 'Kyoto', TagAttribute? attribute}) {
+  return Tag(id: TagId(id), name: name, attribute: attribute);
+}
+
+/// In-memory [MediaTagRepository].
+final class FakeMediaTagRepository implements MediaTagRepository {
+  /// Every tag the library holds, in the order the server would answer.
+  List<Tag> library = <Tag>[];
+
+  /// Which tags each media item carries, by media id.
+  final Map<int, List<Tag>> byMedia = <int, List<Tag>>{};
+
+  /// The (query, limit) pairs [findAll] was asked for, in order.
+  final List<(String, int)> suggestQueries = <(String, int)>[];
+
+  /// The replacements applied, in order.
+  final List<(MediaId, List<TagId>)> replacements = <(MediaId, List<TagId>)>[];
+
+  /// When set, the server settles on this instead of what was asked for —
+  /// stands in for another device having changed the tags in between.
+  List<Tag>? settleTagsAt;
+
+  /// When set, every call throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<List<Tag>> findAll({String query = '', int limit = 20}) async {
+    _failIfAsked();
+    suggestQueries.add((query, limit));
+    return [
+      for (final tag in library)
+        if (query.isEmpty ||
+            tag.name.toLowerCase().contains(query.toLowerCase()))
+          tag,
+    ].take(limit).toList(growable: false);
+  }
+
+  @override
+  Future<List<Tag>> findByMedia(MediaId id) async {
+    _failIfAsked();
+    return List<Tag>.unmodifiable(byMedia[id.value] ?? const <Tag>[]);
+  }
+
+  @override
+  Future<List<Tag>> replaceMediaTags(MediaId id, List<TagId> tagIds) async {
+    _failIfAsked();
+    replacements.add((id, tagIds));
+    final settled =
+        settleTagsAt ??
+        [
+          for (final tagId in tagIds)
+            library.firstWhere(
+              (Tag tag) => tag.id == tagId,
+              orElse: () => Tag(id: tagId, name: 'tag-${tagId.value}'),
+            ),
+        ];
+    byMedia[id.value] = settled;
+    return List<Tag>.unmodifiable(settled);
   }
 
   void _failIfAsked() {

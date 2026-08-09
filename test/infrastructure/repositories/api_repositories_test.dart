@@ -6,17 +6,20 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:photonest/domain/entities/tag.dart';
 import 'package:photonest/domain/entities/upload_resumption.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/domain/value_objects/album_id.dart';
 import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/tag_id.dart';
 import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_library_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_playback_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_tag_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_photo_upload_repository.dart';
 
@@ -1133,6 +1136,130 @@ void main() {
           ),
         );
         expect(requests, isEmpty);
+      },
+    );
+  });
+
+  group('ApiMediaTagRepository', () {
+    test('lists the library tags, omitting a blank filter', () async {
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'items': [
+              {'id': 1, 'name': 'Kyoto', 'attr': 'place'},
+              {'id': 2, 'name': 'Hanabi', 'attr': 'event'},
+            ],
+          }),
+        ),
+      );
+
+      final tags = await repository.findAll(limit: 30);
+
+      expect(requests.single.url.path, '/api/tags');
+      // No `q`: the server reads a present-but-empty filter as a match
+      // against '' and would answer with nothing.
+      expect(requests.single.url.queryParameters, {'limit': '30'});
+      expect(tags.map((tag) => tag.name), ['Kyoto', 'Hanabi']);
+      expect(tags.first.attribute, TagAttribute.place);
+    });
+
+    test('sends the filter the reader typed', () async {
+      final repository = ApiMediaTagRepository(
+        client((request) async => json({'items': <Object>[]})),
+      );
+
+      await repository.findAll(query: 'kyo', limit: 5);
+
+      expect(requests.single.url.queryParameters, {'q': 'kyo', 'limit': '5'});
+    });
+
+    test('reads a media item\'s tags from its detail', () async {
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'id': 10,
+            'filename': 'a.jpg',
+            'tags': [
+              {'id': 1, 'name': 'Kyoto', 'attr': 'place'},
+            ],
+          }),
+        ),
+      );
+
+      final tags = await repository.findByMedia(MediaId(10));
+
+      expect(requests.single.url.path, '/api/media/10');
+      expect(tags.single.id.value, 1);
+    });
+
+    test('an attribute outside the vocabulary is left unset', () async {
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'tags': [
+              {'id': 1, 'name': 'Kyoto', 'attr': 'colour'},
+              {'id': 2, 'name': 'Osaka'},
+            ],
+          }),
+        ),
+      );
+
+      final tags = await repository.findByMedia(MediaId(10));
+
+      expect(tags.map((tag) => tag.attribute), [null, null]);
+    });
+
+    test(
+      'replaces the tag set and reports what the server settled on',
+      () async {
+        final repository = ApiMediaTagRepository(
+          client(
+            (request) async => json({
+              'tags': [
+                {'id': 1, 'name': 'Kyoto', 'attr': 'place'},
+              ],
+            }),
+          ),
+        );
+
+        final settled = await repository.replaceMediaTags(MediaId(10), [
+          TagId(1),
+          TagId(2),
+        ]);
+
+        expect(requests.single.method, 'PUT');
+        expect(requests.single.url.path, '/api/media/10/tags');
+        expect(jsonDecode(requests.single.body), {
+          'tag_ids': [1, 2],
+        });
+        // The server dropped tag 2 — another device deleted it between the
+        // picker's read and the save, and the editor must show what is stored.
+        expect(settled.map((tag) => tag.id.value), [1]);
+      },
+    );
+
+    test('clearing every tag sends an empty array', () async {
+      final repository = ApiMediaTagRepository(
+        client((request) async => json({'tags': <Object>[]})),
+      );
+
+      expect(await repository.replaceMediaTags(MediaId(10), const []), isEmpty);
+      expect(jsonDecode(requests.single.body), {'tag_ids': <int>[]});
+    });
+
+    test(
+      'a response without a tag array is a failure, not an empty set',
+      () async {
+        // Reading "no tags" out of a shape we do not understand would let the
+        // next save wipe tags this never managed to read.
+        final repository = ApiMediaTagRepository(
+          client((request) async => json({'id': 10})),
+        );
+
+        await expectLater(
+          repository.findByMedia(MediaId(10)),
+          throwsA(isA<InfrastructureError>()),
+        );
       },
     );
   });

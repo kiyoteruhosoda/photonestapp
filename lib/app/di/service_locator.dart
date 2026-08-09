@@ -20,6 +20,7 @@ import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart'
 import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
+import 'package:photonest/application/usecases/media/edit_media_tags_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
@@ -58,6 +59,7 @@ import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
+import 'package:photonest/domain/repositories/media_tag_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
@@ -117,6 +119,7 @@ Future<void> setupServiceLocator() async {
     )
     ..registerSingleton<MediaLibraryRepository>(infrastructure.mediaLibrary)
     ..registerSingleton<MediaCurationRepository>(infrastructure.mediaCuration)
+    ..registerSingleton<MediaTagRepository>(infrastructure.mediaTags)
     ..registerSingleton<MediaOriginalRepository>(infrastructure.mediaOriginals)
     ..registerSingleton<MediaPlaybackRepository>(infrastructure.mediaPlayback)
     ..registerSingleton<PhotoUploadRepository>(infrastructure.photoUploads)
@@ -225,6 +228,9 @@ Future<void> setupServiceLocator() async {
   );
   sl.registerFactory<CurateMediaUseCase>(
     () => CurateMediaUseCase(sl<MediaCurationRepository>(), sl<AppLogger>()),
+  );
+  sl.registerFactory<EditMediaTagsUseCase>(
+    () => EditMediaTagsUseCase(sl<MediaTagRepository>(), sl<AppLogger>()),
   );
   sl.registerFactory<GetMediaPlaybackUseCase>(
     () => GetMediaPlaybackUseCase(sl<MediaPlaybackRepository>()),

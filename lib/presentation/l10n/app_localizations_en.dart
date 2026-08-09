@@ -108,6 +108,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mediaTrashFailed => 'Could not move this to the trash.';
 
   @override
+  String get mediaTagsTitle => 'Tags';
+  @override
+  String get mediaTagsSave => 'Save';
+  @override
+  String get mediaTagsNoneOnMedia => 'No tags on this item yet.';
+  @override
+  String get mediaTagsSearchLabel => 'Search tags';
+  @override
+  String get mediaTagsNoMatches => 'No tags matched.';
+  @override
+  String get tagAttributeThing => 'Thing';
+  @override
+  String get tagAttributePerson => 'Person';
+  @override
+  String get tagAttributePlace => 'Place';
+  @override
+  String get tagAttributeEvent => 'Event';
+  @override
+  String get tagAttributeScene => 'Scene';
+  @override
+  String get tagAttributeActivity => 'Activity';
+  @override
+  String get tagAttributeSource => 'Source';
+  @override
+  String get tagAttributeOthers => 'Other';
+
+  @override
   String get videoNotReady =>
       'The video is still being prepared on the server. Try again later.';
 

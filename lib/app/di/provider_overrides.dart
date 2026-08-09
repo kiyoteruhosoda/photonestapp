@@ -18,6 +18,7 @@ import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart'
 import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
+import 'package:photonest/application/usecases/media/edit_media_tags_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
@@ -72,6 +73,7 @@ List<Override> buildProviderOverrides() {
       sl<ListLibraryMediaUseCase>(),
     ),
     curateMediaUseCaseProvider.overrideWithValue(sl<CurateMediaUseCase>()),
+    editMediaTagsUseCaseProvider.overrideWithValue(sl<EditMediaTagsUseCase>()),
     listTrashedMediaUseCaseProvider.overrideWithValue(
       sl<ListTrashedMediaUseCase>(),
     ),

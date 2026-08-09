@@ -9,6 +9,7 @@ import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/l10n/error_descriptions.dart';
 import 'package:photonest/presentation/providers/media_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/media_tag_editor.dart';
 import 'package:photonest/presentation/widgets/ui/thumbnail_image.dart';
 import 'package:photonest/presentation/widgets/ui/video_playback_view.dart';
 
@@ -145,6 +146,16 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
     });
   }
 
+  /// Opens the tag editor for the media on screen.
+  ///
+  /// Nothing on this page depends on the result: tags are not drawn on the
+  /// image or in the bar, and the editor has already shown the reader the set
+  /// the server settled on. Awaited only so a second tap cannot stack two
+  /// sheets.
+  Future<void> _editTags() async {
+    await showMediaTagEditor(context, id: _current.id);
+  }
+
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -204,6 +215,7 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
               isFavorite: item.isFavorite,
               busy: curating.isBusy(item.id),
               onToggleFavorite: () => unawaited(_toggleFavorite()),
+              onEditTags: () => unawaited(_editTags()),
               onMoveToTrash: () => unawaited(_moveToTrash()),
               // Videos stream a rendition the player owns, so there is
               // nothing to swap in place; saving is how their untouched file
@@ -228,6 +240,7 @@ class _ViewerBar extends StatelessWidget {
     required this.isFavorite,
     required this.busy,
     required this.onToggleFavorite,
+    required this.onEditTags,
     required this.onMoveToTrash,
     required this.onShowOriginal,
     required this.onSave,
@@ -241,6 +254,11 @@ class _ViewerBar extends StatelessWidget {
   /// controls disable so a double tap cannot send twice.
   final bool busy;
   final VoidCallback onToggleFavorite;
+
+  /// Opens the tag editor. Not gated on [busy]: tagging is a separate
+  /// request from the favourite and trash calls, and the editor sends
+  /// nothing until the reader saves.
+  final VoidCallback onEditTags;
   final VoidCallback onMoveToTrash;
   final VoidCallback? onShowOriginal;
   final VoidCallback? onSave;
@@ -274,6 +292,12 @@ class _ViewerBar extends StatelessWidget {
               icon: Icon(isFavorite ? Icons.favorite : Icons.favorite_border),
               color: isFavorite ? Colors.redAccent : Colors.white,
               disabledColor: Colors.white38,
+            ),
+            IconButton(
+              onPressed: onEditTags,
+              tooltip: l10n.mediaTagsTitle,
+              icon: const Icon(Icons.label_outline),
+              color: Colors.white,
             ),
             IconButton(
               onPressed: busy ? null : onMoveToTrash,

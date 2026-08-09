@@ -104,6 +104,33 @@ class AppLocalizationsJa extends AppLocalizations {
   String get mediaTrashFailed => 'ゴミ箱へ移動できませんでした。';
 
   @override
+  String get mediaTagsTitle => 'タグ';
+  @override
+  String get mediaTagsSave => '保存';
+  @override
+  String get mediaTagsNoneOnMedia => 'このアイテムにはまだタグがありません。';
+  @override
+  String get mediaTagsSearchLabel => 'タグを検索';
+  @override
+  String get mediaTagsNoMatches => '一致するタグがありません。';
+  @override
+  String get tagAttributeThing => 'もの';
+  @override
+  String get tagAttributePerson => '人物';
+  @override
+  String get tagAttributePlace => '場所';
+  @override
+  String get tagAttributeEvent => 'イベント';
+  @override
+  String get tagAttributeScene => 'シーン';
+  @override
+  String get tagAttributeActivity => '活動';
+  @override
+  String get tagAttributeSource => '出典';
+  @override
+  String get tagAttributeOthers => 'その他';
+
+  @override
   String get videoNotReady => '動画はサーバーで準備中です。しばらくしてからもう一度お試しください。';
 
   @override

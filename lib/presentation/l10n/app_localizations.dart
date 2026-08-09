@@ -87,6 +87,22 @@ abstract class AppLocalizations {
   String get mediaMoveToTrashConfirm;
   String get mediaMovedToTrash;
   String get mediaTrashFailed;
+
+  // ─── Tags ─────────────────────────────────────────────────────────────
+  String get mediaTagsTitle;
+  String get mediaTagsSave;
+  String get mediaTagsNoneOnMedia;
+  String get mediaTagsSearchLabel;
+  String get mediaTagsNoMatches;
+  String get tagAttributeThing;
+  String get tagAttributePerson;
+  String get tagAttributePlace;
+  String get tagAttributeEvent;
+  String get tagAttributeScene;
+  String get tagAttributeActivity;
+  String get tagAttributeSource;
+  String get tagAttributeOthers;
+
   String get videoNotReady;
   String get videoUnavailable;
 

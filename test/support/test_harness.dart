@@ -20,6 +20,7 @@ import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart'
 import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
 import 'package:photonest/application/usecases/media/curate_media_usecase.dart';
+import 'package:photonest/application/usecases/media/edit_media_tags_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_original_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_playback_usecase.dart';
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
@@ -86,6 +87,7 @@ class TestScope {
     FakeMediaThumbnailCacheRepository? mediaThumbnailCacheRepository,
     FakeMediaLibraryRepository? mediaLibraryRepository,
     FakeMediaCurationRepository? mediaCurationRepository,
+    FakeMediaTagRepository? mediaTagRepository,
     FakeMediaOriginalRepository? mediaOriginalRepository,
     FakeMediaPlaybackRepository? mediaPlaybackRepository,
     FakePhotoUploadRepository? photoUploadRepository,
@@ -126,6 +128,7 @@ class TestScope {
            mediaLibraryRepository ?? FakeMediaLibraryRepository(),
        mediaCurationRepository =
            mediaCurationRepository ?? FakeMediaCurationRepository(),
+       mediaTagRepository = mediaTagRepository ?? FakeMediaTagRepository(),
        mediaOriginalRepository =
            mediaOriginalRepository ?? FakeMediaOriginalRepository(),
        mediaPlaybackRepository =
@@ -157,6 +160,7 @@ class TestScope {
   final FakeMediaThumbnailCacheRepository mediaThumbnailCacheRepository;
   final FakeMediaLibraryRepository mediaLibraryRepository;
   final FakeMediaCurationRepository mediaCurationRepository;
+  final FakeMediaTagRepository mediaTagRepository;
   final FakeMediaOriginalRepository mediaOriginalRepository;
   final FakeMediaPlaybackRepository mediaPlaybackRepository;
   final FakePhotoUploadRepository photoUploadRepository;
@@ -268,6 +272,9 @@ class TestScope {
       ),
       curateMediaUseCaseProvider.overrideWithValue(
         CurateMediaUseCase(mediaCurationRepository, logger),
+      ),
+      editMediaTagsUseCaseProvider.overrideWithValue(
+        EditMediaTagsUseCase(mediaTagRepository, logger),
       ),
       getMediaOriginalUseCaseProvider.overrideWithValue(
         GetMediaOriginalUseCase(mediaOriginalRepository),

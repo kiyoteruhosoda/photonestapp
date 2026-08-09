@@ -57,6 +57,25 @@ final class PhotoNestApiClient {
     return _decodeJson(response);
   }
 
+  /// PUTs [body] as JSON to [path] and decodes the JSON response.
+  ///
+  /// Distinct from [putStream], which sends a raw byte range for uploads:
+  /// this is the JSON-in, JSON-out form the replacement endpoints use.
+  Future<Map<String, dynamic>> putJson(
+    String path,
+    Map<String, dynamic> body, {
+    Map<String, String>? headers,
+  }) async {
+    final response = await _sendWithRetry(
+      authenticated: true,
+      build: () => http.Request('PUT', _resolve(path))
+        ..headers['Content-Type'] = 'application/json'
+        ..headers.addAll(headers ?? const {})
+        ..body = jsonEncode(body),
+    );
+    return _decodeJson(response);
+  }
+
   /// GETs [path] and decodes the JSON response.
   Future<Map<String, dynamic>> getJson(
     String path, {

@@ -18,6 +18,7 @@ import 'package:photonest/domain/repositories/media_curation_repository.dart';
 import 'package:photonest/domain/repositories/media_library_repository.dart';
 import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
+import 'package:photonest/domain/repositories/media_tag_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
@@ -41,6 +42,7 @@ import 'package:photonest/infrastructure/repositories/api_media_curation_reposit
 import 'package:photonest/infrastructure/repositories/api_media_library_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_playback_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_tag_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_thumbnail_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_thumbnail_url_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_photo_upload_repository.dart';
@@ -88,6 +90,7 @@ final class InfrastructureModule {
     required this.mediaThumbnailCache,
     required this.mediaLibrary,
     required this.mediaCuration,
+    required this.mediaTags,
     required this.mediaOriginals,
     required this.mediaPlayback,
     required this.photoUploads,
@@ -183,6 +186,7 @@ final class InfrastructureModule {
       ),
       mediaLibrary: ApiMediaLibraryRepository(apiClient),
       mediaCuration: ApiMediaCurationRepository(apiClient),
+      mediaTags: ApiMediaTagRepository(apiClient),
       mediaOriginals: ApiMediaOriginalRepository(apiClient),
       mediaPlayback: ApiMediaPlaybackRepository(apiClient),
       photoUploads: ApiPhotoUploadRepository(
@@ -230,6 +234,7 @@ final class InfrastructureModule {
   final MediaThumbnailCacheRepository mediaThumbnailCache;
   final MediaLibraryRepository mediaLibrary;
   final MediaCurationRepository mediaCuration;
+  final MediaTagRepository mediaTags;
   final MediaOriginalRepository mediaOriginals;
   final MediaPlaybackRepository mediaPlayback;
   final PhotoUploadRepository photoUploads;

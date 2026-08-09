@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/presentation/theme/app_colors.dart';
-import 'package:flutterbase/presentation/theme/app_theme.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/presentation/theme/app_colors.dart';
+import 'package:photonest/presentation/theme/app_theme.dart';
+import 'package:photonest/shared/app_config.dart';
 
 void main() {
   group('AppTheme.light', () {

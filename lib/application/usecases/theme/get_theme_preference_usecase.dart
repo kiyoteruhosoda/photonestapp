@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
-import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
+import 'package:photonest/domain/repositories/theme_preference_repository.dart';
+import 'package:photonest/domain/value_objects/app_theme_mode.dart';
 
 /// Returns the user's currently saved theme preference.
 final class GetThemePreferenceUseCase {

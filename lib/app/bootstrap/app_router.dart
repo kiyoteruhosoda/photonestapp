@@ -1,19 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/presentation/navigation/app_routes.dart';
-import 'package:flutterbase/presentation/pages/albums/album_detail_page.dart';
-import 'package:flutterbase/presentation/pages/auth/login_page.dart';
-import 'package:flutterbase/presentation/pages/main_page.dart';
-import 'package:flutterbase/presentation/pages/notifications/notifications_page.dart';
-import 'package:flutterbase/presentation/pages/system/about_page.dart';
-import 'package:flutterbase/presentation/pages/system/debug_page.dart';
-import 'package:flutterbase/presentation/pages/system/deep_link_page.dart';
-import 'package:flutterbase/presentation/pages/system/logs_page.dart';
-import 'package:flutterbase/presentation/pages/system/not_found_page.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
 import 'package:go_router/go_router.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/presentation/navigation/app_routes.dart';
+import 'package:photonest/presentation/pages/albums/album_detail_page.dart';
+import 'package:photonest/presentation/pages/auth/login_page.dart';
+import 'package:photonest/presentation/pages/main_page.dart';
+import 'package:photonest/presentation/pages/notifications/notifications_page.dart';
+import 'package:photonest/presentation/pages/system/about_page.dart';
+import 'package:photonest/presentation/pages/system/debug_page.dart';
+import 'package:photonest/presentation/pages/system/deep_link_page.dart';
+import 'package:photonest/presentation/pages/system/logs_page.dart';
+import 'package:photonest/presentation/pages/system/not_found_page.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 
 /// Re-runs the router's redirect when poked.
 ///

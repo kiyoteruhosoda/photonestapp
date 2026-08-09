@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/system/about_page.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/system/about_page.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/shared/app_config.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/test_harness.dart';

@@ -1,15 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/watch_session_usecase.dart';
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/value_objects/login_credentials.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:photonest/application/usecases/auth/get_api_endpoint_usecase.dart';
+import 'package:photonest/application/usecases/auth/login_usecase.dart';
+import 'package:photonest/application/usecases/auth/logout_usecase.dart';
+import 'package:photonest/application/usecases/auth/restore_session_usecase.dart';
+import 'package:photonest/application/usecases/auth/watch_session_usecase.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/login_credentials.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 

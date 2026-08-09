@@ -1,4 +1,4 @@
-import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
+import 'package:photonest/application/ports/background_sync_scheduler.dart';
 import 'package:workmanager/workmanager.dart';
 
 /// [BackgroundSyncScheduler] backed by the `workmanager` plugin — Android's

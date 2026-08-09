@@ -50,9 +50,9 @@
 #   BUILD_MODE         Passed through to build.sh (release|debug)
 #
 # The assumed layout is **/<project>/<channel>** (for example
-# /volume1/builds/flutterbase/internal), from which the project name is taken
+# /volume1/builds/photonest/internal), from which the project name is taken
 # as the parent directory name. Precedence: APP_PROJECT > the config file's
-# PROJECT > parent directory name > the default, flutterbase. Following that
+# PROJECT > parent directory name > the default, photonest. Following that
 # layout means PROJECT never has to be set.
 #
 # Configuration can also live in `build-remote-container.env` next to this
@@ -93,8 +93,8 @@ if [[ -f "$_config_file" ]]; then
   done <"$_config_file"
 fi
 
-log() { printf '[flutterbase:container] %s\n' "$*" >&2; }
-die() { printf '[flutterbase:container][error] %s\n' "$*" >&2; exit 1; }
+log() { printf '[photonest:container] %s\n' "$*" >&2; }
+die() { printf '[photonest:container][error] %s\n' "$*" >&2; exit 1; }
 
 # ─── Artifact directory and this script's own path ─────────────────────────
 artifact_dir="${APP_ARTIFACT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
@@ -112,7 +112,7 @@ self_path="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOUR
 #     environment — never by editing them here) ───────────────────────────
 _project_from_dir="$(basename "$(dirname "$artifact_dir")")"
 case "$_project_from_dir" in '' | '/' | '.' | '..') _project_from_dir='' ;; esac
-project="${APP_PROJECT:-${PROJECT:-${_project_from_dir:-flutterbase}}}"
+project="${APP_PROJECT:-${PROJECT:-${_project_from_dir:-photonest}}}"
 # Where the name came from, so the startup log answers "why this value".
 if [[ -n "${APP_PROJECT:-}" ]]; then project_source="environment APP_PROJECT"
 elif [[ -n "${PROJECT:-}" ]]; then project_source="config file PROJECT"

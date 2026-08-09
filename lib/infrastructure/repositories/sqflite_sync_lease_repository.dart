@@ -1,6 +1,6 @@
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/sync_lease_repository.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// [SyncLeaseRepository] backed by the shared SQLite database.

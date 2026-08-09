@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
+import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
 
 /// The last PhotoNest server address the user signed in to, for prefilling
 /// the login form.

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutterbase/presentation/theme/app_colors.dart';
-import 'package:flutterbase/presentation/theme/app_radius.dart';
-import 'package:flutterbase/presentation/theme/app_spacing.dart';
-import 'package:flutterbase/presentation/theme/app_text_styles.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/presentation/theme/app_colors.dart';
+import 'package:photonest/presentation/theme/app_radius.dart';
+import 'package:photonest/presentation/theme/app_spacing.dart';
+import 'package:photonest/presentation/theme/app_text_styles.dart';
+import 'package:photonest/shared/app_config.dart';
 
 /// デジタル庁デザインシステム準拠のアプリテーマ
 class AppTheme {

@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// Local, persistent store of server thumbnails already downloaded.
 ///

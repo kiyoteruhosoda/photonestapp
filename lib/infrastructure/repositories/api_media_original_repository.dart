@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/domain/entities/signed_media_url.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/media_original_repository.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
-import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
+import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/media_original_repository.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 /// [MediaOriginalRepository] backed by `POST /api/media/{id}/original-url`.
 ///

@@ -1,6 +1,6 @@
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/domain/entities/local_photo.dart';
-import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
+import 'package:photonest/domain/repositories/upload_history_repository.dart';
 
 /// One device photo offered on the upload screen.
 final class UploadCandidate {

@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/application/usecases/debug/get_debug_settings_usecase.dart';
-import 'package:flutterbase/application/usecases/debug/set_debug_mode_usecase.dart';
-import 'package:flutterbase/application/usecases/debug/set_log_level_usecase.dart';
-import 'package:flutterbase/application/usecases/language/get_language_preference_usecase.dart';
-import 'package:flutterbase/application/usecases/language/set_language_preference_usecase.dart';
-import 'package:flutterbase/application/usecases/theme/get_theme_preference_usecase.dart';
-import 'package:flutterbase/application/usecases/theme/set_theme_preference_usecase.dart';
-import 'package:flutterbase/domain/value_objects/app_language.dart';
-import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
+import 'package:photonest/application/usecases/debug/get_debug_settings_usecase.dart';
+import 'package:photonest/application/usecases/debug/set_debug_mode_usecase.dart';
+import 'package:photonest/application/usecases/debug/set_log_level_usecase.dart';
+import 'package:photonest/application/usecases/language/get_language_preference_usecase.dart';
+import 'package:photonest/application/usecases/language/set_language_preference_usecase.dart';
+import 'package:photonest/application/usecases/theme/get_theme_preference_usecase.dart';
+import 'package:photonest/application/usecases/theme/set_theme_preference_usecase.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
+import 'package:photonest/domain/value_objects/app_theme_mode.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
 
 // ─── Use-case seams ────────────────────────────────────────────────────────
 //

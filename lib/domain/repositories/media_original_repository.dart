@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/domain/entities/signed_media_url.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// Boundary to the server's untouched originals.
 ///

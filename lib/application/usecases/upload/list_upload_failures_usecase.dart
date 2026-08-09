@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/repositories/upload_failure_repository.dart';
 
 /// The photos that are currently failing to upload, most recent first.
 final class ListUploadFailuresUseCase {

@@ -1,6 +1,6 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 
 /// Records the outcome of one backup pass as a notification.
 ///

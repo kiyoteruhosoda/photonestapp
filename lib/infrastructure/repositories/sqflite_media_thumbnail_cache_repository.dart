@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
-import 'package:flutterbase/domain/repositories/media_thumbnail_cache_repository.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// [MediaThumbnailCacheRepository] backed by SQLite, scoped to the signed-in

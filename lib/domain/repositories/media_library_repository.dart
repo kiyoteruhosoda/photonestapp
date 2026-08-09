@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/media_library_page.dart';
+import 'package:photonest/domain/entities/media_library_page.dart';
 
 /// Boundary to the server's whole-library media listing.
 ///

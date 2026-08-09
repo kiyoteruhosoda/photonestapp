@@ -10,8 +10,11 @@
 //   dart run tool/check_architecture.dart [--root=<dir>] [--package=<name>]
 //                                         [--verbose]
 //
-// `--root` defaults to `lib` and `--package` to `flutterbase`; both exist so
-// the checker's own tests can run it against fixture trees.
+// `--root` defaults to `lib` and `--package` to `photonest`; both exist so
+// the checker's own tests can run it against fixture trees. The default has
+// to stay in step with `pubspec.yaml`'s `name`: layer membership is decided
+// from `package:<name>/...` imports, so a stale default makes every import
+// unrecognised and the checker reports a clean tree it never examined.
 //
 // Exits 0 when clean, 1 when any rule is violated, 2 on a usage error.
 
@@ -183,7 +186,7 @@ class Violation {
 
 void main(List<String> args) {
   var root = 'lib';
-  var package = 'flutterbase';
+  var package = 'photonest';
   var verbose = false;
   for (final arg in args) {
     if (arg == '--verbose') {

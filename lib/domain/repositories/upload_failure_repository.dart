@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/local_photo.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
 
 /// Persistence of the photos that are currently failing to upload.
 ///

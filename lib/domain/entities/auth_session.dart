@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 /// A signed-in session with the PhotoNest server.
 ///

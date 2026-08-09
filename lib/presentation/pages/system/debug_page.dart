@@ -3,13 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/domain/entities/app_info.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/providers/app_info_providers.dart';
-import 'package:flutterbase/presentation/providers/app_providers.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/domain/entities/app_info.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/providers/app_info_providers.dart';
+import 'package:photonest/presentation/providers/app_providers.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/shared/app_config.dart';
 
 /// Debug information page — shows build metadata and diagnostic actions.
 class DebugPage extends ConsumerStatefulWidget {

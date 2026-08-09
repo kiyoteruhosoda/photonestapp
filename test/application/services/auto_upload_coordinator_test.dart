@@ -1,10 +1,10 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/services/auto_upload_coordinator.dart';
-import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/application/services/auto_upload_coordinator.dart';
+import 'package:photonest/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
 
 import '../../support/fakes.dart';
 import '../../support/recording_app_logger.dart';

@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/app_info.dart';
+import 'package:photonest/domain/entities/app_info.dart';
 
 /// Provides build-time and runtime application metadata.
 ///

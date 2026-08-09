@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
 
 /// Every location the app can be at, as `go_router` path patterns.
 ///

@@ -1,10 +1,10 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/album_repository.dart';
-import 'package:flutterbase/domain/repositories/album_snapshot_repository.dart';
-import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/album_repository.dart';
+import 'package:photonest/domain/repositories/album_snapshot_repository.dart';
+import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
 
 /// Lists the albums visible to the signed-in user, keeping the offline
 /// snapshot in step.

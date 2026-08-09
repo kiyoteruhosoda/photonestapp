@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 /// Identity of an album stored on the PhotoNest server.
 ///

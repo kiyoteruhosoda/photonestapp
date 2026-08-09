@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 /// Where a chunked upload of one device photo got to, so a later run can
 /// carry on instead of sending the file again from the start.

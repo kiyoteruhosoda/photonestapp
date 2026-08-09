@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/application/usecases/auth/get_api_endpoint_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/login_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/logout_usecase.dart';
-import 'package:flutterbase/application/usecases/auth/restore_session_usecase.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
-import 'package:flutterbase/domain/value_objects/login_credentials.dart';
+import 'package:photonest/application/usecases/auth/get_api_endpoint_usecase.dart';
+import 'package:photonest/application/usecases/auth/login_usecase.dart';
+import 'package:photonest/application/usecases/auth/logout_usecase.dart';
+import 'package:photonest/application/usecases/auth/restore_session_usecase.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
+import 'package:photonest/domain/value_objects/login_credentials.dart';
 
 import '../../../support/fakes.dart';
 import '../../../support/recording_app_logger.dart';

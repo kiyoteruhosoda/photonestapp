@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/entities/media_item.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
-import 'package:flutterbase/presentation/providers/album_providers.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/presentation/providers/album_providers.dart';
 
 import '../../support/fakes.dart';
 import '../../support/test_harness.dart';

@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/album.dart';
-import 'package:flutterbase/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/value_objects/album_id.dart';
 
 /// Boundary to the server's album endpoints.
 abstract interface class AlbumRepository {

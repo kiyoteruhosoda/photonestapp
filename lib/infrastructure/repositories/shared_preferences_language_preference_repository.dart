@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/repositories/language_preference_repository.dart';
-import 'package:flutterbase/domain/value_objects/app_language.dart';
+import 'package:photonest/domain/repositories/language_preference_repository.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stores the language preference in [SharedPreferences].

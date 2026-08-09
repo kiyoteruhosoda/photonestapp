@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_ja.dart';
-import 'package:flutterbase/presentation/l10n/error_descriptions.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/l10n/app_localizations_ja.dart';
+import 'package:photonest/presentation/l10n/error_descriptions.dart';
 
 void main() {
   const en = AppLocalizationsEn();

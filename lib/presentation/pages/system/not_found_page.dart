@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/navigation/app_routes.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
 import 'package:go_router/go_router.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/navigation/app_routes.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
 /// Shown when no route matches.
 ///

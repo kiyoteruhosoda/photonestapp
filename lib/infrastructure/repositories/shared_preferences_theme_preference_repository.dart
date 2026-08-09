@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/repositories/theme_preference_repository.dart';
-import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
+import 'package:photonest/domain/repositories/theme_preference_repository.dart';
+import 'package:photonest/domain/value_objects/app_theme_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Stores the theme preference in [SharedPreferences].

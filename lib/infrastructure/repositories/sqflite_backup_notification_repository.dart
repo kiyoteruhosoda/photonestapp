@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutterbase/domain/entities/backup_notification.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
+import 'package:photonest/domain/entities/backup_notification.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/backup_notification_repository.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// [BackupNotificationRepository] backed by the shared SQLite database.

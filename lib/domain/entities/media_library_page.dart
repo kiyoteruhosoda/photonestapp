@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/media_item.dart';
+import 'package:photonest/domain/entities/media_item.dart';
 
 /// One window of the whole media library, as the library listing endpoint
 /// returns it.

@@ -3,9 +3,9 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.example.flutterbase",
+      "package_name": "com.nolumia.photonest",
       "sha256_cert_fingerprints": [
-        "REPLACE:WITH:YOUR:DEBUG:KEYSTORE:SHA256:FINGERPRINT",
+        "A1:29:88:AF:3F:1C:C1:29:82:94:BE:EF:62:7E:AA:B3:C2:BC:08:58:5E:8F:08:5D:16:64:E6:30:6C:97:1A:58",
         "REPLACE:WITH:YOUR:RELEASE:KEYSTORE:SHA256:FINGERPRINT"
       ]
     }

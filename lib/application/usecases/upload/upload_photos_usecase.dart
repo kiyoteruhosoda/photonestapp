@@ -1,11 +1,11 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/domain/entities/local_photo.dart';
-import 'package:flutterbase/domain/entities/upload_failure.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/domain/repositories/photo_upload_repository.dart';
-import 'package:flutterbase/domain/repositories/upload_failure_repository.dart';
-import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/upload_failure.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/photo_upload_repository.dart';
+import 'package:photonest/domain/repositories/upload_failure_repository.dart';
+import 'package:photonest/domain/repositories/upload_history_repository.dart';
 
 /// Why a single photo could not be uploaded, as something the UI can
 /// translate — the developer-facing detail stays in

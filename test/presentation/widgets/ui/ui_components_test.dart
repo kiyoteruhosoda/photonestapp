@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/theme/app_theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/widgets.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/theme/app_theme.dart';
+import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
 import '../../../support/test_harness.dart';
 

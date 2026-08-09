@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/auth_session.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
 
 /// Local persistence of the signed-in session.
 ///

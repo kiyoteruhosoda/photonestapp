@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/value_objects/app_language.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
 
 /// Persists and retrieves the user's language preference.
 ///

@@ -1,5 +1,5 @@
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/value_objects/login_credentials.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/value_objects/login_credentials.dart';
 
 /// Boundary to the server's authentication endpoints.
 ///

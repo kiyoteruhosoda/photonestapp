@@ -1,13 +1,13 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/ports/network_connection_gateway.dart';
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/application/usecases/notification/record_backup_result_usecase.dart';
-import 'package:flutterbase/application/usecases/upload/upload_photos_usecase.dart';
-import 'package:flutterbase/domain/entities/local_photo.dart';
-import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
-import 'package:flutterbase/domain/repositories/session_repository.dart';
-import 'package:flutterbase/domain/repositories/sync_lease_repository.dart';
-import 'package:flutterbase/domain/repositories/upload_history_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/network_connection_gateway.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/application/usecases/notification/record_backup_result_usecase.dart';
+import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
+import 'package:photonest/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:photonest/domain/repositories/session_repository.dart';
+import 'package:photonest/domain/repositories/sync_lease_repository.dart';
+import 'package:photonest/domain/repositories/upload_history_repository.dart';
 
 /// Why a sync pass ended, so the caller can tell "nothing to do" apart from
 /// "could not run".

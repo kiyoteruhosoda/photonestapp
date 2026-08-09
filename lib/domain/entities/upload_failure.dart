@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
 
 /// Why a device photo could not be uploaded, as something the UI can
 /// translate.

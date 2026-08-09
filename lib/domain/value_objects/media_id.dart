@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/errors/app_error.dart';
+import 'package:photonest/domain/errors/app_error.dart';
 
 /// Identity of a media item (photo or video) stored on the PhotoNest server.
 final class MediaId {

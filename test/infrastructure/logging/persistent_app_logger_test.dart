@@ -2,9 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/entities/log_entry.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
-import 'package:flutterbase/infrastructure/logging/persistent_app_logger.dart';
+import 'package:photonest/domain/entities/log_entry.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
+import 'package:photonest/infrastructure/logging/persistent_app_logger.dart';
 
 // PersistentAppLogger is exercised directly. `init()` is never called, so no
 // file I/O happens and only the in-memory buffer and console output are under

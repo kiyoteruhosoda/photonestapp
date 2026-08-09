@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/value_objects/app_language.dart';
-import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
-import 'package:flutterbase/domain/value_objects/log_level.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/main_page.dart';
-import 'package:flutterbase/presentation/providers/settings_providers.dart';
-import 'package:flutterbase/shared/app_config.dart';
+import 'package:photonest/domain/value_objects/app_language.dart';
+import 'package:photonest/domain/value_objects/app_theme_mode.dart';
+import 'package:photonest/domain/value_objects/log_level.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/main_page.dart';
+import 'package:photonest/presentation/providers/settings_providers.dart';
+import 'package:photonest/shared/app_config.dart';
 
 import '../../support/fakes.dart';
 import '../../support/test_harness.dart';

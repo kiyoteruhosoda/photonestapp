@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations_en.dart';
-import 'package:flutterbase/presentation/pages/system/not_found_page.dart';
+import 'package:photonest/presentation/l10n/app_localizations_en.dart';
+import 'package:photonest/presentation/pages/system/not_found_page.dart';
 
 import '../../../support/test_harness.dart';
 

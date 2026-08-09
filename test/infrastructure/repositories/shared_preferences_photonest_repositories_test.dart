@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/infrastructure/repositories/shared_preferences_api_endpoint_repository.dart';
-import 'package:flutterbase/infrastructure/repositories/shared_preferences_auto_upload_settings_repository.dart';
+import 'package:photonest/infrastructure/repositories/shared_preferences_api_endpoint_repository.dart';
+import 'package:photonest/infrastructure/repositories/shared_preferences_auto_upload_settings_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

@@ -1,6 +1,6 @@
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
-import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/background_sync_scheduler.dart';
+import 'package:photonest/domain/repositories/auto_upload_settings_repository.dart';
 
 /// Restricts automatic upload to unmetered connections, or lifts the
 /// restriction.

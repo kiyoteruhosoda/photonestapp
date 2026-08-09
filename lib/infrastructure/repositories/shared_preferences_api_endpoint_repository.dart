@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/repositories/api_endpoint_repository.dart';
+import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// [ApiEndpointRepository] backed by [SharedPreferences].

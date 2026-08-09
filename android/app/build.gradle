@@ -51,7 +51,7 @@ android {
     // manifest carries no `package` attribute).  Routing the value through a
     // Groovy variable makes that lookup fail with "package identifier or
     // launch activity not found" before Gradle ever runs.
-    namespace = "com.example.flutterbase"
+    namespace = "com.nolumia.photonest"
     compileSdk = 36
 
     compileOptions {
@@ -84,11 +84,15 @@ android {
 
     defaultConfig {
         // Keep literal — see the note on `namespace` above.
-        applicationId = "com.example.flutterbase"
-        // Android 7.0+. Old-device camera-roll migration is a core use case,
-        // so keep this as low as Flutter and photo_manager support. 36 would
-        // exclude every device below Android 16 (effectively undistributable).
-        minSdk = 24
+        applicationId = "com.nolumia.photonest"
+        // Android 12+. Chosen so the App Links intent filter can use
+        // android:pathAdvancedPattern (API 31+) to claim exactly the paths
+        // the app routes: the host also serves the web SPA, and the older
+        // android:pathPrefix would drag SPA-only URLs into the app. Below 31
+        // that attribute is ignored rather than rejected, which silently
+        // widens the filter to the whole domain — so the floor and the
+        // manifest have to move together.
+        minSdk = 31
         targetSdk = 36
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName

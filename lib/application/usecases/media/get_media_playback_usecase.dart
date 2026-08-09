@@ -1,6 +1,6 @@
-import 'package:flutterbase/domain/entities/signed_media_url.dart';
-import 'package:flutterbase/domain/repositories/media_playback_repository.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
+import 'package:photonest/domain/entities/signed_media_url.dart';
+import 'package:photonest/domain/repositories/media_playback_repository.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 
 /// Obtains a streaming source for a server-side video.
 final class GetMediaPlaybackUseCase {

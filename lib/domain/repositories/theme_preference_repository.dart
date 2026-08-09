@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/value_objects/app_theme_mode.dart';
+import 'package:photonest/domain/value_objects/app_theme_mode.dart';
 
 /// Persists and retrieves the user's theme preference.
 ///

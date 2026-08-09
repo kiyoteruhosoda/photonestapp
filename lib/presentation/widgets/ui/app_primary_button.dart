@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
+import 'package:photonest/presentation/theme/theme.dart';
 
 /// デジタル庁デザインシステム準拠 プライマリボタン
 class AppPrimaryButton extends StatelessWidget {

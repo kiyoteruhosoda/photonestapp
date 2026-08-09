@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/errors/app_error.dart';
-import 'package:flutterbase/presentation/providers/session_providers.dart';
+import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 
 import '../../support/fakes.dart';
 import '../../support/test_harness.dart';

@@ -1,4 +1,4 @@
-import 'package:flutterbase/domain/repositories/backup_notification_repository.dart';
+import 'package:photonest/domain/repositories/backup_notification_repository.dart';
 
 /// Signals whenever this isolate mutates the notification store.
 ///

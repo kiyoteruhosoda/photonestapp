@@ -187,7 +187,7 @@ byte 単位で比較し、異なれば最新版へ差し替えて同じ引数で
 | `BUILD_MODE` | （未設定） | `build.sh` へそのまま渡す |
 
 値の中の `{PROJECT}` は確定したプロジェクト名へ展開されます。ディレクトリ構成が
-`/<プロジェクト名>/<チャネル>`（例 `/volume1/builds/flutterbase/internal`）なら
+`/<プロジェクト名>/<チャネル>`（例 `/volume1/builds/photonest/internal`）なら
 プロジェクト名は親ディレクトリ名から決まるので、`PROJECT` の指定は不要です。
 
 ### よくある失敗と対処
@@ -227,7 +227,7 @@ byte 単位で比較し、異なれば最新版へ差し替えて同じ引数で
 アプリのデータを消せば DB ファイルごと消えます。
 
 ```bash
-adb shell pm clear com.example.flutterbase
+adb shell pm clear com.nolumia.photonest
 ```
 
 ### テスト

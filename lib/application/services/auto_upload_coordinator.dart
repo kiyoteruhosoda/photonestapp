@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:flutterbase/application/ports/app_logger.dart';
-import 'package:flutterbase/application/ports/background_sync_scheduler.dart';
-import 'package:flutterbase/application/ports/photo_library_gateway.dart';
-import 'package:flutterbase/application/usecases/upload/sync_new_photos_usecase.dart';
-import 'package:flutterbase/domain/repositories/auto_upload_settings_repository.dart';
+import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/background_sync_scheduler.dart';
+import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
+import 'package:photonest/domain/repositories/auto_upload_settings_repository.dart';
 
 /// Keeps the automatic upload running while the app is alive.
 ///

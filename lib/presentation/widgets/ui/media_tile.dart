@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutterbase/domain/entities/media_item.dart';
-import 'package:flutterbase/presentation/l10n/app_localizations.dart';
-import 'package:flutterbase/presentation/providers/media_providers.dart';
-import 'package:flutterbase/presentation/theme/theme.dart';
-import 'package:flutterbase/presentation/widgets/ui/thumbnail_image.dart';
+import 'package:photonest/domain/entities/media_item.dart';
+import 'package:photonest/presentation/l10n/app_localizations.dart';
+import 'package:photonest/presentation/providers/media_providers.dart';
+import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/thumbnail_image.dart';
 
 /// One media cell: the server thumbnail, plus a play badge for videos.
 ///

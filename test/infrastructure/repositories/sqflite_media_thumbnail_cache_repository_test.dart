@@ -1,9 +1,9 @@
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutterbase/domain/value_objects/media_id.dart';
-import 'package:flutterbase/infrastructure/database/app_database.dart';
-import 'package:flutterbase/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
+import 'package:photonest/infrastructure/database/app_database.dart';
+import 'package:photonest/infrastructure/repositories/sqflite_media_thumbnail_cache_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import '../../support/fakes.dart';

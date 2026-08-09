@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-import 'package:flutterbase/domain/entities/local_photo.dart';
+import 'package:photonest/domain/entities/local_photo.dart';
 
 /// How far one file's bytes have travelled: [sent] of [total].
 ///

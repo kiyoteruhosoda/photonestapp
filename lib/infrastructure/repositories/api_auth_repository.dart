@@ -1,7 +1,7 @@
-import 'package:flutterbase/domain/entities/auth_session.dart';
-import 'package:flutterbase/domain/repositories/auth_repository.dart';
-import 'package:flutterbase/domain/value_objects/login_credentials.dart';
-import 'package:flutterbase/infrastructure/api/photonest_api_client.dart';
+import 'package:photonest/domain/entities/auth_session.dart';
+import 'package:photonest/domain/repositories/auth_repository.dart';
+import 'package:photonest/domain/value_objects/login_credentials.dart';
+import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 /// [AuthRepository] backed by the PhotoNest `/api/auth` endpoints.
 final class ApiAuthRepository implements AuthRepository {

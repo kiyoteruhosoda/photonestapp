@@ -339,6 +339,12 @@ final class UploadPhotosUseCase {
       NetworkUnreachableError() => PhotoUploadFailureReason.unreachable,
       InfrastructureError(code: 'unsupported_format') =>
         PhotoUploadFailureReason.unsupportedFormat,
+      // A chunked upload that stopped making progress is a transfer that
+      // failed, not a photo the server refused: the next pass resumes it
+      // from where it stopped and will usually finish. Calling it "rejected"
+      // would tell the reader to give up on a photo that is fine.
+      InfrastructureError(code: 'upload_stalled') =>
+        PhotoUploadFailureReason.unreachable,
       _ => PhotoUploadFailureReason.rejected,
     };
   }

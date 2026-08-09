@@ -180,6 +180,18 @@ void main() {
       uploads.failFor = {'offline'};
       result = await uploadUseCase().execute([offline]);
       expect(result.failed.single.reason, PhotoUploadFailureReason.unreachable);
+
+      // A chunked upload that stopped advancing is a transfer to retry, not
+      // a photo the server refused — the next pass resumes it.
+      final stalled = testLocalPhoto(localId: 'stalled');
+      library.bytesById['stalled'] = Uint8List.fromList([5]);
+      uploads.failure = const InfrastructureError(
+        'Gave up sending IMG_0001.jpg after 3 attempts',
+        code: 'upload_stalled',
+      );
+      uploads.failFor = {'stalled'};
+      result = await uploadUseCase().execute([stalled]);
+      expect(result.failed.single.reason, PhotoUploadFailureReason.unreachable);
     });
 
     test('reports progress after each settled photo', () async {

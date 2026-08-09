@@ -73,16 +73,27 @@ void main() {
     await repository.save(resumption());
     await repository.save(resumption(localId: 'asset-2'));
 
-    await repository.clear('asset-1');
+    await repository.clear('asset-1', tempFileId: 'tmp-1');
 
     expect(await repository.find('asset-1'), isNull);
     expect(await repository.find('asset-2'), isNotNull);
   });
 
   test('clearing a photo that has no record is not an error', () async {
-    await repository.clear('asset-1');
+    await repository.clear('asset-1', tempFileId: 'tmp-1');
 
     expect(await repository.find('asset-1'), isNull);
+  });
+
+  test('clearing leaves a record that belongs to another upload', () async {
+    // A manual upload and an automatic pass overlapped: the row now names
+    // the other upload's temp file, and finishing first must not throw away
+    // everything that one has sent.
+    await repository.save(resumption(tempFileId: 'tmp-2'));
+
+    await repository.clear('asset-1', tempFileId: 'tmp-1');
+
+    expect((await repository.find('asset-1'))?.tempFileId, 'tmp-2');
   });
 
   test('records are scoped to the account they were sent to', () async {

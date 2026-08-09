@@ -13,7 +13,14 @@ abstract interface class UploadResumptionRepository {
   /// Stores [resumption], replacing any earlier record for the same photo.
   Future<void> save(UploadResumption resumption);
 
-  /// Forgets the record for [localId] — the upload finished, or the server
-  /// no longer knows the temp file.
-  Future<void> clear(String localId);
+  /// Forgets the record for [localId], but only while it still names
+  /// [tempFileId] — the upload finished, or the server no longer knows that
+  /// temp file.
+  ///
+  /// Scoped to the temp file because two uploads of the same photo can
+  /// overlap (a manual upload started during an automatic pass). Each
+  /// announces its own temp file and the later one takes the row; an
+  /// unconditional delete would let whichever finished first throw away the
+  /// other's resume point, costing it everything it had sent.
+  Future<void> clear(String localId, {required String tempFileId});
 }

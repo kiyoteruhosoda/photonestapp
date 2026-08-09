@@ -74,14 +74,17 @@ final class SqfliteUploadResumptionRepository
   }
 
   @override
-  Future<void> clear(String localId) async {
+  Future<void> clear(String localId, {required String tempFileId}) async {
     final account = _activeAccountKey();
     if (account == null) return;
     try {
       await _database.delete(
         AppDatabase.uploadResumptionsTable,
-        where: 'account_key = ? AND local_id = ?',
-        whereArgs: [account, localId],
+        // The temp file id is part of the condition, not just the key: a row
+        // that now belongs to an overlapping upload of the same photo is not
+        // ours to delete.
+        where: 'account_key = ? AND local_id = ? AND temp_file_id = ?',
+        whereArgs: [account, localId, tempFileId],
       );
     } on DatabaseException catch (error) {
       throw InfrastructureError(

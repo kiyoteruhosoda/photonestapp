@@ -893,18 +893,31 @@ final class FakeUploadResumptionRepository
   /// Ids passed to [clear], in order.
   final List<String> cleared = <String>[];
 
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
   @override
-  Future<UploadResumption?> find(String localId) async => stored[localId];
+  Future<UploadResumption?> find(String localId) async {
+    final error = failure;
+    if (error != null) throw error;
+    return stored[localId];
+  }
 
   @override
   Future<void> save(UploadResumption resumption) async {
+    final error = failure;
+    if (error != null) throw error;
     stored[resumption.localId] = resumption;
   }
 
   @override
-  Future<void> clear(String localId) async {
+  Future<void> clear(String localId, {required String tempFileId}) async {
+    final error = failure;
+    if (error != null) throw error;
     cleared.add(localId);
-    stored.remove(localId);
+    // Scoped like the real store: a row that now belongs to another upload
+    // of the same photo is not this caller's to delete.
+    if (stored[localId]?.tempFileId == tempFileId) stored.remove(localId);
   }
 }
 

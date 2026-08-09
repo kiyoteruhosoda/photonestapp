@@ -145,7 +145,7 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
       _logger.info(
         '[Upload] the server forgot ${photo.fileName} — starting over',
       );
-      await _resumptions.clear(photo.localId);
+      await _forgetResumePoint(photo, state.tempFileId);
       state = await _begin(photo, content, contentType);
       state = await _sendRemaining(photo, content, state, onBytes);
     }
@@ -153,7 +153,7 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
     await _commit(photo, state);
     // The temp file is now the server's problem; a stale resume point would
     // only send the next attempt to a file id that no longer exists.
-    await _resumptions.clear(photo.localId);
+    await _forgetResumePoint(photo, state.tempFileId);
   }
 
   /// Picks up where a previous attempt left off, or announces a new upload.
@@ -162,7 +162,7 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
     _UploadContent content,
     MediaType contentType,
   ) async {
-    final stored = await _resumptions.find(photo.localId);
+    final stored = await _findResumePoint(photo);
     if (stored == null) return _begin(photo, content, contentType);
 
     if (!stored.describes(fileName: photo.fileName, fileSize: content.length)) {
@@ -172,7 +172,7 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
         '[Upload] ${photo.fileName} no longer matches its resume point '
         '— starting over',
       );
-      await _resumptions.clear(photo.localId);
+      await _forgetResumePoint(photo, stored.tempFileId);
       return _begin(photo, content, contentType);
     }
 
@@ -188,7 +188,7 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
       return state;
     } on InfrastructureError catch (error) {
       if (error.code != 'upload_not_found') rethrow;
-      await _resumptions.clear(photo.localId);
+      await _forgetResumePoint(photo, stored.tempFileId);
       return _begin(photo, content, contentType);
     }
   }
@@ -211,16 +211,25 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
     );
     final state = _stateFrom(sessionId, payload);
     // Recorded before the first byte goes out: an upload interrupted during
-    // its very first chunk is exactly the one worth resuming.
-    await _resumptions.save(
-      UploadResumption(
-        localId: photo.localId,
-        fileName: photo.fileName,
-        fileSize: content.length,
-        uploadSessionId: sessionId,
-        tempFileId: state.tempFileId,
-      ),
-    );
+    // its very first chunk is exactly the one worth resuming. A store that
+    // cannot be written costs the resume, not the upload — so it is logged
+    // and the send goes ahead.
+    try {
+      await _resumptions.save(
+        UploadResumption(
+          localId: photo.localId,
+          fileName: photo.fileName,
+          fileSize: content.length,
+          uploadSessionId: sessionId,
+          tempFileId: state.tempFileId,
+        ),
+      );
+    } on AppError catch (error) {
+      _logger.warning(
+        '[Upload] could not record the resume point for ${photo.fileName}: '
+        '${error.message}',
+      );
+    }
     return state;
   }
 
@@ -333,6 +342,42 @@ final class ApiPhotoUploadRepository implements PhotoUploadRepository {
           : null;
       throw InfrastructureError(
         message ?? 'The server did not accept ${photo.fileName}.',
+      );
+    }
+  }
+
+  /// The recorded resume point, or null when there is none — including when
+  /// the store could not be read.
+  ///
+  /// A store that cannot answer means the resume is unavailable, not that
+  /// the photo cannot be backed up: the upload starts from the beginning,
+  /// which is exactly what it did before there was a resume point at all.
+  Future<UploadResumption?> _findResumePoint(LocalPhoto photo) async {
+    try {
+      return await _resumptions.find(photo.localId);
+    } on AppError catch (error) {
+      _logger.warning(
+        '[Upload] could not read the resume point for ${photo.fileName}: '
+        '${error.message}',
+      );
+      return null;
+    }
+  }
+
+  /// Forgets the resume point for [tempFileId], best-effort.
+  ///
+  /// Never allowed to fail the upload. After a successful commit the server
+  /// already holds the photo: throwing here would have the caller record it
+  /// as failed and never mark it uploaded, so the next pass would send the
+  /// same photo again. A row left behind is harmless by comparison — the
+  /// next attempt finds the temp file gone and starts over.
+  Future<void> _forgetResumePoint(LocalPhoto photo, String tempFileId) async {
+    try {
+      await _resumptions.clear(photo.localId, tempFileId: tempFileId);
+    } on AppError catch (error) {
+      _logger.warning(
+        '[Upload] could not clear the resume point for ${photo.fileName}: '
+        '${error.message}',
       );
     }
   }

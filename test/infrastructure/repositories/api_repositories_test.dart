@@ -961,6 +961,46 @@ void main() {
       },
     );
 
+    test(
+      'a bookkeeping failure never fails an upload the server accepted',
+      () async {
+        // The server has the photo. Throwing here would have the caller
+        // record the photo as failed and never mark it uploaded, so the
+        // next pass would send the very same photo again.
+        resumptions.failure = const InfrastructureError('database is locked');
+        final repository = repositoryOn(
+          happyServer(fileSize: 2, chunkSize: 8, appended: <List<int>>[]),
+        );
+
+        await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2]));
+
+        expect(requests.last.url.path, '/api/upload/commit');
+      },
+    );
+
+    test('an unreadable resume point just starts the upload over', () async {
+      await resumptions.save(
+        UploadResumption(
+          localId: 'asset-1',
+          fileName: 'IMG_0001.jpg',
+          fileSize: 2,
+          uploadSessionId: 'session-1',
+          tempFileId: 'tmp-1',
+        ),
+      );
+      resumptions.failure = const InfrastructureError('database is locked');
+      final repository = repositoryOn(
+        happyServer(fileSize: 2, chunkSize: 8, appended: <List<int>>[]),
+      );
+
+      await repository.upload(testLocalPhoto(), Uint8List.fromList([1, 2]));
+
+      // No resume query — the store could not say where to resume from.
+      expect(requests.first.url.path, '/api/upload/chunks');
+      expect(requests.first.method, 'POST');
+      expect(requests.last.url.path, '/api/upload/commit');
+    });
+
     test('a commit rejection surfaces the server message', () async {
       final repository = repositoryOn(
         client((request) async {

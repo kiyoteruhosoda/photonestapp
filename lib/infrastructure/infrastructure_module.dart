@@ -19,6 +19,7 @@ import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -39,6 +40,7 @@ import 'package:photonest/infrastructure/repositories/api_media_library_reposito
 import 'package:photonest/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_thumbnail_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_thumbnail_url_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:photonest/infrastructure/repositories/package_info_app_info_repository.dart';
 import 'package:photonest/infrastructure/repositories/secure_storage_session_repository.dart';
@@ -80,6 +82,7 @@ final class InfrastructureModule {
     required this.albums,
     required this.albumSnapshots,
     required this.mediaThumbnails,
+    required this.mediaThumbnailUrls,
     required this.mediaThumbnailCache,
     required this.mediaLibrary,
     required this.mediaOriginals,
@@ -169,6 +172,7 @@ final class InfrastructureModule {
         apiEndpoints,
       ),
       mediaThumbnails: ApiMediaThumbnailRepository(apiClient),
+      mediaThumbnailUrls: ApiMediaThumbnailUrlRepository(apiClient),
       mediaThumbnailCache: SqfliteMediaThumbnailCacheRepository(
         database,
         sessions,
@@ -218,6 +222,7 @@ final class InfrastructureModule {
   final AlbumRepository albums;
   final AlbumSnapshotRepository albumSnapshots;
   final MediaThumbnailRepository mediaThumbnails;
+  final MediaThumbnailUrlRepository mediaThumbnailUrls;
   final MediaThumbnailCacheRepository mediaThumbnailCache;
   final MediaLibraryRepository mediaLibrary;
   final MediaOriginalRepository mediaOriginals;

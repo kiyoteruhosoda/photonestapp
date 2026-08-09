@@ -61,7 +61,9 @@ void main() {
     expect(find.text(l10n.mediaViewerPosition(2, 3)), findsOneWidget);
     // The neighbour's rendition was fetched, so the swipe really moved.
     expect(
-      scope.mediaThumbnailRepository.fetched.map((entry) => entry.$1.value),
+      scope.mediaThumbnailUrlRepository.requested.map(
+        (entry) => entry.$1.value,
+      ),
       contains(2),
     );
   });

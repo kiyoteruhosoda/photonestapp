@@ -29,6 +29,7 @@ import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -716,9 +717,17 @@ final class FakeAlbumSnapshotRepository implements AlbumSnapshotRepository {
 
 /// In-memory [MediaThumbnailRepository] returning a fixed byte pattern.
 final class FakeMediaThumbnailRepository implements MediaThumbnailRepository {
+  /// Reads that went through the app server, one round trip each.
   final List<(MediaId, int)> fetched = <(MediaId, int)>[];
 
+  /// Reads that went through a signed URL (proxy or CDN edge).
+  final List<SignedMediaUrl> fetchedFrom = <SignedMediaUrl>[];
+
   AppError? failure;
+
+  /// When set, only signed-URL reads throw it — lets a test check the
+  /// fallback to the app server.
+  AppError? signedFailure;
 
   @override
   Future<Uint8List> fetch(MediaId id, {required int size}) async {
@@ -726,6 +735,52 @@ final class FakeMediaThumbnailRepository implements MediaThumbnailRepository {
     if (error != null) throw error;
     fetched.add((id, size));
     return testPngBytes;
+  }
+
+  @override
+  Future<Uint8List> fetchFrom(SignedMediaUrl url) async {
+    final error = signedFailure ?? failure;
+    if (error != null) throw error;
+    fetchedFrom.add(url);
+    return testPngBytes;
+  }
+}
+
+/// In-memory [MediaThumbnailUrlRepository] that issues a URL per media item.
+final class FakeMediaThumbnailUrlRepository
+    implements MediaThumbnailUrlRepository {
+  /// Batches asked for, in order — the point of the batching is that this
+  /// stays short while the grid is long.
+  final List<(List<MediaId>, int)> issued = <(List<MediaId>, int)>[];
+
+  /// Media the server refuses to issue for (deleted, purged).
+  final Set<int> unissuable = <int>{};
+
+  /// Every thumbnail asked for, flattened to (media, size) — what a test
+  /// means by "the grid requested this rendition", whichever batch it
+  /// travelled in.
+  List<(MediaId, int)> get requested => [
+    for (final (ids, size) in issued)
+      for (final id in ids) (id, size),
+  ];
+
+  AppError? failure;
+
+  @override
+  Future<Map<MediaId, SignedMediaUrl>> issue(
+    List<MediaId> ids, {
+    required int size,
+  }) async {
+    issued.add((List<MediaId>.of(ids), size));
+    final error = failure;
+    if (error != null) throw error;
+    return {
+      for (final id in ids)
+        if (!unissuable.contains(id.value))
+          id: SignedMediaUrl(
+            url: Uri.parse('https://cdn.example.com/thumb/${id.value}/$size'),
+          ),
+    };
   }
 }
 

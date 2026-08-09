@@ -44,6 +44,7 @@ import 'package:photonest/application/usecases/media/get_media_playback_usecase.
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
+import 'package:photonest/application/usecases/media/thumbnail_url_batch.dart';
 import 'package:photonest/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:photonest/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:photonest/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -88,6 +89,7 @@ import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -116,6 +118,7 @@ import 'package:photonest/infrastructure/repositories/api_media_library_reposito
 import 'package:photonest/infrastructure/repositories/api_media_original_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_playback_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_thumbnail_repository.dart';
+import 'package:photonest/infrastructure/repositories/api_media_thumbnail_url_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_photo_upload_repository.dart';
 import 'package:photonest/infrastructure/repositories/package_info_app_info_repository.dart';
 import 'package:photonest/infrastructure/repositories/secure_storage_session_repository.dart';

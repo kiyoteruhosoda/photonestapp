@@ -24,6 +24,7 @@ import 'package:photonest/application/usecases/media/get_media_playback_usecase.
 import 'package:photonest/application/usecases/media/get_media_thumbnail_usecase.dart';
 import 'package:photonest/application/usecases/media/list_library_media_usecase.dart';
 import 'package:photonest/application/usecases/media/save_media_original_usecase.dart';
+import 'package:photonest/application/usecases/media/thumbnail_url_batch.dart';
 import 'package:photonest/application/usecases/notification/get_unread_notification_count_usecase.dart';
 import 'package:photonest/application/usecases/notification/list_backup_notifications_usecase.dart';
 import 'package:photonest/application/usecases/notification/mark_notifications_read_usecase.dart';
@@ -56,6 +57,7 @@ import 'package:photonest/domain/repositories/media_original_repository.dart';
 import 'package:photonest/domain/repositories/media_playback_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_cache_repository.dart';
 import 'package:photonest/domain/repositories/media_thumbnail_repository.dart';
+import 'package:photonest/domain/repositories/media_thumbnail_url_repository.dart';
 import 'package:photonest/domain/repositories/photo_upload_repository.dart';
 import 'package:photonest/domain/repositories/session_repository.dart';
 import 'package:photonest/domain/repositories/sync_lease_repository.dart';
@@ -103,6 +105,9 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<AlbumSnapshotRepository>(infrastructure.albumSnapshots)
     ..registerSingleton<MediaThumbnailRepository>(
       infrastructure.mediaThumbnails,
+    )
+    ..registerSingleton<MediaThumbnailUrlRepository>(
+      infrastructure.mediaThumbnailUrls,
     )
     ..registerSingleton<MediaThumbnailCacheRepository>(
       infrastructure.mediaThumbnailCache,
@@ -196,11 +201,18 @@ Future<void> setupServiceLocator() async {
       sl<AppLogger>(),
     ),
   );
+  // One batcher for the whole app, not one per use case: the point is that
+  // the tiles built in the same frame share a request, and a per-instance
+  // queue would put each tile in a batch of one.
+  sl.registerSingleton<ThumbnailUrlBatch>(
+    ThumbnailUrlBatch(sl<MediaThumbnailUrlRepository>(), sl<AppLogger>()),
+  );
   sl.registerFactory<GetMediaThumbnailUseCase>(
     () => GetMediaThumbnailUseCase(
       sl<MediaThumbnailRepository>(),
       sl<MediaThumbnailCacheRepository>(),
       sl<AppLogger>(),
+      sl<ThumbnailUrlBatch>(),
     ),
   );
   sl.registerFactory<GetMediaPlaybackUseCase>(

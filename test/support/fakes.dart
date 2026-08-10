@@ -569,6 +569,13 @@ final class FakeAuthRepository implements AuthRepository {
   /// models a platform/plugin blowing up outside the typed error contract.
   Object? unexpectedFailure;
 
+  /// When set, [login] refuses credentials that carry no authenticator code
+  /// — the way the server answers for an account with two-factor on.
+  bool requiresTotp = false;
+
+  /// The only code [login] accepts while [requiresTotp] is set.
+  String expectedTotpCode = '123456';
+
   final List<LoginCredentials> logins = <LoginCredentials>[];
   final List<AuthSession> loggedOut = <AuthSession>[];
 
@@ -576,6 +583,21 @@ final class FakeAuthRepository implements AuthRepository {
   Future<AuthSession> login(LoginCredentials credentials) async {
     _failIfAsked();
     logins.add(credentials);
+    if (requiresTotp) {
+      final code = credentials.totpCode;
+      if (code == null) {
+        throw const AuthenticationError(
+          'Two-factor code required.',
+          code: 'totp_required',
+        );
+      }
+      if (code != expectedTotpCode) {
+        throw const AuthenticationError(
+          'Two-factor code did not match.',
+          code: 'invalid_totp',
+        );
+      }
+    }
     return sessionToReturn ??
         AuthSession(
           accessToken: 'access-token',

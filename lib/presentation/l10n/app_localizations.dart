@@ -54,6 +54,9 @@ abstract class AppLocalizations {
   String get loginErrorInvalidInput;
   String get loginErrorInvalidCredentials;
   String get loginErrorNetwork;
+  String get loginTotpLabel;
+  String get loginTotpRequired;
+  String get loginErrorInvalidTotp;
 
   // ─── Albums ───────────────────────────────────────────────────────────
   String get albumsTitle;
@@ -201,6 +204,7 @@ abstract class AppLocalizations {
   String get accountTwoFactorSetupTitle;
   String get accountTwoFactorSetupIntro;
   String get accountTwoFactorOpenApp;
+  String get accountTwoFactorNoApp;
   String get accountTwoFactorSecretLabel;
   String get accountTwoFactorSecretCopied;
   String get accountTwoFactorScanHint;

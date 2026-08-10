@@ -139,19 +139,22 @@ void main() {
       expect(manifest, contains('android:exported="true"'));
     });
 
-    test('every web scheme an external link may use is visible to '
+    test('every scheme an external link may use is visible to '
         'canLaunchUrl', () {
       // The <queries> block gates package visibility on API 30+. A scheme
       // missing here makes canLaunchUrl report an openable URL as
       // unopenable — url_launcher sits behind the ExternalLinkLauncher
-      // port and must be able to see handlers for both web schemes.
+      // port and must be able to see handlers for every scheme the app
+      // hands it. `otpauth` is the two-factor setup sheet's: without it,
+      // "Open authenticator app" falls through to the copy-the-key path
+      // even on a phone with an authenticator installed.
       final queries = RegExp(
         r'<queries>.*?</queries>',
         dotAll: true,
       ).firstMatch(manifest);
       expect(queries, isNotNull, reason: 'no <queries> element found');
 
-      for (final scheme in const ['http', 'https']) {
+      for (final scheme in const ['http', 'https', 'otpauth']) {
         expect(
           queries!.group(0),
           contains('android:scheme="$scheme"'),

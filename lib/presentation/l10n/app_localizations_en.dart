@@ -44,6 +44,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginErrorNetwork =>
       'Could not reach the server. Check the URL and your connection.';
+  @override
+  String get loginTotpLabel => 'Code from your authenticator app';
+  @override
+  String get loginTotpRequired =>
+      'This account uses two-factor authentication. Enter the code from your '
+      'authenticator app.';
+  @override
+  String get loginErrorInvalidTotp =>
+      'That code did not match. Try the next one the app shows.';
 
   // ─── Albums ───────────────────────────────────────────────────────────
   @override
@@ -345,6 +354,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'it shows.';
   @override
   String get accountTwoFactorOpenApp => 'Open authenticator app';
+  @override
+  String get accountTwoFactorNoApp =>
+      'No authenticator app answered. Use the setup key below.';
   @override
   String get accountTwoFactorSecretLabel => 'Setup key';
   @override

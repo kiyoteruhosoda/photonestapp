@@ -91,10 +91,8 @@ class _TwoFactorSetupSheetState extends ConsumerState<TwoFactorSetupSheet> {
     final opened = await ref.read(externalLinkLauncherProvider).open(uri);
     if (!mounted || opened) return;
     // No installed app answers `otpauth://`. That is an outcome, not a
-    // failure: the setup key below is the way through.
-    messenger.showSnackBar(
-      SnackBar(content: Text(l10n.accountTwoFactorSecretLabel)),
-    );
+    // failure: the setup key below is the way through, so say that.
+    messenger.showSnackBar(SnackBar(content: Text(l10n.accountTwoFactorNoApp)));
   }
 
   Future<void> _copySecret(String secret) async {

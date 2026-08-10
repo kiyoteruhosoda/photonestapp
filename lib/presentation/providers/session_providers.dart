@@ -61,6 +61,14 @@ enum LoginFailure {
   /// The server answered and said no.
   invalidCredentials,
 
+  /// The account has an authenticator and the password alone is not enough.
+  /// Not a failure of the entry so far — the form asks for a code and the
+  /// reader tries again.
+  totpRequired,
+
+  /// The authenticator code did not match.
+  invalidTotp,
+
   /// The server could not be reached or errored.
   network,
 }
@@ -127,6 +135,7 @@ class SessionNotifier extends Notifier<SessionState> {
     required String serverUrl,
     required String email,
     required String password,
+    String? totpCode,
   }) async {
     final logger = ref.read(appLoggerProvider);
     state = SessionState(
@@ -143,6 +152,7 @@ class SessionNotifier extends Notifier<SessionState> {
         serverUrl: parsed,
         email: email,
         password: password,
+        totpCode: totpCode,
       );
       final session = await ref.read(loginUseCaseProvider).execute(credentials);
       state = SessionState(
@@ -154,8 +164,14 @@ class SessionNotifier extends Notifier<SessionState> {
       _failWith(LoginFailure.invalidInput);
       return false;
     } on AuthenticationError catch (error) {
-      logger.warning('[Session] login rejected: ${error.message}');
-      _failWith(LoginFailure.invalidCredentials);
+      logger.warning('[Session] login rejected: ${error.code ?? 'rejected'}');
+      // The server names the two second-factor outcomes; both mean "the
+      // password was right, keep going" rather than "start over".
+      _failWith(switch (error.code) {
+        'totp_required' => LoginFailure.totpRequired,
+        'invalid_totp' => LoginFailure.invalidTotp,
+        _ => LoginFailure.invalidCredentials,
+      });
       return false;
     } on InfrastructureError catch (error) {
       logger.warning('[Session] login failed: ${error.message}');

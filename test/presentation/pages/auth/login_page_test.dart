@@ -115,4 +115,78 @@ void main() {
 
     expect(scope.container.read(sessionProvider).isAuthenticated, isTrue);
   });
+
+  group('two-factor sign-in', () {
+    testWidgets('asks for a code only after the server says so', (
+      tester,
+    ) async {
+      final scope = signedOut();
+      scope.authRepository.requiresTotp = true;
+      await pumpInScope(tester, const LoginPage(), scope: scope);
+
+      // A field nobody without an authenticator can fill has no business on
+      // the form up front.
+      expect(find.text(l10n.loginTotpLabel), findsNothing);
+
+      await fillForm(tester);
+      await tester.tap(find.byType(AppPrimaryButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.loginTotpLabel), findsOneWidget);
+      expect(find.text(l10n.loginTotpRequired), findsOneWidget);
+      expect(scope.container.read(sessionProvider).isAuthenticated, isFalse);
+    });
+
+    testWidgets('signs in once the code is entered', (tester) async {
+      final scope = signedOut();
+      scope.authRepository.requiresTotp = true;
+      await pumpInScope(tester, const LoginPage(), scope: scope);
+
+      await fillForm(tester);
+      await tester.tap(find.byType(AppPrimaryButton));
+      await tester.pumpAndSettle();
+
+      // Spacing as an authenticator displays it — the credentials strip it.
+      await tester.enterText(find.byType(AppTextField).at(3), '123 456');
+      await tester.tap(find.byType(AppPrimaryButton));
+      await tester.pumpAndSettle();
+
+      expect(scope.authRepository.logins.last.totpCode, '123456');
+      expect(scope.container.read(sessionProvider).isAuthenticated, isTrue);
+    });
+
+    testWidgets('keeps the field after a code that did not match', (
+      tester,
+    ) async {
+      final scope = signedOut();
+      scope.authRepository.requiresTotp = true;
+      await pumpInScope(tester, const LoginPage(), scope: scope);
+
+      await fillForm(tester);
+      await tester.tap(find.byType(AppPrimaryButton));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(AppTextField).at(3), '000000');
+      await tester.tap(find.byType(AppPrimaryButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.loginErrorInvalidTotp), findsOneWidget);
+      // Taking the field away would leave a form that cannot succeed.
+      expect(find.text(l10n.loginTotpLabel), findsOneWidget);
+    });
+
+    testWidgets('an account without an authenticator never sees the field', (
+      tester,
+    ) async {
+      final scope = signedOut();
+      await pumpInScope(tester, const LoginPage(), scope: scope);
+
+      await fillForm(tester);
+      await tester.tap(find.byType(AppPrimaryButton));
+      await tester.pumpAndSettle();
+
+      expect(scope.authRepository.logins.single.totpCode, isNull);
+      expect(find.text(l10n.loginTotpLabel), findsNothing);
+      expect(scope.container.read(sessionProvider).isAuthenticated, isTrue);
+    });
+  });
 }

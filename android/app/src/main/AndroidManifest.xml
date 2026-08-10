@@ -138,5 +138,15 @@
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="http"/>
         </intent>
+        <!-- The two-factor setup sheet hands an `otpauth://` URI to whichever
+             authenticator app is installed. Without this query, package
+             visibility hides those apps on API 30+ and canLaunchUrl() answers
+             false before the platform is ever asked — the button would always
+             fall through to the copy-the-key path even with an authenticator
+             installed. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="otpauth"/>
+        </intent>
     </queries>
 </manifest>

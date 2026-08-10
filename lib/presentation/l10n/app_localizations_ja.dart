@@ -41,6 +41,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginErrorInvalidCredentials => 'メールアドレスまたはパスワードが正しくありません。';
   @override
   String get loginErrorNetwork => 'サーバーに接続できません。URL と通信環境を確認してください。';
+  @override
+  String get loginTotpLabel => '認証アプリのコード';
+  @override
+  String get loginTotpRequired => 'このアカウントは二要素認証を使っています。認証アプリのコードを入力してください。';
+  @override
+  String get loginErrorInvalidTotp => 'コードが一致しません。次に表示されるコードで試してください。';
 
   // ─── Albums ───────────────────────────────────────────────────────────
   @override
@@ -319,6 +325,8 @@ class AppLocalizationsJa extends AppLocalizations {
       '認証アプリにこのアカウントを登録し、表示されたコードを入力してください。';
   @override
   String get accountTwoFactorOpenApp => '認証アプリで開く';
+  @override
+  String get accountTwoFactorNoApp => '認証アプリが見つかりません。下のセットアップキーを使ってください。';
   @override
   String get accountTwoFactorSecretLabel => 'セットアップキー';
   @override

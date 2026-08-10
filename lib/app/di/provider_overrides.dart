@@ -3,6 +3,7 @@
 import 'package:flutter_riverpod/misc.dart';
 import 'package:photonest/app/di/service_locator.dart';
 import 'package:photonest/application/ports/app_logger.dart';
+import 'package:photonest/application/ports/external_link_launcher.dart';
 import 'package:photonest/application/services/auto_upload_coordinator.dart';
 import 'package:photonest/application/usecases/album/edit_album_usecase.dart';
 import 'package:photonest/application/usecases/album/get_album_usecase.dart';
@@ -11,6 +12,7 @@ import 'package:photonest/application/usecases/app_info/get_app_info_usecase.dar
 import 'package:photonest/application/usecases/auth/get_api_endpoint_usecase.dart';
 import 'package:photonest/application/usecases/auth/login_usecase.dart';
 import 'package:photonest/application/usecases/auth/logout_usecase.dart';
+import 'package:photonest/application/usecases/auth/manage_account_usecase.dart';
 import 'package:photonest/application/usecases/auth/restore_session_usecase.dart';
 import 'package:photonest/application/usecases/auth/watch_session_usecase.dart';
 import 'package:photonest/application/usecases/debug/get_debug_settings_usecase.dart';
@@ -45,6 +47,7 @@ import 'package:photonest/application/usecases/upload/set_auto_upload_unmetered_
 import 'package:photonest/application/usecases/upload/set_backup_albums_usecase.dart';
 import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/watch_upload_failures_usecase.dart';
+import 'package:photonest/presentation/providers/account_providers.dart';
 import 'package:photonest/presentation/providers/album_providers.dart';
 import 'package:photonest/presentation/providers/app_info_providers.dart';
 import 'package:photonest/presentation/providers/app_providers.dart';
@@ -68,6 +71,8 @@ List<Override> buildProviderOverrides() {
     listAlbumsUseCaseProvider.overrideWithValue(sl<ListAlbumsUseCase>()),
     getAlbumUseCaseProvider.overrideWithValue(sl<GetAlbumUseCase>()),
     editAlbumUseCaseProvider.overrideWithValue(sl<EditAlbumUseCase>()),
+    manageAccountUseCaseProvider.overrideWithValue(sl<ManageAccountUseCase>()),
+    externalLinkLauncherProvider.overrideWithValue(sl<ExternalLinkLauncher>()),
     getMediaThumbnailUseCaseProvider.overrideWithValue(
       sl<GetMediaThumbnailUseCase>(),
     ),

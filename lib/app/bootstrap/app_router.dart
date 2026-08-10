@@ -9,6 +9,7 @@ import 'package:photonest/presentation/pages/auth/login_page.dart';
 import 'package:photonest/presentation/pages/main_page.dart';
 import 'package:photonest/presentation/pages/media/trash_page.dart';
 import 'package:photonest/presentation/pages/notifications/notifications_page.dart';
+import 'package:photonest/presentation/pages/settings/account_page.dart';
 import 'package:photonest/presentation/pages/system/about_page.dart';
 import 'package:photonest/presentation/pages/system/debug_page.dart';
 import 'package:photonest/presentation/pages/system/deep_link_page.dart';
@@ -108,6 +109,10 @@ class AppRouter {
                   state.pathParameters[AppRoutes.albumIdParam],
                 ),
               ),
+            ),
+            GoRoute(
+              path: _relative(AppRoutes.account),
+              builder: (context, state) => const AccountPage(),
             ),
             GoRoute(
               path: _relative(AppRoutes.about),

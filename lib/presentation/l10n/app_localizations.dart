@@ -175,6 +175,41 @@ abstract class AppLocalizations {
   String get settingsSignOutCancel;
   String get settingsSignedInAs;
 
+  // ─── Account (credentials) ────────────────────────────────────────────
+  String get accountTitle;
+  String get accountOpen;
+  String get accountEmailLabel;
+  String get accountPasswordSection;
+  String get accountPasswordHint;
+  String get accountPasswordNewLabel;
+  String get accountPasswordConfirmLabel;
+  String accountPasswordTooShort(int minimum);
+  String get accountPasswordMismatch;
+  String get accountPasswordChange;
+  String get accountPasswordChanged;
+  String get accountPasswordFailed;
+  String get accountTwoFactorSection;
+  String get accountTwoFactorOn;
+  String get accountTwoFactorOff;
+  String get accountTwoFactorEnable;
+  String get accountTwoFactorDisable;
+  String get accountTwoFactorDisableConfirmTitle;
+  String get accountTwoFactorDisableConfirmBody;
+  String get accountTwoFactorDisabled;
+  String get accountTwoFactorEnabled;
+  String get accountTwoFactorFailed;
+  String get accountTwoFactorSetupTitle;
+  String get accountTwoFactorSetupIntro;
+  String get accountTwoFactorOpenApp;
+  String get accountTwoFactorSecretLabel;
+  String get accountTwoFactorSecretCopied;
+  String get accountTwoFactorScanHint;
+  String get accountTwoFactorCodeLabel;
+  String get accountTwoFactorCodeRequired;
+  String get accountTwoFactorConfirm;
+  String get accountTwoFactorInvalidCode;
+  String get accountPasskeysUnavailable;
+
   // ─── Drawer ───────────────────────────────────────────────────────────
   String get drawerClose;
   String get drawerAbout;

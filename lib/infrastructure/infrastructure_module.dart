@@ -5,6 +5,7 @@ import 'package:photonest/application/ports/background_sync_scheduler.dart';
 import 'package:photonest/application/ports/external_link_launcher.dart';
 import 'package:photonest/application/ports/network_connection_gateway.dart';
 import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/repositories/account_repository.dart';
 import 'package:photonest/domain/repositories/album_editing_repository.dart';
 import 'package:photonest/domain/repositories/album_repository.dart';
 import 'package:photonest/domain/repositories/album_snapshot_repository.dart';
@@ -37,6 +38,7 @@ import 'package:photonest/infrastructure/device/connectivity_plus_network_connec
 import 'package:photonest/infrastructure/device/photo_manager_photo_library_gateway.dart';
 import 'package:photonest/infrastructure/links/url_launcher_external_link_launcher.dart';
 import 'package:photonest/infrastructure/logging/persistent_app_logger.dart';
+import 'package:photonest/infrastructure/repositories/api_account_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_album_editing_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
@@ -85,6 +87,7 @@ final class InfrastructureModule {
     required this.auth,
     required this.sessions,
     required this.apiEndpoints,
+    required this.account,
     required this.albums,
     required this.albumEditing,
     required this.albumSnapshots,
@@ -174,6 +177,7 @@ final class InfrastructureModule {
       auth: ApiAuthRepository(apiClient),
       sessions: sessions,
       apiEndpoints: apiEndpoints,
+      account: ApiAccountRepository(apiClient),
       albums: ApiAlbumRepository(apiClient),
       albumEditing: ApiAlbumEditingRepository(apiClient),
       albumSnapshots: SqfliteAlbumSnapshotRepository(
@@ -231,6 +235,7 @@ final class InfrastructureModule {
   final AuthRepository auth;
   final SessionRepository sessions;
   final ApiEndpointRepository apiEndpoints;
+  final AccountRepository account;
   final AlbumRepository albums;
   final AlbumEditingRepository albumEditing;
   final AlbumSnapshotRepository albumSnapshots;

@@ -269,6 +269,25 @@ class _SettingsContent extends ConsumerWidget {
                 ),
               ),
               const Divider(height: 1),
+              // The credential screen, one tap from the account card that
+              // already names who is signed in.
+              ListTile(
+                leading: Icon(
+                  Icons.password_outlined,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                title: Text(
+                  l10n.accountOpen,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => unawaited(context.push<void>(AppRoutes.account)),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.componentPadding,
+                  vertical: AppSpacing.xs,
+                ),
+              ),
+              const Divider(height: 1),
               ListTile(
                 leading: Icon(
                   Icons.logout_outlined,

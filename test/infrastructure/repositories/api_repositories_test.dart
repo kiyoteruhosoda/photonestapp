@@ -14,6 +14,7 @@ import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/domain/value_objects/tag_id.dart';
 import 'package:photonest/infrastructure/api/photonest_api_client.dart';
+import 'package:photonest/infrastructure/repositories/api_account_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_album_editing_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
@@ -305,6 +306,125 @@ void main() {
         repository.findById(AlbumId(9)),
         throwsA(isA<InfrastructureError>()),
       );
+    });
+  });
+
+  group('ApiAccountRepository', () {
+    test('load reads the account and the two-factor state', () async {
+      final repository = ApiAccountRepository(
+        client((request) async {
+          if (request.url.path.endsWith('/2fa/status')) {
+            return json({'enabled': true});
+          }
+          return json({'id': 4, 'email': 'user@example.com'});
+        }),
+      );
+
+      final profile = await repository.load();
+
+      expect(requests.map((r) => r.url.path), [
+        '/api/auth/me',
+        '/api/auth/2fa/status',
+      ]);
+      expect(profile.id, 4);
+      expect(profile.email, 'user@example.com');
+      expect(profile.twoFactorEnabled, isTrue);
+    });
+
+    test('load rejects an unreported two-factor state', () async {
+      final repository = ApiAccountRepository(
+        client((request) async {
+          if (request.url.path.endsWith('/2fa/status')) return json({});
+          return json({'id': 4, 'email': 'user@example.com'});
+        }),
+      );
+
+      // Reading "not said" as "off" would invite the reader to turn on what
+      // may already be on.
+      await expectLater(repository.load(), throwsA(isA<InfrastructureError>()));
+    });
+
+    test('changePassword sends only the password', () async {
+      final repository = ApiAccountRepository(
+        client((request) async => json({'updated': true})),
+      );
+
+      await repository.changePassword('hunter2secret');
+
+      expect(requests.single.method, 'PUT');
+      expect(requests.single.url.path, '/api/auth/profile');
+      // Echoing the e-mail back would let a stale copy overwrite an address
+      // changed elsewhere.
+      expect(jsonDecode(requests.single.body), {'password': 'hunter2secret'});
+    });
+
+    test('beginTwoFactorEnrollment reads the secret and the URI', () async {
+      final repository = ApiAccountRepository(
+        client(
+          (request) async => json({
+            'secret': 'JBSWY3DPEHPK3PXP',
+            'otpauth_uri': 'otpauth://totp/PhotoNest:user@example.com',
+            'qr_data_uri': 'data:image/png;base64,iVBORw0KGgo=',
+          }),
+        ),
+      );
+
+      final enrollment = await repository.beginTwoFactorEnrollment();
+
+      expect(enrollment.secret, 'JBSWY3DPEHPK3PXP');
+      expect(enrollment.otpauthUri.scheme, 'otpauth');
+      expect(enrollment.qrImage?.scheme, 'data');
+    });
+
+    test(
+      'beginTwoFactorEnrollment rejects a response with no secret',
+      () async {
+        final repository = ApiAccountRepository(
+          client((request) async => json({'otpauth_uri': 'otpauth://totp/x'})),
+        );
+
+        await expectLater(
+          repository.beginTwoFactorEnrollment(),
+          throwsA(isA<InfrastructureError>()),
+        );
+      },
+    );
+
+    test('confirmTwoFactor refuses a 200 that enabled nothing', () async {
+      final repository = ApiAccountRepository(
+        client((request) async => json({'enabled': false})),
+      );
+
+      // A success that did not actually register the authenticator must not
+      // read as one — the reader would think they are protected.
+      await expectLater(
+        repository.confirmTwoFactor(secret: 'SECRET', code: '123456'),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test('confirmTwoFactor sends the secret alongside the code', () async {
+      final repository = ApiAccountRepository(
+        client((request) async => json({'enabled': true})),
+      );
+
+      await repository.confirmTwoFactor(secret: 'SECRET', code: '123456');
+
+      expect(jsonDecode(requests.single.body), {
+        'secret': 'SECRET',
+        'code': '123456',
+      });
+    });
+
+    test('disableTwoFactor deletes the authenticator', () async {
+      final repository = ApiAccountRepository(
+        client((request) async => json({'enabled': false})),
+      );
+
+      await repository.disableTwoFactor();
+
+      expect(requests.single.method, 'DELETE');
+      expect(requests.single.url.path, '/api/auth/2fa');
     });
   });
 

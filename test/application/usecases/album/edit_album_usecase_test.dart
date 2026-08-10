@@ -119,7 +119,7 @@ void main() {
       ]);
     });
 
-    test('reports a photo the album already holds as not added', () async {
+    test('writes nothing when the album already holds the photo', () async {
       repository.mediaIds = {
         AlbumId(4): <MediaId>[MediaId(1)],
       };
@@ -127,8 +127,11 @@ void main() {
       final result = await usecase().addMedia(AlbumId(4), MediaId(1));
 
       expect(result.added, isFalse);
-      // The same set is sent back, so the album's order is untouched.
-      expect(repository.replaced.single.mediaIds, [MediaId(1)]);
+      // Not even the same set back: the endpoint replaces the whole album,
+      // so a write built from ids read moments ago would undo whatever
+      // another device changed in between — to say nothing.
+      expect(repository.replaced, isEmpty);
+      expect(result.album, isNull);
     });
 
     test('files the first photo into an empty album', () async {

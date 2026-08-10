@@ -11,7 +11,11 @@ import 'package:photonest/domain/value_objects/media_id.dart';
 /// difference to word the confirmation: "added" and "already in there" are
 /// both successes, and reporting the second as the first makes the reader
 /// wonder whether they filed it twice.
-typedef AlbumMediaAddition = ({Album album, bool added});
+///
+/// [album] is the album the server settled on, and is null exactly when
+/// nothing was written — an album that already held the photo is never sent
+/// back to the server, so there is no fresh answer to carry.
+typedef AlbumMediaAddition = ({Album? album, bool added});
 
 /// Makes albums, renames them, and files media under them.
 ///
@@ -84,16 +88,16 @@ final class EditAlbumUseCase {
   /// the reader's, set on the server, and a photo added from the app is the
   /// most recent thing they filed.
   ///
-  /// A photo the album already holds is left alone. Sending the same set
-  /// back would rewrite every row's sort index to say nothing.
+  /// A photo the album already holds ends the call **without writing
+  /// anything**. Sending the set straight back would rewrite every row's
+  /// sort index to say nothing, and — because the endpoint replaces the
+  /// whole album — a write built from ids read moments ago would undo
+  /// whatever another device added or removed in between.
   Future<AlbumMediaAddition> addMedia(AlbumId albumId, MediaId mediaId) async {
     final current = await _albums.mediaIdsOf(albumId);
     if (current.contains(mediaId)) {
       _logger.info('[Album] ${albumId.value} already holds ${mediaId.value}');
-      // Re-read rather than returned from the caller's stale copy: the
-      // album's count and cover may have moved since the grid drew it.
-      final album = await _albums.replaceMedia(albumId, current);
-      return (album: album, added: false);
+      return (album: null, added: false);
     }
     final album = await _albums.replaceMedia(albumId, [...current, mediaId]);
     _logger.info('[Album] ${albumId.value} now holds ${mediaId.value}');

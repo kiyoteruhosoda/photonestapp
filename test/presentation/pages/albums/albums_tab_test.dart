@@ -108,18 +108,16 @@ void main() {
     expect(find.text(l10n.albumCreated('Kyoto')), findsOneWidget);
   });
 
-  testWidgets('the new album is in the list without a pull to refresh', (
-    tester,
-  ) async {
+  testWidgets('the created album stays on screen even if a re-read would '
+      'fail', (tester) async {
     final scope = TestScope();
     await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
     expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
 
-    // The album the reader is about to make, as the server would list it
-    // on the reload the create triggers.
-    scope.albumRepository.albums = [
-      testAlbum(id: 100, title: 'Kyoto', mediaCount: 0, coverMediaId: null),
-    ];
+    // The server stops answering the *list* right after the create lands.
+    // The album exists — reporting it as gone (or showing the tab's error
+    // state) would be a lie about a write that succeeded.
+    scope.albumRepository.failure = const NetworkUnreachableError('offline');
     await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -130,6 +128,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Kyoto'), findsOneWidget);
+    expect(find.text(l10n.commonErrorNetwork), findsNothing);
   });
 
   testWidgets('offers no create button without album:create', (tester) async {

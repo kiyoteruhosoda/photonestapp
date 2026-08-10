@@ -76,7 +76,7 @@ void main() {
   testWidgets('says so rather than claiming a second copy was added', (
     tester,
   ) async {
-    await openPicker(
+    final scope = await openPicker(
       tester,
       scope: scopeWithAlbums(
         holding: {
@@ -89,6 +89,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.albumAlreadyContains('Trip')), findsOneWidget);
+    // Nothing was written: the endpoint replaces the whole album, so a
+    // pointless PUT could undo another device's change.
+    expect(scope.albumEditingRepository.replaced, isEmpty);
   });
 
   testWidgets('reports a failure and leaves the sheet open', (tester) async {
@@ -155,5 +158,34 @@ void main() {
     // is still there — it is the creating that is not offered.
     expect(find.text('Trip'), findsOneWidget);
     expect(find.text(l10n.albumPickerNewAlbum), findsNothing);
+  });
+
+  testWidgets('hides the existing albums without album:edit', (tester) async {
+    await openPicker(
+      tester,
+      scope: TestScope(
+        sessionRepository: FakeSessionRepository(
+          AuthSession(
+            accessToken: 'access-token',
+            refreshToken: 'refresh-token',
+            email: 'reader@example.com',
+            scopes: const [
+              'gui:view',
+              'album:view',
+              'media:view',
+              'album:create',
+            ],
+          ),
+        ),
+        albumRepository: FakeAlbumRepository(
+          albums: [testAlbum(id: 4, title: 'Trip')],
+        ),
+      ),
+    );
+
+    // Filing into one goes through PUT /albums/{id}, which needs
+    // album:edit — offering the row would only earn a 403 after the tap.
+    expect(find.text('Trip'), findsNothing);
+    expect(find.text(l10n.albumPickerNewAlbum), findsOneWidget);
   });
 }

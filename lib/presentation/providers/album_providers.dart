@@ -62,6 +62,33 @@ class AlbumListNotifier extends AsyncNotifier<List<Album>> {
       () => ref.read(listAlbumsUseCaseProvider).execute(),
     );
   }
+
+  /// Puts [album] into the loaded list — replacing the entry with the same
+  /// id, or adding it at the front when the list does not hold it yet.
+  ///
+  /// This is how a create or a rename reaches the grid, rather than a
+  /// [reload]. A reload after a write that already succeeded can only make
+  /// things worse: its own request may fail, and the failure would replace
+  /// a correct list with the error state — or, offline, with the snapshot
+  /// taken *before* the album existed. [album] is what the server settled
+  /// on, so patching it in is not a guess.
+  ///
+  /// The front, because the server lists albums newest first; a rename
+  /// finds its entry by id and leaves the order alone. A list that has not
+  /// loaded is left alone — its first read will carry the album anyway.
+  void upsert(Album album) {
+    final loaded = state.value;
+    if (loaded == null) return;
+    // Album equality is its id, so `contains` finds a renamed album too.
+    state = AsyncValue.data(
+      loaded.contains(album)
+          ? [
+              for (final each in loaded)
+                if (each == album) album else each,
+            ]
+          : [album, ...loaded],
+    );
+  }
 }
 
 /// How many media items each album-detail page requests.
@@ -302,7 +329,11 @@ class AlbumEditingNotifier extends Notifier<AlbumEditingState> {
       final album = await ref
           .read(editAlbumUseCaseProvider)
           .create(title, description: description, mediaIds: mediaIds);
-      await ref.read(albumListProvider.notifier).reload();
+      // Patched into the loaded grid rather than re-read: the create has
+      // already succeeded, and a reload that failed would hide a real
+      // album behind the error state (or, offline, behind the snapshot
+      // taken before it existed).
+      ref.read(albumListProvider.notifier).upsert(album);
       return album;
     });
   }
@@ -328,7 +359,7 @@ class AlbumEditingNotifier extends Notifier<AlbumEditingState> {
       if (ref.exists(albumDetailProvider(id))) {
         ref.read(albumDetailProvider(id).notifier).replaceAlbum(album);
       }
-      await ref.read(albumListProvider.notifier).reload();
+      ref.read(albumListProvider.notifier).upsert(album);
       return album;
     });
   }
@@ -340,14 +371,17 @@ class AlbumEditingNotifier extends Notifier<AlbumEditingState> {
       final result = await ref
           .read(editAlbumUseCaseProvider)
           .addMedia(albumId, mediaId);
-      if (result.added) {
-        // The album's grid has to show the photo, and its tile has to show
-        // the new count. Invalidated rather than patched: the server places
-        // the media and may have picked a cover, and this notifier holds no
-        // MediaItem to append — only an id. Invalidating an instance that
-        // was never created is a no-op, so this needs no `exists` guard.
+      final album = result.album;
+      if (album != null) {
+        // The tile's count and cover come straight from the write's answer
+        // — no second request, so nothing here can fail after the photo is
+        // already filed.
+        ref.read(albumListProvider.notifier).upsert(album);
+        // The album's grid, though, has to show the photo itself, and this
+        // notifier holds no MediaItem to append — only an id. That one has
+        // to be re-read. Invalidating an instance that was never created is
+        // a no-op, so it needs no `exists` guard.
         ref.invalidate(albumDetailProvider(albumId));
-        await ref.read(albumListProvider.notifier).reload();
       }
       return result.added;
     });

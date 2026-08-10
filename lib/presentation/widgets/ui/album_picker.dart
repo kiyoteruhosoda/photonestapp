@@ -125,56 +125,69 @@ class _AlbumPickerState extends ConsumerState<AlbumPicker> {
               ListTile(
                 leading: const Icon(Icons.add),
                 title: Text(l10n.albumPickerNewAlbum),
+                // Disabled while a row's request is running. Opening the
+                // form on top of it would stack a dialog on the same
+                // navigator, and the pop that closes this sheet when the
+                // request lands would close the form instead — handing
+                // `_createAndAdd` the tapped album as its result and
+                // throwing away what the reader had typed.
+                enabled: _pending == null,
                 onTap: () => unawaited(_createAndAdd()),
               ),
-            Flexible(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxHeight: maxHeight),
-                child: switch (albums) {
-                  AsyncLoading<List<Album>>() => const AppLoadingView(),
-                  AsyncError<List<Album>>(:final error) => AppErrorView(
-                    message: describeLoadError(error, l10n),
-                    onRetry: () => unawaited(
-                      ref.read(albumListProvider.notifier).reload(),
+            // Filing into an album that already exists goes through
+            // `PUT /albums/{id}`, which the server guards with
+            // `album:edit`. A session that may only create albums gets the
+            // row above and nothing else — rows it could only be refused
+            // for are not worth offering.
+            if (permissions.allows(MediaPermission.editAlbum))
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: maxHeight),
+                  child: switch (albums) {
+                    AsyncLoading<List<Album>>() => const AppLoadingView(),
+                    AsyncError<List<Album>>(:final error) => AppErrorView(
+                      message: describeLoadError(error, l10n),
+                      onRetry: () => unawaited(
+                        ref.read(albumListProvider.notifier).reload(),
+                      ),
                     ),
-                  ),
-                  AsyncData<List<Album>>(value: final items)
-                      when items.isEmpty =>
-                    AppEmptyView(
-                      message: l10n.albumPickerEmpty,
-                      icon: Icons.photo_album_outlined,
-                    ),
-                  AsyncData<List<Album>>(value: final items) => ListView(
-                    shrinkWrap: true,
-                    children: [
-                      for (final album in items)
-                        ListTile(
-                          leading: const Icon(Icons.photo_album_outlined),
-                          title: Text(album.title),
-                          subtitle: Text(
-                            l10n.albumsMediaCount(album.mediaCount),
+                    AsyncData<List<Album>>(value: final items)
+                        when items.isEmpty =>
+                      AppEmptyView(
+                        message: l10n.albumPickerEmpty,
+                        icon: Icons.photo_album_outlined,
+                      ),
+                    AsyncData<List<Album>>(value: final items) => ListView(
+                      shrinkWrap: true,
+                      children: [
+                        for (final album in items)
+                          ListTile(
+                            leading: const Icon(Icons.photo_album_outlined),
+                            title: Text(album.title),
+                            subtitle: Text(
+                              l10n.albumsMediaCount(album.mediaCount),
+                            ),
+                            // Every row disables while one is running: the
+                            // sheet closes on success, so a second tap could
+                            // only file the photo somewhere the reader is no
+                            // longer looking at.
+                            enabled: _pending == null,
+                            trailing: _pending == album
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : null,
+                            onTap: () => unawaited(_addTo(album)),
                           ),
-                          // Every row disables while one is running: the
-                          // sheet closes on success, so a second tap could
-                          // only file the photo somewhere the reader is no
-                          // longer looking at.
-                          enabled: _pending == null,
-                          trailing: _pending == album
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : null,
-                          onTap: () => unawaited(_addTo(album)),
-                        ),
-                    ],
-                  ),
-                },
+                      ],
+                    ),
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ),

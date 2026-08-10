@@ -17,6 +17,7 @@ import 'package:photonest/domain/entities/tag.dart';
 import 'package:photonest/domain/entities/upload_failure.dart';
 import 'package:photonest/domain/entities/upload_resumption.dart';
 import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/album_editing_repository.dart';
 import 'package:photonest/domain/repositories/album_repository.dart';
 import 'package:photonest/domain/repositories/album_snapshot_repository.dart';
 import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
@@ -277,6 +278,8 @@ final AuthSession testAuthSession = AuthSession(
   scopes: const [
     'gui:view',
     'album:view',
+    'album:create',
+    'album:edit',
     'media:view',
     'media:upload',
     'media:tag-manage',
@@ -696,6 +699,88 @@ final class FakeAlbumRepository implements AlbumRepository {
       media: page,
       mediaTotal: reportsMediaTotal ? detail.media.length : null,
     );
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// In-memory [AlbumEditingRepository].
+///
+/// Holds each album's media ids so a test can watch what a "put this photo
+/// in that album" replacement actually sends.
+final class FakeAlbumEditingRepository implements AlbumEditingRepository {
+  FakeAlbumEditingRepository({Map<AlbumId, List<MediaId>>? mediaIds})
+    : mediaIds = mediaIds ?? <AlbumId, List<MediaId>>{};
+
+  /// What each album currently holds, in display order.
+  Map<AlbumId, List<MediaId>> mediaIds;
+
+  /// Albums created through [create], in call order.
+  final List<({String title, String? description, List<MediaId> mediaIds})>
+  created = <({String title, String? description, List<MediaId> mediaIds})>[];
+
+  /// Detail updates, in call order.
+  final List<({AlbumId id, String title, String? description})> updated =
+      <({AlbumId id, String title, String? description})>[];
+
+  /// Media replacements, in call order.
+  final List<({AlbumId id, List<MediaId> mediaIds})> replaced =
+      <({AlbumId id, List<MediaId> mediaIds})>[];
+
+  /// When set, every method throws this instead of answering.
+  AppError? failure;
+
+  int _nextId = 100;
+
+  @override
+  Future<Album> create({
+    required String title,
+    String? description,
+    List<MediaId> mediaIds = const <MediaId>[],
+  }) async {
+    _failIfAsked();
+    created.add((title: title, description: description, mediaIds: mediaIds));
+    final album = Album(
+      id: AlbumId(_nextId++),
+      title: title,
+      description: description,
+      mediaCount: mediaIds.length,
+    );
+    this.mediaIds[album.id] = List.of(mediaIds);
+    return album;
+  }
+
+  @override
+  Future<Album> updateDetails(
+    AlbumId id, {
+    required String title,
+    String? description,
+  }) async {
+    _failIfAsked();
+    updated.add((id: id, title: title, description: description));
+    return Album(
+      id: id,
+      title: title,
+      description: description,
+      mediaCount: mediaIds[id]?.length ?? 0,
+    );
+  }
+
+  @override
+  Future<List<MediaId>> mediaIdsOf(AlbumId id) async {
+    _failIfAsked();
+    return mediaIds[id] ?? <MediaId>[];
+  }
+
+  @override
+  Future<Album> replaceMedia(AlbumId id, List<MediaId> ids) async {
+    _failIfAsked();
+    replaced.add((id: id, mediaIds: ids));
+    mediaIds[id] = List.of(ids);
+    return Album(id: id, title: 'Trip', mediaCount: ids.length);
   }
 
   void _failIfAsked() {

@@ -5,6 +5,7 @@ import 'package:photonest/application/ports/background_sync_scheduler.dart';
 import 'package:photonest/application/ports/external_link_launcher.dart';
 import 'package:photonest/application/ports/network_connection_gateway.dart';
 import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/repositories/album_editing_repository.dart';
 import 'package:photonest/domain/repositories/album_repository.dart';
 import 'package:photonest/domain/repositories/album_snapshot_repository.dart';
 import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
@@ -36,6 +37,7 @@ import 'package:photonest/infrastructure/device/connectivity_plus_network_connec
 import 'package:photonest/infrastructure/device/photo_manager_photo_library_gateway.dart';
 import 'package:photonest/infrastructure/links/url_launcher_external_link_launcher.dart';
 import 'package:photonest/infrastructure/logging/persistent_app_logger.dart';
+import 'package:photonest/infrastructure/repositories/api_album_editing_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_curation_repository.dart';
@@ -84,6 +86,7 @@ final class InfrastructureModule {
     required this.sessions,
     required this.apiEndpoints,
     required this.albums,
+    required this.albumEditing,
     required this.albumSnapshots,
     required this.mediaThumbnails,
     required this.mediaThumbnailUrls,
@@ -172,6 +175,7 @@ final class InfrastructureModule {
       sessions: sessions,
       apiEndpoints: apiEndpoints,
       albums: ApiAlbumRepository(apiClient),
+      albumEditing: ApiAlbumEditingRepository(apiClient),
       albumSnapshots: SqfliteAlbumSnapshotRepository(
         database,
         sessions,
@@ -228,6 +232,7 @@ final class InfrastructureModule {
   final SessionRepository sessions;
   final ApiEndpointRepository apiEndpoints;
   final AlbumRepository albums;
+  final AlbumEditingRepository albumEditing;
   final AlbumSnapshotRepository albumSnapshots;
   final MediaThumbnailRepository mediaThumbnails;
   final MediaThumbnailUrlRepository mediaThumbnailUrls;

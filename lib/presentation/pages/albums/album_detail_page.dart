@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/l10n/error_descriptions.dart';
 import 'package:photonest/presentation/providers/album_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
 import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
@@ -32,6 +34,13 @@ class AlbumDetailPage extends ConsumerWidget {
     }
 
     final detail = ref.watch(albumDetailProvider(albumId));
+    // Only offered once the album is loaded and the session may edit: the
+    // form needs the current name to start from, and a button that 403s is
+    // worse than no button.
+    final loaded = detail.value;
+    final canRename =
+        loaded != null &&
+        ref.watch(grantedPermissionsProvider).allows(MediaPermission.editAlbum);
     return Scaffold(
       appBar: AppMainHeader(
         title: switch (detail) {
@@ -39,6 +48,15 @@ class AlbumDetailPage extends ConsumerWidget {
             value.album.title,
           _ => l10n.albumsTitle,
         },
+        actions: [
+          if (canRename)
+            IconButton(
+              onPressed: () =>
+                  unawaited(showAlbumEditForm(context, loaded.album)),
+              tooltip: l10n.albumEditTitle,
+              icon: const Icon(Icons.edit_outlined),
+            ),
+        ],
       ),
       body: switch (detail) {
         AsyncLoading<AlbumDetailState?>() => const AppLoadingView(),

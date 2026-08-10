@@ -90,4 +90,57 @@ void main() {
 
     expect(scope.location, '/albums/5');
   });
+
+  testWidgets('creates an album from the tab and reports it', (tester) async {
+    final scope = TestScope();
+    await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.albumNameLabel),
+      'Kyoto',
+    );
+    await tester.tap(find.text(l10n.albumCreateAction));
+    await tester.pumpAndSettle();
+
+    expect(scope.albumEditingRepository.created.single.title, 'Kyoto');
+    expect(find.text(l10n.albumCreated('Kyoto')), findsOneWidget);
+  });
+
+  testWidgets('the new album is in the list without a pull to refresh', (
+    tester,
+  ) async {
+    final scope = TestScope();
+    await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
+    expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
+
+    // The album the reader is about to make, as the server would list it
+    // on the reload the create triggers.
+    scope.albumRepository.albums = [
+      testAlbum(id: 100, title: 'Kyoto', mediaCount: 0, coverMediaId: null),
+    ];
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.albumNameLabel),
+      'Kyoto',
+    );
+    await tester.tap(find.text(l10n.albumCreateAction));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kyoto'), findsOneWidget);
+  });
+
+  testWidgets('offers no create button without album:create', (tester) async {
+    await pumpInScope(
+      tester,
+      const Scaffold(body: AlbumsTab()),
+      scope: TestScope(
+        sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+      ),
+    );
+
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
 }

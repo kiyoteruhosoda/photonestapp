@@ -192,4 +192,45 @@ void main() {
       2,
     });
   });
+
+  testWidgets('renames the album and repaints the header', (tester) async {
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository(details: {AlbumId(3): detail()}),
+    );
+    await pumpInScope(tester, AlbumDetailPage(id: AlbumId(3)), scope: scope);
+    expect(find.text('Holiday'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.albumNameLabel),
+      'Kyoto',
+    );
+    await tester.tap(find.text(l10n.albumRenameAction));
+    await tester.pumpAndSettle();
+
+    expect(scope.albumEditingRepository.updated.single.title, 'Kyoto');
+    // Patched in place: the header shows the new name and the media pages
+    // already read are still on screen.
+    expect(find.text('Kyoto'), findsOneWidget);
+    expect(
+      scope.container.read(albumDetailProvider(AlbumId(3))).value!.media,
+      isNotEmpty,
+    );
+    // Re-reading the album would have asked for page one a second time.
+    expect(scope.albumRepository.mediaPageRequests, hasLength(1));
+  });
+
+  testWidgets('offers no rename without album:edit', (tester) async {
+    await pumpInScope(
+      tester,
+      AlbumDetailPage(id: AlbumId(3)),
+      scope: TestScope(
+        albumRepository: FakeAlbumRepository(details: {AlbumId(3): detail()}),
+        sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+      ),
+    );
+
+    expect(find.byIcon(Icons.edit_outlined), findsNothing);
+  });
 }

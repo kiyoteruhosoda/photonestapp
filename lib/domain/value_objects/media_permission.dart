@@ -1,7 +1,7 @@
 import 'package:photonest/domain/entities/auth_session.dart';
 
-/// An operation the app performs against the server's media, paired with the
-/// permission code the server demands for it.
+/// An operation the app performs against the server's media library, paired
+/// with the permission code the server demands for it.
 ///
 /// The server refuses an unpermitted call with 403, and it refuses it *after*
 /// the reader has already chosen tags or confirmed a deletion. Naming the
@@ -22,7 +22,19 @@ enum MediaPermission {
 
   /// `POST /upload/chunks` and the rest of the chunked upload — sending a
   /// device photo to the server.
-  uploadMedia('media:upload');
+  uploadMedia('media:upload'),
+
+  /// `POST /albums` — making a new album.
+  ///
+  /// Separate from [editAlbum] because the server issues the two codes
+  /// separately: a reader may be allowed to file photos into the albums
+  /// that exist without being allowed to add more.
+  createAlbum('album:create'),
+
+  /// `PUT /albums/{id}` — renaming an album and changing which media it
+  /// holds. One code covers both: the server guards the whole update with
+  /// it.
+  editAlbum('album:edit');
 
   const MediaPermission(this.scope);
 

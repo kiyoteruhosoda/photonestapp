@@ -64,6 +64,44 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get albumLoadMoreRetry => 'Could not load more items. Tap to retry.';
 
+  // ─── Albums: creating, renaming, filing photos ────────────────────────
+  @override
+  String get albumCreateTitle => 'New album';
+  @override
+  String get albumEditTitle => 'Rename album';
+  @override
+  String get albumNameLabel => 'Name';
+  @override
+  String get albumDescriptionLabel => 'Description (optional)';
+  @override
+  String get albumNameRequired => 'Enter a name for the album.';
+  @override
+  String get albumSaveFailed => 'Could not save the album.';
+  @override
+  String get albumCreateAction => 'Create';
+  @override
+  String get albumRenameAction => 'Save';
+  @override
+  String albumCreated(String title) => 'Created "$title".';
+  @override
+  String get albumAddToAlbum => 'Add to album';
+  @override
+  String get albumPickerTitle => 'Add to album';
+  @override
+  String get albumPickerNewAlbum => 'New album…';
+  @override
+  String get albumPickerEmpty =>
+      'No albums yet. Create one to file this '
+      'photo under.';
+  @override
+  String albumAddedTo(String title) => 'Added to "$title".';
+  @override
+  String albumAlreadyContains(String title) =>
+      '"$title" already has this '
+      'photo.';
+  @override
+  String get albumAddFailed => 'Could not add the photo to the album.';
+
   // ─── Photos (library timeline) ────────────────────────────────────────
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/presentation/l10n/app_localizations_en.dart';
 import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
@@ -266,5 +267,36 @@ void main() {
     // stay.
     expect(find.byIcon(Icons.hd_outlined), findsOneWidget);
     expect(find.byIcon(Icons.download_outlined), findsOneWidget);
+  });
+
+  testWidgets('files the photo on screen into an album', (tester) async {
+    final scope = TestScope(
+      albumRepository: FakeAlbumRepository(
+        albums: [testAlbum(id: 4, title: 'Trip', coverMediaId: null)],
+      ),
+    );
+    await openViewer(tester, items: photos(3), initialIndex: 1, scope: scope);
+
+    await tester.tap(find.byIcon(Icons.playlist_add));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Trip'));
+    await tester.pumpAndSettle();
+
+    // The photo the reader swiped to, not the one the viewer opened on.
+    expect(scope.albumEditingRepository.replaced.single.mediaIds, [MediaId(2)]);
+  });
+
+  testWidgets('drops the album button without either album permission', (
+    tester,
+  ) async {
+    await openViewer(
+      tester,
+      items: photos(1),
+      scope: TestScope(
+        sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+      ),
+    );
+
+    expect(find.byIcon(Icons.playlist_add), findsNothing);
   });
 }

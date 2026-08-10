@@ -61,6 +61,40 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get albumLoadMoreRetry => '続きを読み込めませんでした。タップで再試行できます。';
 
+  // ─── Albums: creating, renaming, filing photos ────────────────────────
+  @override
+  String get albumCreateTitle => '新しいアルバム';
+  @override
+  String get albumEditTitle => 'アルバム名を変更';
+  @override
+  String get albumNameLabel => '名前';
+  @override
+  String get albumDescriptionLabel => '説明（任意）';
+  @override
+  String get albumNameRequired => 'アルバムの名前を入力してください。';
+  @override
+  String get albumSaveFailed => 'アルバムを保存できませんでした。';
+  @override
+  String get albumCreateAction => '作成';
+  @override
+  String get albumRenameAction => '保存';
+  @override
+  String albumCreated(String title) => '「$title」を作成しました。';
+  @override
+  String get albumAddToAlbum => 'アルバムへ追加';
+  @override
+  String get albumPickerTitle => 'アルバムへ追加';
+  @override
+  String get albumPickerNewAlbum => '新しいアルバム…';
+  @override
+  String get albumPickerEmpty => 'アルバムがありません。作成するとこの写真を入れられます。';
+  @override
+  String albumAddedTo(String title) => '「$title」へ追加しました。';
+  @override
+  String albumAlreadyContains(String title) => '「$title」にはすでに入っています。';
+  @override
+  String get albumAddFailed => 'アルバムへ追加できませんでした。';
+
   // ─── Photos (library timeline) ────────────────────────────────────────
 
   @override

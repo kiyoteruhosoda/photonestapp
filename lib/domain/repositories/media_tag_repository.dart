@@ -30,4 +30,16 @@ abstract interface class MediaTagRepository {
   /// endpoint offers, and because it is what makes the result unambiguous:
   /// the answer is the media's tags, not a diff to reconcile.
   Future<List<Tag>> replaceMediaTags(MediaId id, List<TagId> tagIds);
+
+  /// Puts a tag named [name] and filed under [attribute] into the library,
+  /// and returns the library's tag for that name.
+  ///
+  /// Returns rather than voids because the caller needs the id: a tag the
+  /// reader just made is a tag they meant to file the photo under, and the
+  /// id is what the replacement takes.
+  ///
+  /// "The library's tag for that name" rather than "the tag just made" — a
+  /// name the library already holds comes back as it stands, with whatever
+  /// attribute it was given, instead of being duplicated.
+  Future<Tag> createTag(String name, TagAttribute attribute);
 }

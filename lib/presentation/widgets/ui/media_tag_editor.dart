@@ -47,6 +47,11 @@ Future<List<Tag>?> showMediaTagEditor(
 /// which is the shape the server's endpoint takes. Nothing is sent while the
 /// reader is still choosing: adding three tags is one request, and closing
 /// without saving leaves the media exactly as it was.
+///
+/// A name the library does not hold yet is offered as a tag to make, from
+/// the search field itself. That is the one thing here that reaches the
+/// server before Save — a tag has to exist before media can point at it —
+/// and it still changes nothing about the media until the reader saves.
 class MediaTagEditor extends ConsumerStatefulWidget {
   const MediaTagEditor({required this.id, super.key});
 
@@ -76,6 +81,18 @@ class _MediaTagEditorState extends ConsumerState<MediaTagEditor> {
   /// double tap cannot send twice.
   bool _saving = false;
 
+  /// True while a new tag is being put into the library.
+  ///
+  /// Separate from [_saving] because it interrupts a different thing: the
+  /// header keeps showing Save, and it is the picker's row that reports the
+  /// wait.
+  bool _creating = false;
+
+  /// True while anything is in flight. Every control is disabled together:
+  /// making a tag and saving the set both act on the chosen set, and letting
+  /// one run during the other would save a set the reader is still changing.
+  bool get _busy => _saving || _creating;
+
   @override
   void dispose() {
     _debounce?.cancel();
@@ -100,6 +117,42 @@ class _MediaTagEditorState extends ConsumerState<MediaTagEditor> {
             ]
           : [...chosen, tag];
     });
+  }
+
+  /// Puts [name] into the library and files this media under it.
+  ///
+  /// No permission check of its own: the server guards `POST /api/tags` with
+  /// the same `media:tag-manage` it guards the replacement with, so a reader
+  /// who can open this editor at all can already make tags.
+  Future<void> _create(String name, List<Tag> chosen) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _creating = true);
+    final Tag created;
+    try {
+      created = await ref.read(editMediaTagsUseCaseProvider).create(name);
+    } on Object catch (error) {
+      if (!mounted) return;
+      setState(() => _creating = false);
+      messenger.showSnackBar(
+        SnackBar(content: Text(describeLoadError(error, l10n))),
+      );
+      return;
+    }
+    if (!mounted) return;
+    setState(() {
+      _creating = false;
+      // Chosen straight away: naming a tag from this sheet is how the reader
+      // says this photo belongs under it. Nothing reaches the media until
+      // they save, exactly as when they tick an existing tag.
+      //
+      // Guarded because the server answers a name it already holds with the
+      // existing tag, which the reader may already have chosen.
+      _chosen = chosen.contains(created) ? chosen : [...chosen, created];
+    });
+    // The picker's answer for this query was read before the tag existed, so
+    // it would go on offering to make one that is now in the library.
+    ref.invalidate(tagSuggestionsProvider(_query));
   }
 
   Future<void> _save(List<Tag> chosen) async {
@@ -137,9 +190,11 @@ class _MediaTagEditorState extends ConsumerState<MediaTagEditor> {
         query: _query,
         searchController: _search,
         saving: _saving,
+        creating: _creating,
         onQueryChanged: _onQueryChanged,
         onToggle: (tag) => _toggle(tag, _chosen ?? loaded),
-        onSave: _saving ? null : () => unawaited(_save(_chosen ?? loaded)),
+        onCreate: (name) => unawaited(_create(name, _chosen ?? loaded)),
+        onSave: _busy ? null : () => unawaited(_save(_chosen ?? loaded)),
       ),
       AsyncError<List<Tag>>(:final error) => _SheetMessage(
         text: describeLoadError(error, l10n),
@@ -156,8 +211,10 @@ class _EditorBody extends ConsumerWidget {
     required this.query,
     required this.searchController,
     required this.saving,
+    required this.creating,
     required this.onQueryChanged,
     required this.onToggle,
+    required this.onCreate,
     required this.onSave,
   });
 
@@ -165,14 +222,17 @@ class _EditorBody extends ConsumerWidget {
   final String query;
   final TextEditingController searchController;
   final bool saving;
+  final bool creating;
   final ValueChanged<String> onQueryChanged;
   final ValueChanged<Tag> onToggle;
+  final ValueChanged<String> onCreate;
   final VoidCallback? onSave;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final suggestions = ref.watch(tagSuggestionsProvider(query));
+    final busy = saving || creating;
 
     return Padding(
       // Lifts the sheet clear of the on-screen keyboard, which covers the
@@ -233,7 +293,7 @@ class _EditorBody extends ConsumerWidget {
                         for (final tag in chosen)
                           InputChip(
                             label: Text(tag.name),
-                            onDeleted: saving ? null : () => onToggle(tag),
+                            onDeleted: busy ? null : () => onToggle(tag),
                           ),
                       ],
                     ),
@@ -248,7 +308,7 @@ class _EditorBody extends ConsumerWidget {
             ),
             child: TextField(
               controller: searchController,
-              enabled: !saving,
+              enabled: !busy,
               onChanged: onQueryChanged,
               decoration: InputDecoration(
                 labelText: l10n.mediaTagsSearchLabel,
@@ -261,8 +321,11 @@ class _EditorBody extends ConsumerWidget {
               AsyncData<List<Tag>>(value: final available) => _SuggestionList(
                 available: available,
                 chosen: chosen,
-                enabled: !saving,
+                query: query,
+                enabled: !busy,
+                creating: creating,
                 onToggle: onToggle,
+                onCreate: onCreate,
               ),
               AsyncError<List<Tag>>(:final error) => _SheetMessage(
                 text: describeLoadError(error, l10n),
@@ -276,31 +339,62 @@ class _EditorBody extends ConsumerWidget {
   }
 }
 
-/// The library's tags, with the ones already on this media ticked.
+/// The library's tags, with the ones already on this media ticked, headed by
+/// an offer to make the typed name into a tag when the library holds no such
+/// name.
 class _SuggestionList extends StatelessWidget {
   const _SuggestionList({
     required this.available,
     required this.chosen,
+    required this.query,
     required this.enabled,
+    required this.creating,
     required this.onToggle,
+    required this.onCreate,
   });
 
   final List<Tag> available;
   final List<Tag> chosen;
+
+  /// What the picker was filtered by — the name a new tag would take.
+  final String query;
   final bool enabled;
+  final bool creating;
   final ValueChanged<Tag> onToggle;
+  final ValueChanged<String> onCreate;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (available.isEmpty) {
+    final name = query.trim();
+    // Offered only when no tag in reach carries this exact name. Chosen tags
+    // are checked as well as the picker's answer: a tag just made is chosen
+    // immediately, and until the picker has re-read it would otherwise be
+    // offered a second time.
+    final creatable =
+        name.isNotEmpty &&
+        !_holdsName(available, name) &&
+        !_holdsName(chosen, name);
+    if (available.isEmpty && !creatable) {
       return _SheetMessage(text: l10n.mediaTagsNoMatches);
     }
     return ListView.builder(
       shrinkWrap: true,
-      itemCount: available.length,
+      itemCount: available.length + (creatable ? 1 : 0),
       itemBuilder: (context, index) {
-        final tag = available[index];
+        if (creatable && index == 0) {
+          return ListTile(
+            leading: creating
+                ? const SizedBox.square(
+                    dimension: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.add),
+            title: Text(l10n.mediaTagsCreate(name)),
+            onTap: enabled ? () => onCreate(name) : null,
+          );
+        }
+        final tag = available[creatable ? index - 1 : index];
         final attribute = tag.attribute;
         return CheckboxListTile(
           value: chosen.contains(tag),
@@ -312,6 +406,14 @@ class _SuggestionList extends StatelessWidget {
         );
       },
     );
+  }
+
+  /// Whether any of [tags] is named [name], ignoring case — the same
+  /// comparison the server makes before it decides a name is new, so the
+  /// offer appears exactly when a tap would actually make something.
+  static bool _holdsName(List<Tag> tags, String name) {
+    final folded = name.toLowerCase();
+    return tags.any((tag) => tag.name.toLowerCase() == folded);
   }
 
   static String _attributeLabel(

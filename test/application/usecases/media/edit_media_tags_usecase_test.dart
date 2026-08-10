@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:photonest/application/usecases/media/edit_media_tags_usecase.dart';
+import 'package:photonest/domain/entities/tag.dart';
 import 'package:photonest/domain/errors/app_error.dart';
 import 'package:photonest/domain/value_objects/log_level.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
@@ -92,6 +93,47 @@ void main() {
     await usecase().replace(MediaId(10), const []);
 
     expect(logger.messagesAt(LogLevel.info), ['[Media] 10 tags: none']);
+  });
+
+  test('puts a new name into the library and hands back its tag', () async {
+    final tag = await usecase().create('Nara');
+
+    expect(tags.created.single.$1, 'Nara');
+    expect(tag.name, 'Nara');
+    expect(tags.library.map((each) => each.name), ['Nara']);
+  });
+
+  test('a name the library already holds is not duplicated', () async {
+    final kyoto = testTag(id: 1, name: 'Kyoto');
+    tags.library = [kyoto];
+
+    final tag = await usecase().create('kyoto');
+
+    expect(tag.id, kyoto.id);
+    expect(tags.library, hasLength(1));
+  });
+
+  test('surrounding whitespace does not make a second tag', () async {
+    await usecase().create('  Nara  ');
+
+    expect(tags.created.single.$1, 'Nara');
+  });
+
+  test('a name that is only whitespace never reaches the server', () {
+    expect(() => usecase().create('   '), throwsA(isA<DomainError>()));
+    expect(tags.created, isEmpty);
+  });
+
+  test('a tag is filed as unclassified rather than guessed at', () async {
+    await usecase().create('Nara');
+
+    expect(tags.created.single.$2, TagAttribute.others);
+  });
+
+  test('logs a made tag by id, keeping the name out of the log', () async {
+    await usecase().create('Nara');
+
+    expect(logger.messagesAt(LogLevel.info), ['[Media] tag available: 900']);
   });
 
   test('a repository failure reaches the caller', () {

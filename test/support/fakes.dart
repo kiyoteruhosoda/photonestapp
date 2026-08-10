@@ -842,6 +842,12 @@ final class FakeMediaTagRepository implements MediaTagRepository {
   /// The replacements applied, in order.
   final List<(MediaId, List<TagId>)> replacements = <(MediaId, List<TagId>)>[];
 
+  /// The (name, attribute) pairs [createTag] was asked for, in order.
+  final List<(String, TagAttribute)> created = <(String, TagAttribute)>[];
+
+  /// Ids handed to tags this fake makes, kept clear of the seeded library's.
+  int _nextTagId = 900;
+
   /// When set, the server settles on this instead of what was asked for —
   /// stands in for another device having changed the tags in between.
   List<Tag>? settleTagsAt;
@@ -882,6 +888,20 @@ final class FakeMediaTagRepository implements MediaTagRepository {
         ];
     byMedia[id.value] = settled;
     return List<Tag>.unmodifiable(settled);
+  }
+
+  @override
+  Future<Tag> createTag(String name, TagAttribute attribute) async {
+    _failIfAsked();
+    created.add((name, attribute));
+    // Same rule as the server: a name the library already holds comes back
+    // as it stands rather than becoming a second tag.
+    for (final tag in library) {
+      if (tag.name.toLowerCase() == name.toLowerCase()) return tag;
+    }
+    final tag = Tag(id: TagId(_nextTagId++), name: name, attribute: attribute);
+    library = [...library, tag];
+    return tag;
   }
 
   void _failIfAsked() {

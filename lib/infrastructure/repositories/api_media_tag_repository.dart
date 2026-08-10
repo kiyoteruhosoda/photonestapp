@@ -7,9 +7,9 @@ import 'package:photonest/infrastructure/api/photonest_api_client.dart';
 
 /// [MediaTagRepository] backed by the server's tag endpoints.
 ///
-/// The library's tags come from `/api/tags`; a media item's own tags are read
-/// from its detail (`/api/media/{id}`), which is the only endpoint that
-/// reports them, and replaced through `/api/media/{id}/tags`.
+/// The library's tags are read from and added to `/api/tags`; a media item's
+/// own tags are read from its detail (`/api/media/{id}`), which is the only
+/// endpoint that reports them, and replaced through `/api/media/{id}/tags`.
 final class ApiMediaTagRepository implements MediaTagRepository {
   const ApiMediaTagRepository(this._client);
 
@@ -42,6 +42,18 @@ final class ApiMediaTagRepository implements MediaTagRepository {
       'tag_ids': [for (final tagId in tagIds) tagId.value],
     });
     return _tagsFrom(payload['tags'], 'Tag update response');
+  }
+
+  @override
+  Future<Tag> createTag(String name, TagAttribute attribute) async {
+    final payload = await _client.postJson('/tags', {
+      'name': name,
+      'attr': attribute.wireValue,
+    });
+    // The endpoint answers with `created` alongside the tag, saying whether
+    // the name was new. The editor has nothing to decide from it — either
+    // way this is the tag to file the photo under — so it is not read.
+    return _tagFrom(payload['tag'], 'Tag creation response');
   }
 
   /// Reads a whole tag array, rejecting anything it does not understand.

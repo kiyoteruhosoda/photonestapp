@@ -226,6 +226,107 @@ void main() {
       expect(tags.suggestQueries.map((query) => query.$1), ['', 'osa']);
     });
 
+    testWidgets('a name the library does not hold is offered as a new tag', (
+      tester,
+    ) async {
+      final tags = seededTags();
+      await openEditor(tester, tags: tags);
+
+      await tester.enterText(find.byType(TextField), 'Nara');
+      await tester.pump(tagSearchDebounce);
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.mediaTagsCreate('Nara')), findsOneWidget);
+      // Offering is not making: nothing reaches the library until it is
+      // tapped.
+      expect(tags.created, isEmpty);
+    });
+
+    testWidgets('a name the library already holds is not offered again', (
+      tester,
+    ) async {
+      await openEditor(tester, tags: seededTags());
+
+      // Case is ignored, the same way the server ignores it when deciding a
+      // name is new — otherwise the offer would make nothing.
+      await tester.enterText(find.byType(TextField), 'osaka');
+      await tester.pump(tagSearchDebounce);
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(CheckboxListTile, 'Osaka'), findsOneWidget);
+      expect(find.text(l10n.mediaTagsCreate('osaka')), findsNothing);
+    });
+
+    testWidgets('an empty search offers nothing to make', (tester) async {
+      await openEditor(tester, tags: FakeMediaTagRepository());
+
+      // An empty library with nothing typed is "no tags matched", not an
+      // offer to make a tag with no name.
+      expect(find.text(l10n.mediaTagsNoMatches), findsOneWidget);
+      expect(find.byIcon(Icons.add), findsNothing);
+    });
+
+    testWidgets('a made tag is chosen but not saved until the reader saves', (
+      tester,
+    ) async {
+      final tags = seededTags();
+      await openEditor(tester, tags: tags);
+
+      await tester.enterText(find.byType(TextField), 'Nara');
+      await tester.pump(tagSearchDebounce);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.mediaTagsCreate('Nara')));
+      await tester.pumpAndSettle();
+
+      // It exists in the library, is chosen, and is no longer offered...
+      expect(tags.created.single.$1, 'Nara');
+      expect(find.widgetWithText(InputChip, 'Nara'), findsOneWidget);
+      expect(find.text(l10n.mediaTagsCreate('Nara')), findsNothing);
+      // ...but the media itself has not been touched.
+      expect(tags.replacements, isEmpty);
+
+      await tester.tap(find.text(l10n.mediaTagsSave));
+      await tester.pumpAndSettle();
+
+      expect(tags.replacements.single.$2.map((id) => id.value), [1, 900]);
+    });
+
+    testWidgets('a tag is made unclassified rather than asking which kind', (
+      tester,
+    ) async {
+      final tags = seededTags();
+      await openEditor(tester, tags: tags);
+
+      await tester.enterText(find.byType(TextField), 'Nara');
+      await tester.pump(tagSearchDebounce);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.mediaTagsCreate('Nara')));
+      await tester.pumpAndSettle();
+
+      // No vocabulary question between the reader and the photo — see
+      // docs/adr/0012-app-created-tags-are-unclassified.md.
+      expect(tags.created.single.$2, TagAttribute.others);
+    });
+
+    testWidgets('a failure to make a tag is shown and changes nothing', (
+      tester,
+    ) async {
+      final tags = seededTags();
+      await openEditor(tester, tags: tags);
+
+      await tester.enterText(find.byType(TextField), 'Nara');
+      await tester.pump(tagSearchDebounce);
+      await tester.pumpAndSettle();
+      tags.failure = const NetworkUnreachableError('offline');
+      await tester.tap(find.text(l10n.mediaTagsCreate('Nara')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.commonErrorNetwork), findsOneWidget);
+      expect(find.widgetWithText(InputChip, 'Nara'), findsNothing);
+      // Still offered: the reader can retry without retyping.
+      expect(find.text(l10n.mediaTagsCreate('Nara')), findsOneWidget);
+    });
+
     testWidgets('a failure to read the current tags is shown, not hidden', (
       tester,
     ) async {

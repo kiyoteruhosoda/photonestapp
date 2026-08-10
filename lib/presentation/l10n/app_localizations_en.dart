@@ -118,6 +118,8 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mediaTagsNoMatches => 'No tags matched.';
   @override
+  String mediaTagsCreate(String name) => 'Create “$name”';
+  @override
   String get tagAttributeThing => 'Thing';
   @override
   String get tagAttributePerson => 'Person';

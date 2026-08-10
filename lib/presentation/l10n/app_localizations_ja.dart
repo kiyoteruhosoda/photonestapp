@@ -114,6 +114,8 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get mediaTagsNoMatches => '一致するタグがありません。';
   @override
+  String mediaTagsCreate(String name) => '「$name」を作る';
+  @override
   String get tagAttributeThing => 'もの';
   @override
   String get tagAttributePerson => '人物';

@@ -94,6 +94,7 @@ abstract class AppLocalizations {
   String get mediaTagsNoneOnMedia;
   String get mediaTagsSearchLabel;
   String get mediaTagsNoMatches;
+  String mediaTagsCreate(String name);
   String get tagAttributeThing;
   String get tagAttributePerson;
   String get tagAttributePlace;

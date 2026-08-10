@@ -1247,6 +1247,58 @@ void main() {
       expect(jsonDecode(requests.single.body), {'tag_ids': <int>[]});
     });
 
+    test('puts a new tag into the library and reads it back', () async {
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'tag': {'id': 7, 'name': 'Nara', 'attr': 'others'},
+            'created': true,
+          }),
+        ),
+      );
+
+      final tag = await repository.createTag('Nara', TagAttribute.others);
+
+      expect(requests.single.method, 'POST');
+      expect(requests.single.url.path, '/api/tags');
+      expect(jsonDecode(requests.single.body), {
+        'name': 'Nara',
+        'attr': 'others',
+      });
+      expect(tag.id.value, 7);
+      expect(tag.attribute, TagAttribute.others);
+    });
+
+    test('a name the server already held comes back as it stands', () async {
+      // `created: false` — the server answers a known name with the existing
+      // tag, attribute and all, rather than making a second one. The caller
+      // needs that tag, not the flag.
+      final repository = ApiMediaTagRepository(
+        client(
+          (request) async => json({
+            'tag': {'id': 3, 'name': 'Osaka', 'attr': 'place'},
+            'created': false,
+          }),
+        ),
+      );
+
+      final tag = await repository.createTag('osaka', TagAttribute.others);
+
+      expect(tag.id.value, 3);
+      expect(tag.attribute, TagAttribute.place);
+    });
+
+    test('a creation answer without a usable tag is a failure', () async {
+      final repository = ApiMediaTagRepository(
+        client((request) async => json({'created': true})),
+      );
+
+      await expectLater(
+        repository.createTag('Nara', TagAttribute.others),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
     test('a malformed entry fails the whole array, not just itself', () async {
       // Skipping the bad entry would hand the editor a subset dressed up as
       // the complete current state, and the next save — a whole-set

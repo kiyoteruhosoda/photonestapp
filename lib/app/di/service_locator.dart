@@ -6,6 +6,7 @@ import 'package:photonest/application/ports/external_link_launcher.dart';
 import 'package:photonest/application/ports/network_connection_gateway.dart';
 import 'package:photonest/application/ports/photo_library_gateway.dart';
 import 'package:photonest/application/services/auto_upload_coordinator.dart';
+import 'package:photonest/application/usecases/album/edit_album_usecase.dart';
 import 'package:photonest/application/usecases/album/get_album_usecase.dart';
 import 'package:photonest/application/usecases/album/list_albums_usecase.dart';
 import 'package:photonest/application/usecases/app_info/get_app_info_usecase.dart';
@@ -49,6 +50,7 @@ import 'package:photonest/application/usecases/upload/set_backup_albums_usecase.
 import 'package:photonest/application/usecases/upload/sync_new_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/upload_photos_usecase.dart';
 import 'package:photonest/application/usecases/upload/watch_upload_failures_usecase.dart';
+import 'package:photonest/domain/repositories/album_editing_repository.dart';
 import 'package:photonest/domain/repositories/album_repository.dart';
 import 'package:photonest/domain/repositories/album_snapshot_repository.dart';
 import 'package:photonest/domain/repositories/api_endpoint_repository.dart';
@@ -110,6 +112,7 @@ Future<void> setupServiceLocator() async {
     ..registerSingleton<SessionRepository>(infrastructure.sessions)
     ..registerSingleton<ApiEndpointRepository>(infrastructure.apiEndpoints)
     ..registerSingleton<AlbumRepository>(infrastructure.albums)
+    ..registerSingleton<AlbumEditingRepository>(infrastructure.albumEditing)
     ..registerSingleton<AlbumSnapshotRepository>(infrastructure.albumSnapshots)
     ..registerSingleton<MediaThumbnailRepository>(
       infrastructure.mediaThumbnails,
@@ -210,6 +213,9 @@ Future<void> setupServiceLocator() async {
       sl<ApiEndpointRepository>(),
       sl<AppLogger>(),
     ),
+  );
+  sl.registerFactory<EditAlbumUseCase>(
+    () => EditAlbumUseCase(sl<AlbumEditingRepository>(), sl<AppLogger>()),
   );
   // One batcher for the whole app, not one per use case: the point is that
   // the tiles built in the same frame share a request, and a per-instance

@@ -65,6 +65,24 @@ abstract class AppLocalizations {
   String get albumEmpty;
   String get albumLoadMoreRetry;
 
+  // ─── Albums: creating, renaming, filing photos ────────────────────────
+  String get albumCreateTitle;
+  String get albumEditTitle;
+  String get albumNameLabel;
+  String get albumDescriptionLabel;
+  String get albumNameRequired;
+  String get albumSaveFailed;
+  String get albumCreateAction;
+  String get albumRenameAction;
+  String albumCreated(String title);
+  String get albumAddToAlbum;
+  String get albumPickerTitle;
+  String get albumPickerNewAlbum;
+  String get albumPickerEmpty;
+  String albumAddedTo(String title);
+  String albumAlreadyContains(String title);
+  String get albumAddFailed;
+
   // ─── Photos (library timeline) ────────────────────────────────────────
   String get photosEmpty;
   String get photosUndatedSection;

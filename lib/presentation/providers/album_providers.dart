@@ -2,11 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // `AsyncNotifierProviderFamily` — the type the family expression above
 // evaluates to — lives in Riverpod's `misc.dart`.
 import 'package:flutter_riverpod/misc.dart';
+import 'package:photonest/application/usecases/album/edit_album_usecase.dart';
 import 'package:photonest/application/usecases/album/get_album_usecase.dart';
 import 'package:photonest/application/usecases/album/list_albums_usecase.dart';
 import 'package:photonest/domain/entities/album.dart';
 import 'package:photonest/domain/entities/media_item.dart';
 import 'package:photonest/domain/value_objects/album_id.dart';
+import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/presentation/providers/app_providers.dart';
 import 'package:photonest/presentation/providers/session_providers.dart';
 
@@ -25,6 +27,13 @@ final Provider<GetAlbumUseCase> getAlbumUseCaseProvider =
     Provider<GetAlbumUseCase>((ref) {
       throw UnimplementedError(
         missingOverrideMessage('getAlbumUseCaseProvider'),
+      );
+    });
+
+final Provider<EditAlbumUseCase> editAlbumUseCaseProvider =
+    Provider<EditAlbumUseCase>((ref) {
+      throw UnimplementedError(
+        missingOverrideMessage('editAlbumUseCaseProvider'),
       );
     });
 
@@ -51,6 +60,33 @@ class AlbumListNotifier extends AsyncNotifier<List<Album>> {
     state = const AsyncValue<List<Album>>.loading();
     state = await AsyncValue.guard(
       () => ref.read(listAlbumsUseCaseProvider).execute(),
+    );
+  }
+
+  /// Puts [album] into the loaded list — replacing the entry with the same
+  /// id, or adding it at the front when the list does not hold it yet.
+  ///
+  /// This is how a create or a rename reaches the grid, rather than a
+  /// [reload]. A reload after a write that already succeeded can only make
+  /// things worse: its own request may fail, and the failure would replace
+  /// a correct list with the error state — or, offline, with the snapshot
+  /// taken *before* the album existed. [album] is what the server settled
+  /// on, so patching it in is not a guess.
+  ///
+  /// The front, because the server lists albums newest first; a rename
+  /// finds its entry by id and leaves the order alone. A list that has not
+  /// loaded is left alone — its first read will carry the album anyway.
+  void upsert(Album album) {
+    final loaded = state.value;
+    if (loaded == null) return;
+    // Album equality is its id, so `contains` finds a renamed album too.
+    state = AsyncValue.data(
+      loaded.contains(album)
+          ? [
+              for (final each in loaded)
+                if (each == album) album else each,
+            ]
+          : [album, ...loaded],
     );
   }
 }
@@ -106,6 +142,7 @@ final class AlbumDetailState {
   }
 
   AlbumDetailState copyWith({
+    Album? album,
     List<MediaItem>? media,
     int? mediaTotal,
     int? pagesLoaded,
@@ -113,7 +150,7 @@ final class AlbumDetailState {
     bool? loadMoreFailed,
   }) {
     return AlbumDetailState(
-      album: album,
+      album: album ?? this.album,
       media: media ?? this.media,
       mediaTotal: mediaTotal ?? this.mediaTotal,
       pagesLoaded: pagesLoaded ?? this.pagesLoaded,
@@ -169,6 +206,18 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
       media: detail.media,
       mediaTotal: detail.mediaTotal ?? (exhausted ? detail.media.length : null),
     );
+  }
+
+  /// Swaps in the album the server settled on after a rename, keeping the
+  /// media pages already read.
+  ///
+  /// A no-op while the album is loading, failed, or not found — there is no
+  /// loaded state to patch, and the next read will carry the new name
+  /// anyway.
+  void replaceAlbum(Album album) {
+    final current = state.value;
+    if (current == null) return;
+    state = AsyncValue.data(current.copyWith(album: album));
   }
 
   /// Fetches the next page and appends it. A no-op while a fetch is already
@@ -232,5 +281,132 @@ class AlbumDetailNotifier extends AsyncNotifier<AlbumDetailState?> {
         loadMoreFailed: false,
       ),
     );
+  }
+}
+
+// ─── Editing ───────────────────────────────────────────────────────────────
+
+/// Runs the album write calls and keeps the loaded screens in step.
+final NotifierProvider<AlbumEditingNotifier, AlbumEditingState>
+albumEditingProvider =
+    NotifierProvider<AlbumEditingNotifier, AlbumEditingState>(
+      AlbumEditingNotifier.new,
+    );
+
+/// What the album form and the picker need to render.
+final class AlbumEditingState {
+  const AlbumEditingState({this.busy = false, this.lastFailure});
+
+  /// True while a create/update request is in flight, so the control that
+  /// started it can disable itself.
+  ///
+  /// One flag rather than one per album — unlike the trash's per-item marks.
+  /// These calls are started from a dialog or a sheet the reader has to
+  /// close before starting another, so there is never a second one to track.
+  final bool busy;
+
+  /// The most recent failure, for the caller to show and then clear.
+  final Object? lastFailure;
+}
+
+/// Creates albums, renames them, and files media under them, writing the
+/// result into whatever is already on screen.
+///
+/// A failure is state rather than an exception to the caller: the sheet
+/// shows it and the album stays as it was.
+class AlbumEditingNotifier extends Notifier<AlbumEditingState> {
+  @override
+  AlbumEditingState build() => const AlbumEditingState();
+
+  /// Makes an album, optionally holding [mediaIds] from the start. Returns
+  /// the album the server stored, or null when the call failed.
+  Future<Album?> create(
+    String title, {
+    String? description,
+    List<MediaId> mediaIds = const <MediaId>[],
+  }) {
+    return _run(() async {
+      final album = await ref
+          .read(editAlbumUseCaseProvider)
+          .create(title, description: description, mediaIds: mediaIds);
+      // Patched into the loaded grid rather than re-read: the create has
+      // already succeeded, and a reload that failed would hide a real
+      // album behind the error state (or, offline, behind the snapshot
+      // taken before it existed).
+      ref.read(albumListProvider.notifier).upsert(album);
+      return album;
+    });
+  }
+
+  /// Renames [id] and replaces its description. Returns the album the
+  /// server settled on, or null when the call failed.
+  Future<Album?> updateDetails(
+    AlbumId id, {
+    required String title,
+    String? description,
+  }) {
+    return _run(() async {
+      final album = await ref
+          .read(editAlbumUseCaseProvider)
+          .updateDetails(id, title: title, description: description);
+      // The open detail screen carries the old title in its header. Patched
+      // rather than invalidated: re-reading would throw away the media
+      // pages the reader has already scrolled through, to change a string.
+      //
+      // Guarded by `exists`, because reading a family instance is what
+      // *creates* it: renaming from a screen that never opened this album
+      // would otherwise start a detail fetch nobody is waiting for.
+      if (ref.exists(albumDetailProvider(id))) {
+        ref.read(albumDetailProvider(id).notifier).replaceAlbum(album);
+      }
+      ref.read(albumListProvider.notifier).upsert(album);
+      return album;
+    });
+  }
+
+  /// Puts [mediaId] into [albumId]. Returns whether the album gained it —
+  /// false when it already held it — or null when the call failed.
+  Future<bool?> addMedia(AlbumId albumId, MediaId mediaId) {
+    return _run(() async {
+      final result = await ref
+          .read(editAlbumUseCaseProvider)
+          .addMedia(albumId, mediaId);
+      final album = result.album;
+      if (album != null) {
+        // The tile's count and cover come straight from the write's answer
+        // — no second request, so nothing here can fail after the photo is
+        // already filed.
+        ref.read(albumListProvider.notifier).upsert(album);
+        // The album's grid, though, has to show the photo itself, and this
+        // notifier holds no MediaItem to append — only an id. That one has
+        // to be re-read. Invalidating an instance that was never created is
+        // a no-op, so it needs no `exists` guard.
+        ref.invalidate(albumDetailProvider(albumId));
+      }
+      return result.added;
+    });
+  }
+
+  /// Clears the last failure once the screen has shown it.
+  void acknowledgeFailure() {
+    if (state.lastFailure == null) return;
+    state = AlbumEditingState(busy: state.busy);
+  }
+
+  /// Runs one write, holding [AlbumEditingState.busy] for its duration.
+  ///
+  /// A second call while one is running is refused, which is what the
+  /// disabled control already prevents in the UI.
+  Future<T?> _run<T>(Future<T> Function() action) async {
+    if (state.busy) return null;
+    state = AlbumEditingState(busy: true, lastFailure: state.lastFailure);
+    try {
+      final result = await action();
+      state = AlbumEditingState(lastFailure: state.lastFailure);
+      return result;
+    } on Object catch (error) {
+      state = AlbumEditingState(lastFailure: error);
+      return null;
+    }
   }
 }

@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:photonest/domain/entities/album.dart';
+import 'package:photonest/domain/value_objects/media_permission.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/l10n/error_descriptions.dart';
 import 'package:photonest/presentation/navigation/app_routes.dart';
 import 'package:photonest/presentation/providers/album_providers.dart';
 import 'package:photonest/presentation/providers/media_providers.dart';
+import 'package:photonest/presentation/providers/session_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
 import 'package:photonest/presentation/widgets/ui/widgets.dart';
 
@@ -23,8 +25,11 @@ class AlbumsTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final albums = ref.watch(albumListProvider);
+    final canCreate = ref
+        .watch(grantedPermissionsProvider)
+        .allows(MediaPermission.createAlbum);
 
-    return switch (albums) {
+    final content = switch (albums) {
       AsyncLoading<List<Album>>() => const AppLoadingView(),
       AsyncError<List<Album>>(:final error) => AppErrorView(
         message: describeLoadError(error, l10n),
@@ -37,6 +42,35 @@ class AlbumsTab extends ConsumerWidget {
         ),
       AsyncData<List<Album>>(value: final items) => _AlbumGrid(albums: items),
     };
+
+    if (!canCreate) return content;
+    // A Scaffold of its own, transparent, so the button floats over this
+    // tab only. The main page's Scaffold is shared by every tab, and a
+    // create-album button hanging over the upload or settings tab would be
+    // wrong there.
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: content,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => unawaited(_createAlbum(context)),
+        tooltip: l10n.albumCreateTitle,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  /// Opens the create form and, when an album comes back, says so.
+  ///
+  /// The list itself is already up to date — the notifier reloads it as
+  /// part of the create — so nothing here refreshes it.
+  Future<void> _createAlbum(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final album = await showAlbumCreateForm(context);
+    if (album == null) return;
+    messenger.showSnackBar(
+      SnackBar(content: Text(l10n.albumCreated(album.title))),
+    );
   }
 }
 

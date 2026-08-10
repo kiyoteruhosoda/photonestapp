@@ -11,6 +11,7 @@ import 'package:photonest/presentation/l10n/error_descriptions.dart';
 import 'package:photonest/presentation/providers/media_providers.dart';
 import 'package:photonest/presentation/providers/session_providers.dart';
 import 'package:photonest/presentation/theme/theme.dart';
+import 'package:photonest/presentation/widgets/ui/album_picker.dart';
 import 'package:photonest/presentation/widgets/ui/media_tag_editor.dart';
 import 'package:photonest/presentation/widgets/ui/thumbnail_image.dart';
 import 'package:photonest/presentation/widgets/ui/video_playback_view.dart';
@@ -158,6 +159,16 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
     await showMediaTagEditor(context, id: _current.id);
   }
 
+  /// Opens the album picker for the media on screen.
+  ///
+  /// Nothing here depends on the result: the sheet has already told the
+  /// reader which album the photo went into, and the viewer draws nothing
+  /// about album membership. Awaited only so a second tap cannot stack two
+  /// sheets.
+  Future<void> _addToAlbum() async {
+    await showAlbumPicker(context, mediaId: _current.id);
+  }
+
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context);
     final messenger = ScaffoldMessenger.of(context);
@@ -229,6 +240,14 @@ class _MediaViewerState extends ConsumerState<_MediaViewer> {
               onEditTags: permissions.allows(MediaPermission.tagMedia)
                   ? () => unawaited(_editTags())
                   : null,
+              // Either permission is enough to be worth opening: the picker
+              // hides the "new album" row without `album:create`, and
+              // filing into an album that exists needs only `album:edit`.
+              onAddToAlbum:
+                  permissions.allows(MediaPermission.editAlbum) ||
+                      permissions.allows(MediaPermission.createAlbum)
+                  ? () => unawaited(_addToAlbum())
+                  : null,
               onMoveToTrash: permissions.allows(MediaPermission.trashMedia)
                   ? () => unawaited(_moveToTrash())
                   : null,
@@ -256,6 +275,7 @@ class _ViewerBar extends StatelessWidget {
     required this.busy,
     required this.onToggleFavorite,
     required this.onEditTags,
+    required this.onAddToAlbum,
     required this.onMoveToTrash,
     required this.onShowOriginal,
     required this.onSave,
@@ -276,6 +296,12 @@ class _ViewerBar extends StatelessWidget {
   /// gated on [busy]: tagging is a separate request from the favourite and
   /// trash calls, and the editor sends nothing until the reader saves.
   final VoidCallback? onEditTags;
+
+  /// Opens the album picker; null when the session may neither create
+  /// albums nor change the ones that exist. Not gated on [busy] for the
+  /// same reason as [onEditTags]: the sheet sends nothing until the reader
+  /// picks an album.
+  final VoidCallback? onAddToAlbum;
 
   /// Null when the session may not delete, which hides the button.
   final VoidCallback? onMoveToTrash;
@@ -318,6 +344,13 @@ class _ViewerBar extends StatelessWidget {
                 onPressed: onEditTags,
                 tooltip: l10n.mediaTagsTitle,
                 icon: const Icon(Icons.label_outline),
+                color: Colors.white,
+              ),
+            if (onAddToAlbum != null)
+              IconButton(
+                onPressed: onAddToAlbum,
+                tooltip: l10n.albumAddToAlbum,
+                icon: const Icon(Icons.playlist_add),
                 color: Colors.white,
               ),
             if (onMoveToTrash != null)

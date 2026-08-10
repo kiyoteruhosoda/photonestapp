@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:photonest/app/bootstrap/app_router.dart';
 import 'package:photonest/application/services/auto_upload_coordinator.dart';
+import 'package:photonest/application/usecases/album/edit_album_usecase.dart';
 import 'package:photonest/application/usecases/album/get_album_usecase.dart';
 import 'package:photonest/application/usecases/album/list_albums_usecase.dart';
 import 'package:photonest/application/usecases/app_info/get_app_info_usecase.dart';
@@ -84,6 +85,7 @@ class TestScope {
     FakeSessionRepository? sessionRepository,
     FakeApiEndpointRepository? apiEndpointRepository,
     FakeAlbumRepository? albumRepository,
+    FakeAlbumEditingRepository? albumEditingRepository,
     FakeAlbumSnapshotRepository? albumSnapshotRepository,
     FakeMediaThumbnailRepository? mediaThumbnailRepository,
     FakeMediaThumbnailUrlRepository? mediaThumbnailUrlRepository,
@@ -119,6 +121,8 @@ class TestScope {
        apiEndpointRepository =
            apiEndpointRepository ?? FakeApiEndpointRepository(),
        albumRepository = albumRepository ?? FakeAlbumRepository(),
+       albumEditingRepository =
+           albumEditingRepository ?? FakeAlbumEditingRepository(),
        albumSnapshotRepository =
            albumSnapshotRepository ?? FakeAlbumSnapshotRepository(),
        mediaThumbnailRepository =
@@ -157,6 +161,7 @@ class TestScope {
   final FakeSessionRepository sessionRepository;
   final FakeApiEndpointRepository apiEndpointRepository;
   final FakeAlbumRepository albumRepository;
+  final FakeAlbumEditingRepository albumEditingRepository;
   final FakeAlbumSnapshotRepository albumSnapshotRepository;
   final FakeMediaThumbnailRepository mediaThumbnailRepository;
   final FakeMediaThumbnailUrlRepository mediaThumbnailUrlRepository;
@@ -255,6 +260,9 @@ class TestScope {
           apiEndpointRepository,
           logger,
         ),
+      ),
+      editAlbumUseCaseProvider.overrideWithValue(
+        EditAlbumUseCase(albumEditingRepository, logger),
       ),
       getMediaThumbnailUseCaseProvider.overrideWithValue(
         GetMediaThumbnailUseCase(

@@ -90,4 +90,56 @@ void main() {
 
     expect(scope.location, '/albums/5');
   });
+
+  testWidgets('creates an album from the tab and reports it', (tester) async {
+    final scope = TestScope();
+    await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.albumNameLabel),
+      'Kyoto',
+    );
+    await tester.tap(find.text(l10n.albumCreateAction));
+    await tester.pumpAndSettle();
+
+    expect(scope.albumEditingRepository.created.single.title, 'Kyoto');
+    expect(find.text(l10n.albumCreated('Kyoto')), findsOneWidget);
+  });
+
+  testWidgets('the created album stays on screen even if a re-read would '
+      'fail', (tester) async {
+    final scope = TestScope();
+    await pumpInScope(tester, const Scaffold(body: AlbumsTab()), scope: scope);
+    expect(find.textContaining(l10n.albumsEmpty), findsOneWidget);
+
+    // The server stops answering the *list* right after the create lands.
+    // The album exists — reporting it as gone (or showing the tab's error
+    // state) would be a lie about a write that succeeded.
+    scope.albumRepository.failure = const NetworkUnreachableError('offline');
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextField, l10n.albumNameLabel),
+      'Kyoto',
+    );
+    await tester.tap(find.text(l10n.albumCreateAction));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kyoto'), findsOneWidget);
+    expect(find.text(l10n.commonErrorNetwork), findsNothing);
+  });
+
+  testWidgets('offers no create button without album:create', (tester) async {
+    await pumpInScope(
+      tester,
+      const Scaffold(body: AlbumsTab()),
+      scope: TestScope(
+        sessionRepository: FakeSessionRepository(restrictedTestAuthSession),
+      ),
+    );
+
+    expect(find.byType(FloatingActionButton), findsNothing);
+  });
 }

@@ -14,6 +14,7 @@ import 'package:photonest/domain/value_objects/login_credentials.dart';
 import 'package:photonest/domain/value_objects/media_id.dart';
 import 'package:photonest/domain/value_objects/tag_id.dart';
 import 'package:photonest/infrastructure/api/photonest_api_client.dart';
+import 'package:photonest/infrastructure/repositories/api_album_editing_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_album_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_auth_repository.dart';
 import 'package:photonest/infrastructure/repositories/api_media_library_repository.dart';
@@ -302,6 +303,186 @@ void main() {
       );
       await expectLater(
         repository.findById(AlbumId(9)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+  });
+
+  group('ApiAlbumEditingRepository', () {
+    test('create sends the name and the media it should hold', () async {
+      final repository = ApiAlbumEditingRepository(
+        client(
+          (request) async => json({
+            'album': {'id': 7, 'title': 'Kyoto', 'mediaCount': 1},
+            'created': true,
+          }),
+        ),
+      );
+
+      final album = await repository.create(
+        title: 'Kyoto',
+        description: 'Autumn',
+        mediaIds: <MediaId>[MediaId(5)],
+      );
+
+      expect(requests.single.method, 'POST');
+      expect(requests.single.url.path, '/api/albums');
+      expect(jsonDecode(requests.single.body), {
+        'name': 'Kyoto',
+        'description': 'Autumn',
+        'mediaIds': [5],
+      });
+      expect(album.id, AlbumId(7));
+      expect(album.title, 'Kyoto');
+    });
+
+    test('create omits a description it was not given', () async {
+      final repository = ApiAlbumEditingRepository(
+        client(
+          (request) async => json({
+            'album': {'id': 7, 'title': 'Kyoto'},
+          }),
+        ),
+      );
+
+      await repository.create(title: 'Kyoto');
+
+      expect(
+        (jsonDecode(requests.single.body) as Map<String, dynamic>).keys,
+        isNot(contains('description')),
+      );
+    });
+
+    test('updateDetails sends a blank description to clear one', () async {
+      final repository = ApiAlbumEditingRepository(
+        client(
+          (request) async => json({
+            'album': {'id': 4, 'title': 'Kyoto'},
+            'updated': true,
+          }),
+        ),
+      );
+
+      await repository.updateDetails(AlbumId(4), title: 'Kyoto');
+
+      // Not null: the endpoint reads a null as "leave this alone", which
+      // would keep text the reader just deleted.
+      expect(jsonDecode(requests.single.body), {
+        'name': 'Kyoto',
+        'description': '',
+      });
+    });
+
+    test('updateDetails leaves the album media out of the body', () async {
+      final repository = ApiAlbumEditingRepository(
+        client(
+          (request) async => json({
+            'album': {'id': 4, 'title': 'Kyoto'},
+          }),
+        ),
+      );
+
+      await repository.updateDetails(AlbumId(4), title: 'Kyoto');
+
+      // A rename that echoed mediaIds would replace the album's contents
+      // with whatever this device last saw.
+      expect(
+        (jsonDecode(requests.single.body) as Map<String, dynamic>).keys,
+        isNot(contains('mediaIds')),
+      );
+    });
+
+    test('replaceMedia leaves the name out of the body', () async {
+      final repository = ApiAlbumEditingRepository(
+        client(
+          (request) async => json({
+            'album': {'id': 4, 'title': 'Kyoto'},
+          }),
+        ),
+      );
+
+      await repository.replaceMedia(AlbumId(4), <MediaId>[MediaId(1)]);
+
+      expect(jsonDecode(requests.single.body), {
+        'mediaIds': [1],
+      });
+    });
+
+    test('mediaIdsOf follows the paging to the end of the album', () async {
+      final repository = ApiAlbumEditingRepository(
+        client((request) async {
+          final page = int.parse(request.url.queryParameters['page']!);
+          // Two full pages then a short one, so the loop keeps going until
+          // the album runs dry rather than stopping at the first window.
+          final count = page < 3 ? 500 : 2;
+          return json({
+            'album': {
+              'id': 4,
+              'title': 'Big',
+              'mediaIds': [
+                for (var i = 0; i < count; i++) (page - 1) * 500 + i + 1,
+              ],
+              'mediaTotal': 1002,
+            },
+          });
+        }),
+      );
+
+      final ids = await repository.mediaIdsOf(AlbumId(4));
+
+      expect(ids, hasLength(1002));
+      expect(requests, hasLength(3));
+      expect(requests.first.url.queryParameters['pageSize'], '500');
+      expect(ids.last, MediaId(1002));
+    });
+
+    test('mediaIdsOf rejects a response without media ids', () async {
+      final repository = ApiAlbumEditingRepository(
+        client(
+          (request) async => json({
+            'album': {'id': 4, 'title': 'Big'},
+          }),
+        ),
+      );
+
+      // Reading these as "the album is empty" would let the next
+      // replacement delete every photo in it.
+      await expectLater(
+        repository.mediaIdsOf(AlbumId(4)),
+        throwsA(isA<InfrastructureError>()),
+      );
+    });
+
+    test(
+      'mediaIdsOf rejects an unreadable id rather than skipping it',
+      () async {
+        final repository = ApiAlbumEditingRepository(
+          client(
+            (request) async => json({
+              'album': {
+                'id': 4,
+                'title': 'Big',
+                'mediaIds': [1, 'two'],
+                'mediaTotal': 2,
+              },
+            }),
+          ),
+        );
+
+        await expectLater(
+          repository.mediaIdsOf(AlbumId(4)),
+          throwsA(isA<InfrastructureError>()),
+        );
+      },
+    );
+
+    test('rejects a response that carries no album', () async {
+      final repository = ApiAlbumEditingRepository(
+        client((request) async => json({'created': true})),
+      );
+
+      await expectLater(
+        repository.create(title: 'Kyoto'),
         throwsA(isA<InfrastructureError>()),
       );
     });

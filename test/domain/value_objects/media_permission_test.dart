@@ -16,6 +16,18 @@ void main() {
       expect(MediaPermission.markFavorite.scope, 'media:metadata-manage');
       expect(MediaPermission.trashMedia.scope, 'media:delete');
       expect(MediaPermission.uploadMedia.scope, 'media:upload');
+      expect(MediaPermission.createAlbum.scope, 'album:create');
+      expect(MediaPermission.editAlbum.scope, 'album:edit');
+    });
+
+    test('creating an album is separate from changing one', () {
+      // The server issues the two codes separately: a reader may file
+      // photos into the albums that exist without being allowed to add
+      // more.
+      final granted = GrantedPermissions.of(sessionWith(const ['album:edit']));
+
+      expect(granted.allows(MediaPermission.editAlbum), isTrue);
+      expect(granted.allows(MediaPermission.createAlbum), isFalse);
     });
   });
 

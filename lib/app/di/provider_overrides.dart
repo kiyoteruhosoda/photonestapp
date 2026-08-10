@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart';
 import 'package:photonest/app/di/service_locator.dart';
 import 'package:photonest/application/ports/app_logger.dart';
 import 'package:photonest/application/services/auto_upload_coordinator.dart';
+import 'package:photonest/application/usecases/album/edit_album_usecase.dart';
 import 'package:photonest/application/usecases/album/get_album_usecase.dart';
 import 'package:photonest/application/usecases/album/list_albums_usecase.dart';
 import 'package:photonest/application/usecases/app_info/get_app_info_usecase.dart';
@@ -66,6 +67,7 @@ List<Override> buildProviderOverrides() {
     appLoggerProvider.overrideWithValue(sl<AppLogger>()),
     listAlbumsUseCaseProvider.overrideWithValue(sl<ListAlbumsUseCase>()),
     getAlbumUseCaseProvider.overrideWithValue(sl<GetAlbumUseCase>()),
+    editAlbumUseCaseProvider.overrideWithValue(sl<EditAlbumUseCase>()),
     getMediaThumbnailUseCaseProvider.overrideWithValue(
       sl<GetMediaThumbnailUseCase>(),
     ),

@@ -13,6 +13,7 @@ import 'package:photonest/application/usecases/app_info/get_app_info_usecase.dar
 import 'package:photonest/application/usecases/auth/get_api_endpoint_usecase.dart';
 import 'package:photonest/application/usecases/auth/login_usecase.dart';
 import 'package:photonest/application/usecases/auth/logout_usecase.dart';
+import 'package:photonest/application/usecases/auth/manage_account_usecase.dart';
 import 'package:photonest/application/usecases/auth/restore_session_usecase.dart';
 import 'package:photonest/application/usecases/auth/watch_session_usecase.dart';
 import 'package:photonest/application/usecases/debug/get_debug_settings_usecase.dart';
@@ -53,6 +54,7 @@ import 'package:photonest/application/usecases/upload/watch_upload_failures_usec
 import 'package:photonest/domain/entities/auth_session.dart';
 import 'package:photonest/presentation/l10n/app_localizations.dart';
 import 'package:photonest/presentation/navigation/app_routes.dart';
+import 'package:photonest/presentation/providers/account_providers.dart';
 import 'package:photonest/presentation/providers/album_providers.dart';
 import 'package:photonest/presentation/providers/app_info_providers.dart';
 import 'package:photonest/presentation/providers/app_providers.dart';
@@ -84,6 +86,8 @@ class TestScope {
     FakeAuthRepository? authRepository,
     FakeSessionRepository? sessionRepository,
     FakeApiEndpointRepository? apiEndpointRepository,
+    FakeAccountRepository? accountRepository,
+    FakeExternalLinkLauncher? externalLinkLauncher,
     FakeAlbumRepository? albumRepository,
     FakeAlbumEditingRepository? albumEditingRepository,
     FakeAlbumSnapshotRepository? albumSnapshotRepository,
@@ -120,6 +124,9 @@ class TestScope {
            FakeSessionRepository(initialSession ?? testAuthSession),
        apiEndpointRepository =
            apiEndpointRepository ?? FakeApiEndpointRepository(),
+       accountRepository = accountRepository ?? FakeAccountRepository(),
+       externalLinkLauncher =
+           externalLinkLauncher ?? FakeExternalLinkLauncher(),
        albumRepository = albumRepository ?? FakeAlbumRepository(),
        albumEditingRepository =
            albumEditingRepository ?? FakeAlbumEditingRepository(),
@@ -160,6 +167,8 @@ class TestScope {
   final FakeAuthRepository authRepository;
   final FakeSessionRepository sessionRepository;
   final FakeApiEndpointRepository apiEndpointRepository;
+  final FakeAccountRepository accountRepository;
+  final FakeExternalLinkLauncher externalLinkLauncher;
   final FakeAlbumRepository albumRepository;
   final FakeAlbumEditingRepository albumEditingRepository;
   final FakeAlbumSnapshotRepository albumSnapshotRepository;
@@ -264,6 +273,10 @@ class TestScope {
       editAlbumUseCaseProvider.overrideWithValue(
         EditAlbumUseCase(albumEditingRepository, logger),
       ),
+      manageAccountUseCaseProvider.overrideWithValue(
+        ManageAccountUseCase(accountRepository, logger),
+      ),
+      externalLinkLauncherProvider.overrideWithValue(externalLinkLauncher),
       getMediaThumbnailUseCaseProvider.overrideWithValue(
         GetMediaThumbnailUseCase(
           mediaThumbnailRepository,

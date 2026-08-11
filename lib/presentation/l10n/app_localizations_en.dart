@@ -44,6 +44,15 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get loginErrorNetwork =>
       'Could not reach the server. Check the URL and your connection.';
+  @override
+  String get loginTotpLabel => 'Code from your authenticator app';
+  @override
+  String get loginTotpRequired =>
+      'This account uses two-factor authentication. Enter the code from your '
+      'authenticator app.';
+  @override
+  String get loginErrorInvalidTotp =>
+      'That code did not match. Try the next one the app shows.';
 
   // ─── Albums ───────────────────────────────────────────────────────────
   @override
@@ -288,6 +297,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsSignOutCancel => 'Cancel';
   @override
   String get settingsSignedInAs => 'Signed in as';
+
+  // ─── Account (credentials) ────────────────────────────────────────────
+  @override
+  String get accountTitle => 'Account';
+  @override
+  String get accountOpen => 'Password and two-factor';
+  @override
+  String get accountEmailLabel => 'Signed in as';
+  @override
+  String get accountPasswordSection => 'Password';
+  @override
+  String get accountPasswordHint =>
+      'Changing it here signs you out of nothing — this device keeps working.';
+  @override
+  String get accountPasswordNewLabel => 'New password';
+  @override
+  String get accountPasswordConfirmLabel => 'New password again';
+  @override
+  String accountPasswordTooShort(int minimum) =>
+      'Use at least $minimum characters.';
+  @override
+  String get accountPasswordMismatch => 'The two entries do not match.';
+  @override
+  String get accountPasswordChange => 'Change password';
+  @override
+  String get accountPasswordChanged => 'Password changed.';
+  @override
+  String get accountPasswordFailed => 'Could not change the password.';
+  @override
+  String get accountTwoFactorSection => 'Two-factor authentication';
+  @override
+  String get accountTwoFactorOn => 'On — sign-in asks for a code.';
+  @override
+  String get accountTwoFactorOff => 'Off — sign-in asks for the password only.';
+  @override
+  String get accountTwoFactorEnable => 'Turn on';
+  @override
+  String get accountTwoFactorDisable => 'Turn off';
+  @override
+  String get accountTwoFactorDisableConfirmTitle => 'Turn off two-factor?';
+  @override
+  String get accountTwoFactorDisableConfirmBody =>
+      'Signing in will need only your password after this.';
+  @override
+  String get accountTwoFactorDisabled => 'Two-factor is off.';
+  @override
+  String get accountTwoFactorEnabled => 'Two-factor is on.';
+  @override
+  String get accountTwoFactorFailed => 'Could not change two-factor.';
+  @override
+  String get accountTwoFactorSetupTitle => 'Turn on two-factor';
+  @override
+  String get accountTwoFactorSetupIntro =>
+      'Register this account with an authenticator app, then enter the code '
+      'it shows.';
+  @override
+  String get accountTwoFactorOpenApp => 'Open authenticator app';
+  @override
+  String get accountTwoFactorNoApp =>
+      'No authenticator app answered. Use the setup key below.';
+  @override
+  String get accountTwoFactorSecretLabel => 'Setup key';
+  @override
+  String get accountTwoFactorSecretCopied => 'Setup key copied.';
+  @override
+  String get accountTwoFactorScanHint => 'Or scan this from another device.';
+  @override
+  String get accountTwoFactorCodeLabel => 'Code from the app';
+  @override
+  String get accountTwoFactorCodeRequired =>
+      'Enter the code from your authenticator app.';
+  @override
+  String get accountTwoFactorConfirm => 'Verify and turn on';
+  @override
+  String get accountTwoFactorInvalidCode =>
+      'That code did not match. Try the next one the app shows.';
+  @override
+  String get accountPasskeysUnavailable =>
+      'Passkeys are managed from PhotoNest in a browser.';
 
   // ─── Drawer ───────────────────────────────────────────────────────────
   @override

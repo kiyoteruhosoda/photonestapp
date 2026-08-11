@@ -2,8 +2,10 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:photonest/application/ports/background_sync_scheduler.dart';
+import 'package:photonest/application/ports/external_link_launcher.dart';
 import 'package:photonest/application/ports/network_connection_gateway.dart';
 import 'package:photonest/application/ports/photo_library_gateway.dart';
+import 'package:photonest/domain/entities/account_profile.dart';
 import 'package:photonest/domain/entities/album.dart';
 import 'package:photonest/domain/entities/app_info.dart';
 import 'package:photonest/domain/entities/auth_session.dart';
@@ -17,6 +19,7 @@ import 'package:photonest/domain/entities/tag.dart';
 import 'package:photonest/domain/entities/upload_failure.dart';
 import 'package:photonest/domain/entities/upload_resumption.dart';
 import 'package:photonest/domain/errors/app_error.dart';
+import 'package:photonest/domain/repositories/account_repository.dart';
 import 'package:photonest/domain/repositories/album_editing_repository.dart';
 import 'package:photonest/domain/repositories/album_repository.dart';
 import 'package:photonest/domain/repositories/album_snapshot_repository.dart';
@@ -566,6 +569,13 @@ final class FakeAuthRepository implements AuthRepository {
   /// models a platform/plugin blowing up outside the typed error contract.
   Object? unexpectedFailure;
 
+  /// When set, [login] refuses credentials that carry no authenticator code
+  /// — the way the server answers for an account with two-factor on.
+  bool requiresTotp = false;
+
+  /// The only code [login] accepts while [requiresTotp] is set.
+  String expectedTotpCode = '123456';
+
   final List<LoginCredentials> logins = <LoginCredentials>[];
   final List<AuthSession> loggedOut = <AuthSession>[];
 
@@ -573,6 +583,21 @@ final class FakeAuthRepository implements AuthRepository {
   Future<AuthSession> login(LoginCredentials credentials) async {
     _failIfAsked();
     logins.add(credentials);
+    if (requiresTotp) {
+      final code = credentials.totpCode;
+      if (code == null) {
+        throw const AuthenticationError(
+          'Two-factor code required.',
+          code: 'totp_required',
+        );
+      }
+      if (code != expectedTotpCode) {
+        throw const AuthenticationError(
+          'Two-factor code did not match.',
+          code: 'invalid_totp',
+        );
+      }
+    }
     return sessionToReturn ??
         AuthSession(
           accessToken: 'access-token',
@@ -704,6 +729,102 @@ final class FakeAlbumRepository implements AlbumRepository {
   void _failIfAsked() {
     final error = failure;
     if (error != null) throw error;
+  }
+}
+
+/// In-memory [AccountRepository].
+final class FakeAccountRepository implements AccountRepository {
+  FakeAccountRepository({AccountProfile? profile})
+    : profile =
+          profile ??
+          const AccountProfile(
+            id: 1,
+            email: 'user@example.com',
+            twoFactorEnabled: false,
+          );
+
+  /// What [load] answers with.
+  AccountProfile profile;
+
+  /// Passwords [changePassword] was given, in call order.
+  final List<String> passwords = <String>[];
+
+  /// `(secret, code)` pairs [confirmTwoFactor] was given, in call order.
+  final List<({String secret, String code})> confirmations =
+      <({String secret, String code})>[];
+
+  /// How many times [disableTwoFactor] was called.
+  int disableCount = 0;
+
+  /// What [beginTwoFactorEnrollment] answers with.
+  TwoFactorEnrollment enrollment = TwoFactorEnrollment(
+    secret: 'JBSWY3DPEHPK3PXP',
+    otpauthUri: Uri.parse('otpauth://totp/PhotoNest:user@example.com'),
+  );
+
+  /// When set, [confirmTwoFactor] throws this instead of accepting the code.
+  AppError? confirmationFailure;
+
+  /// When set, every other method throws this instead of answering.
+  AppError? failure;
+
+  @override
+  Future<AccountProfile> load() async {
+    _failIfAsked();
+    return profile;
+  }
+
+  @override
+  Future<void> changePassword(String newPassword) async {
+    _failIfAsked();
+    passwords.add(newPassword);
+  }
+
+  @override
+  Future<TwoFactorEnrollment> beginTwoFactorEnrollment() async {
+    _failIfAsked();
+    return enrollment;
+  }
+
+  @override
+  Future<void> confirmTwoFactor({
+    required String secret,
+    required String code,
+  }) async {
+    _failIfAsked();
+    final rejection = confirmationFailure;
+    if (rejection != null) throw rejection;
+    confirmations.add((secret: secret, code: code));
+    profile = profile.withTwoFactor(enabled: true);
+  }
+
+  @override
+  Future<void> disableTwoFactor() async {
+    _failIfAsked();
+    disableCount++;
+    profile = profile.withTwoFactor(enabled: false);
+  }
+
+  void _failIfAsked() {
+    final error = failure;
+    if (error != null) throw error;
+  }
+}
+
+/// [ExternalLinkLauncher] that records what it was asked to open.
+final class FakeExternalLinkLauncher implements ExternalLinkLauncher {
+  FakeExternalLinkLauncher({this.canOpen = true});
+
+  /// What [open] answers — false models a device with no authenticator app.
+  bool canOpen;
+
+  /// Every URL [open] was given, in call order.
+  final List<Uri> opened = <Uri>[];
+
+  @override
+  Future<bool> open(Uri url) async {
+    opened.add(url);
+    return canOpen;
   }
 }
 

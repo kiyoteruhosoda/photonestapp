@@ -23,6 +23,10 @@ final class ApiAuthRepository implements AuthRepository {
       'email': credentials.email,
       'password': credentials.password,
       'scope': _requestedScope,
+      // Sent only once the reader has one. The server answers 401
+      // `totp_required` when an account has an authenticator and no code
+      // came with the password; that is the app's cue to ask.
+      'token': ?credentials.totpCode,
     }, authenticated: false);
     return AuthSession(
       accessToken: payload['access_token'] as String,

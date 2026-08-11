@@ -12,4 +12,5 @@ export 'media_tag_editor.dart';
 export 'media_tile.dart';
 export 'media_viewer.dart';
 export 'thumbnail_image.dart';
+export 'two_factor_setup_sheet.dart';
 export 'video_playback_view.dart';

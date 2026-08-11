@@ -41,6 +41,12 @@ class AppLocalizationsJa extends AppLocalizations {
   String get loginErrorInvalidCredentials => 'メールアドレスまたはパスワードが正しくありません。';
   @override
   String get loginErrorNetwork => 'サーバーに接続できません。URL と通信環境を確認してください。';
+  @override
+  String get loginTotpLabel => '認証アプリのコード';
+  @override
+  String get loginTotpRequired => 'このアカウントは二要素認証を使っています。認証アプリのコードを入力してください。';
+  @override
+  String get loginErrorInvalidTotp => 'コードが一致しません。次に表示されるコードで試してください。';
 
   // ─── Albums ───────────────────────────────────────────────────────────
   @override
@@ -266,6 +272,77 @@ class AppLocalizationsJa extends AppLocalizations {
   String get settingsSignOutCancel => 'キャンセル';
   @override
   String get settingsSignedInAs => 'ログイン中のアカウント';
+
+  // ─── Account (credentials) ────────────────────────────────────────────
+  @override
+  String get accountTitle => 'アカウント';
+  @override
+  String get accountOpen => 'パスワードと二要素認証';
+  @override
+  String get accountEmailLabel => 'ログイン中のアカウント';
+  @override
+  String get accountPasswordSection => 'パスワード';
+  @override
+  String get accountPasswordHint => 'ここで変更しても、この端末はログインしたままです。';
+  @override
+  String get accountPasswordNewLabel => '新しいパスワード';
+  @override
+  String get accountPasswordConfirmLabel => '新しいパスワード（確認）';
+  @override
+  String accountPasswordTooShort(int minimum) => '$minimum 文字以上にしてください。';
+  @override
+  String get accountPasswordMismatch => '2 つの入力が一致しません。';
+  @override
+  String get accountPasswordChange => 'パスワードを変更';
+  @override
+  String get accountPasswordChanged => 'パスワードを変更しました。';
+  @override
+  String get accountPasswordFailed => 'パスワードを変更できませんでした。';
+  @override
+  String get accountTwoFactorSection => '二要素認証';
+  @override
+  String get accountTwoFactorOn => '有効 — ログイン時にコードを訊かれます。';
+  @override
+  String get accountTwoFactorOff => '無効 — ログインはパスワードだけです。';
+  @override
+  String get accountTwoFactorEnable => '有効にする';
+  @override
+  String get accountTwoFactorDisable => '無効にする';
+  @override
+  String get accountTwoFactorDisableConfirmTitle => '二要素認証を無効にしますか？';
+  @override
+  String get accountTwoFactorDisableConfirmBody => '以降のログインはパスワードだけになります。';
+  @override
+  String get accountTwoFactorDisabled => '二要素認証を無効にしました。';
+  @override
+  String get accountTwoFactorEnabled => '二要素認証を有効にしました。';
+  @override
+  String get accountTwoFactorFailed => '二要素認証を変更できませんでした。';
+  @override
+  String get accountTwoFactorSetupTitle => '二要素認証を有効にする';
+  @override
+  String get accountTwoFactorSetupIntro =>
+      '認証アプリにこのアカウントを登録し、表示されたコードを入力してください。';
+  @override
+  String get accountTwoFactorOpenApp => '認証アプリで開く';
+  @override
+  String get accountTwoFactorNoApp => '認証アプリが見つかりません。下のセットアップキーを使ってください。';
+  @override
+  String get accountTwoFactorSecretLabel => 'セットアップキー';
+  @override
+  String get accountTwoFactorSecretCopied => 'セットアップキーをコピーしました。';
+  @override
+  String get accountTwoFactorScanHint => '別の端末から読み取る場合はこちら。';
+  @override
+  String get accountTwoFactorCodeLabel => 'アプリに表示されたコード';
+  @override
+  String get accountTwoFactorCodeRequired => '認証アプリのコードを入力してください。';
+  @override
+  String get accountTwoFactorConfirm => '確認して有効にする';
+  @override
+  String get accountTwoFactorInvalidCode => 'コードが一致しません。次に表示されるコードで試してください。';
+  @override
+  String get accountPasskeysUnavailable => 'パスキーはブラウザの PhotoNest から設定します。';
 
   // ─── Drawer ───────────────────────────────────────────────────────────
   @override

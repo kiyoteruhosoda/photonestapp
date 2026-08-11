@@ -30,6 +30,10 @@ class AppRoutes {
   /// rather than interpolating by hand.
   static const String albumDetail = '/albums/:$albumIdParam';
 
+  /// The signed-in person's own credentials — password and two-factor.
+  /// Reached from the settings tab; not a deep-link target.
+  static const String account = '/account';
+
   static const String about = '/about';
   static const String debug = '/debug';
   static const String logs = '/logs';

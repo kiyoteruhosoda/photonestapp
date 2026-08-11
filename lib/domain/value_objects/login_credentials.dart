@@ -16,6 +16,7 @@ final class LoginCredentials {
     required Uri serverUrl,
     required String email,
     required String password,
+    String? totpCode,
   }) {
     if (!serverUrl.hasScheme ||
         !allowedServerSchemes.contains(serverUrl.scheme)) {
@@ -36,10 +37,15 @@ final class LoginCredentials {
     if (password.isEmpty) {
       throw const DomainError('Password must not be empty.');
     }
+    // Authenticator apps display the code in groups ("123 456") and a paste
+    // carries the spacing along; the server compares digits. A code that is
+    // nothing but spacing is the same as not having one.
+    final digits = (totpCode ?? '').replaceAll(RegExp(r'\s'), '');
     return LoginCredentials._(
       serverUrl: serverUrl,
       email: normalisedEmail,
       password: password,
+      totpCode: digits.isEmpty ? null : digits,
     );
   }
 
@@ -47,6 +53,7 @@ final class LoginCredentials {
     required this.serverUrl,
     required this.email,
     required this.password,
+    required this.totpCode,
   });
 
   /// Base address of the PhotoNest server, without the `/api` prefix.
@@ -58,16 +65,26 @@ final class LoginCredentials {
   /// The password as typed. Never logged, never persisted.
   final String password;
 
+  /// The authenticator's current code, or null when the reader has not been
+  /// asked for one.
+  ///
+  /// Null on the first attempt: the app cannot know whether an account has
+  /// an authenticator until the server says `totp_required`, and asking
+  /// everyone for a code up front would put an unanswerable field in front
+  /// of every reader who has none.
+  final String? totpCode;
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       (other is LoginCredentials &&
           other.serverUrl == serverUrl &&
           other.email == email &&
-          other.password == password);
+          other.password == password &&
+          other.totpCode == totpCode);
 
   @override
-  int get hashCode => Object.hash(serverUrl, email, password);
+  int get hashCode => Object.hash(serverUrl, email, password, totpCode);
 
   @override
   String toString() => 'LoginCredentials($email @ $serverUrl)';

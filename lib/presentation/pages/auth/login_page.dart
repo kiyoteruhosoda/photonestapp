@@ -23,6 +23,14 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   final TextEditingController _serverController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _totpController = TextEditingController();
+
+  /// True once the server has said this account has an authenticator.
+  ///
+  /// Latched rather than derived from the last failure: a wrong code sets
+  /// `invalidTotp`, and a field that disappeared on the retry would take the
+  /// reader back to a form that cannot succeed.
+  bool _totpAsked = false;
 
   @override
   void initState() {
@@ -38,6 +46,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     _serverController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _totpController.dispose();
     super.dispose();
   }
 
@@ -48,7 +57,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           serverUrl: _serverController.text,
           email: _emailController.text,
           password: _passwordController.text,
+          // Empty until the server asks; `LoginCredentials` reads a blank
+          // one as "no code".
+          totpCode: _totpController.text,
         );
+    if (!mounted) return;
+    final failure = ref.read(sessionProvider).lastFailure;
+    if (failure == LoginFailure.totpRequired ||
+        failure == LoginFailure.invalidTotp) {
+      setState(() => _totpAsked = true);
+    }
   }
 
   @override
@@ -112,6 +130,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     prefixIcon: const Icon(Icons.lock_outline),
                     onSubmitted: (_) => unawaited(_submit()),
                   ),
+                  // Shown only once the server has asked for it. Putting it
+                  // on the form up front would face every reader without an
+                  // authenticator with a field they cannot fill.
+                  if (_totpAsked) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    AppTextField(
+                      controller: _totpController,
+                      label: l10n.loginTotpLabel,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      enabled: !session.busy,
+                      autofocus: true,
+                      prefixIcon: const Icon(Icons.pin_outlined),
+                      onSubmitted: (_) => unawaited(_submit()),
+                    ),
+                  ],
                   if (session.lastFailure != null) ...[
                     const SizedBox(height: AppSpacing.lg),
                     Text(
@@ -142,6 +176,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       switch (failure) {
         LoginFailure.invalidInput => l10n.loginErrorInvalidInput,
         LoginFailure.invalidCredentials => l10n.loginErrorInvalidCredentials,
+        LoginFailure.totpRequired => l10n.loginTotpRequired,
+        LoginFailure.invalidTotp => l10n.loginErrorInvalidTotp,
         LoginFailure.network => l10n.loginErrorNetwork,
       };
 }
